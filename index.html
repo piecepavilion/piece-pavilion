@@ -10,27 +10,36 @@
 </head>
 <body>
 
+  <!-- ===== SIDEBAR TOGGLE TAB ===== -->
+  <button class="sidebar-tab" id="sidebar-tab" aria-label="Toggle menu">&#9776;</button>
+
+  <!-- ===== SIDEBAR OVERLAY ===== -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
   <!-- ===== LEFT SIDEBAR NAV ===== -->
   <nav class="sidebar" id="sidebar">
-    <a href="#" class="sidebar-logo">
-      <img src="logoPP1.jpg" alt="Piece Pavilion" class="logo-img" />
-    </a>
+    <div class="sidebar-header">
+      <a href="#hero" class="sidebar-logo">
+        <img src="logoPP1.jpg" alt="Piece Pavilion" class="logo-img" />
+      </a>
+      <button class="sidebar-close" id="sidebar-close" aria-label="Close menu">&times;</button>
+    </div>
     <ul class="sidebar-links">
       <li><a href="#hero">Shop Now</a></li>
       <li><a href="#shop">What We Carry</a></li>
       <li><a href="#about">Why Shop With Us</a></li>
       <li><a href="#sell">Sell or Consign</a></li>
       <li><a href="#contact">Get in Touch</a></li>
-      <li>
+      <li class="sidebar-bricklink">
         <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
-           target="_blank" rel="noopener" class="btn-nav sidebar-btn">
+           target="_blank" rel="noopener" class="btn-nav">
           BrickLink Store &rarr;
         </a>
       </li>
     </ul>
   </nav>
 
-  <!-- ===== MAIN CONTENT WRAPPER ===== -->
+  <!-- ===== MAIN CONTENT ===== -->
   <div class="main-content">
 
   <!-- ===== HERO ===== -->
