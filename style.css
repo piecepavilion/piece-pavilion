@@ -162,27 +162,15 @@ img { display: block; max-width: 100%; }
 }
 .logo-footer { font-size: 1.25rem; }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-}
-.nav-links a {
-  font-weight: 700;
-  color: var(--mid);
-  font-size: 0.95rem;
-  transition: color 0.2s;
-}
-.nav-links a:hover { color: var(--red); }
-
 .hamburger {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 5px;
   background: none;
   border: none;
   cursor: pointer;
   padding: 4px;
+  margin-left: auto;
 }
 .hamburger span {
   display: block;
@@ -673,8 +661,6 @@ img { display: block; max-width: 100%; }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .nav-links { display: none; }
-  .hamburger { display: flex; }
 
   .hero {
     flex-direction: column;
