@@ -243,11 +243,11 @@ img { display: block; max-width: 100%; }
 
 /* ===== HERO ===== */
 .hero {
-  min-height: calc(100vh - 0px);
+  min-height: 70vh;
   display: flex;
   align-items: center;
   background: linear-gradient(135deg, #0f0f1a 0%, #1a0a0a 60%, #1f0808 100%);
-  padding: 80px 24px;
+  padding: 48px 24px;
   gap: 60px;
   position: relative;
   overflow: hidden;
@@ -532,9 +532,18 @@ img { display: block; max-width: 100%; }
 }
 .footer-links a:hover { color: var(--white); }
 
+.trademark-notice {
+  font-size: 0.76rem;
+  color: #6b7280;
+  max-width: 560px;
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
 .copyright {
   font-size: 0.82rem;
-  margin-top: 16px;
+  margin-top: 8px;
   border-top: 1px solid #374151;
   padding-top: 16px;
   width: 100%;
@@ -547,11 +556,9 @@ img { display: block; max-width: 100%; }
   width: auto;
   object-fit: contain;
   border-radius: 8px;
-  animation: float 4s ease-in-out infinite;
 }
 .logo-img-footer {
   height: 36px;
-  animation: float 4s ease-in-out infinite;
 }
 
 /* ===== HERO VIDEO ===== */
@@ -609,8 +616,17 @@ img { display: block; max-width: 100%; }
   background: var(--dark);
 }
 
-.sell-icon {
-  font-size: 2.4rem;
+.sell-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sell-icon-right {
+  font-size: 3rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .sell-card h3 {
