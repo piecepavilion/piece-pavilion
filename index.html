@@ -10,39 +10,31 @@
 </head>
 <body>
 
-  <!-- ===== HEADER ===== -->
-  <header id="header">
-    <nav class="nav">
-      <a href="#" class="logo">
-        <img src="logoPP1.jpg" alt="Piece Pavilion" class="logo-img" />
-      </a>
-      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-    </nav>
-  </header>
-
-  <!-- ===== MOBILE DRAWER ===== -->
-  <div class="drawer-overlay" id="drawer-overlay"></div>
-  <nav class="drawer" id="drawer">
-    <button class="drawer-close" id="drawer-close" aria-label="Close menu">&times;</button>
-    <ul class="drawer-links">
-      <li><a href="#shop">Shop Now</a></li>
+  <!-- ===== LEFT SIDEBAR NAV ===== -->
+  <nav class="sidebar" id="sidebar">
+    <a href="#" class="sidebar-logo">
+      <img src="logoPP1.jpg" alt="Piece Pavilion" class="logo-img" />
+    </a>
+    <ul class="sidebar-links">
+      <li><a href="#hero">Shop Now</a></li>
       <li><a href="#shop">What We Carry</a></li>
       <li><a href="#about">Why Shop With Us</a></li>
-      <li><a href="#sell">Sell or Consign Your LEGO</a></li>
+      <li><a href="#sell">Sell or Consign</a></li>
       <li><a href="#contact">Get in Touch</a></li>
       <li>
         <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
-           target="_blank" rel="noopener" class="btn-nav drawer-btn">
+           target="_blank" rel="noopener" class="btn-nav sidebar-btn">
           BrickLink Store &rarr;
         </a>
       </li>
     </ul>
   </nav>
 
+  <!-- ===== MAIN CONTENT WRAPPER ===== -->
+  <div class="main-content">
+
   <!-- ===== HERO ===== -->
-  <section class="hero">
+  <section class="hero" id="hero">
     <div class="hero-content">
       <span class="hero-badge">Now on BrickLink</span>
       <h1>Your LEGO Piece<br /><span class="accent">Destination</span></h1>
@@ -210,6 +202,8 @@
       <p class="copyright">&copy; 2026 Piece Pavilion. All rights reserved.</p>
     </div>
   </footer>
+
+  </div><!-- end .main-content -->
 
   <script src="script.js"></script>
 </body>
