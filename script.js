@@ -4,21 +4,31 @@ window.addEventListener('scroll', () => {
   header.classList.toggle('scrolled', window.scrollY > 10);
 });
 
-// ===== MOBILE NAV =====
-const hamburger = document.getElementById('hamburger');
-const navLinks  = document.getElementById('nav-links');
+// ===== MOBILE DRAWER =====
+const hamburger    = document.getElementById('hamburger');
+const drawer       = document.getElementById('drawer');
+const drawerOverlay = document.getElementById('drawer-overlay');
+const drawerClose  = document.getElementById('drawer-close');
 
-hamburger.addEventListener('click', () => {
-  hamburger.classList.toggle('open');
-  navLinks.classList.toggle('open');
-});
+function openDrawer() {
+  drawer.classList.add('open');
+  drawerOverlay.classList.add('open');
+  hamburger.classList.add('open');
+}
 
-// Close nav when a link is clicked
-navLinks.querySelectorAll('a').forEach(link => {
-  link.addEventListener('click', () => {
-    hamburger.classList.remove('open');
-    navLinks.classList.remove('open');
-  });
+function closeDrawer() {
+  drawer.classList.remove('open');
+  drawerOverlay.classList.remove('open');
+  hamburger.classList.remove('open');
+}
+
+hamburger.addEventListener('click', openDrawer);
+drawerClose.addEventListener('click', closeDrawer);
+drawerOverlay.addEventListener('click', closeDrawer);
+
+// Close drawer and scroll to section when a link is clicked
+drawer.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', () => closeDrawer());
 });
 
 // ===== FADE-IN ON SCROLL =====
