@@ -243,7 +243,7 @@ img { display: block; max-width: 100%; }
 
 /* ===== HERO ===== */
 .hero {
-  min-height: 70vh;
+  min-height: 80vh;
   display: flex;
   align-items: center;
   background: linear-gradient(135deg, #0f0f1a 0%, #1a0a0a 60%, #1f0808 100%);
@@ -564,11 +564,9 @@ img { display: block; max-width: 100%; }
 /* ===== HERO VIDEO ===== */
 .hero-video {
   width: 100%;
-  max-width: 520px;
+  max-width: 720px;
   border-radius: 18px;
   box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-  transform: rotate(-3deg);
-  animation: float 4s ease-in-out infinite;
 }
 
 /* ===== COMING SOON BADGE ===== */
