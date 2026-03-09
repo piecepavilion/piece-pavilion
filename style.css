@@ -80,15 +80,15 @@ img { display: block; max-width: 100%; }
 
 .btn-ghost {
   display: inline-block;
-  color: var(--dark);
+  color: var(--white);
   font-weight: 700;
   font-size: 1rem;
   padding: 14px 28px;
   border-radius: 50px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid rgba(255,255,255,0.4);
   transition: border-color 0.2s, background 0.2s;
 }
-.btn-ghost:hover { border-color: var(--red); color: var(--red); }
+.btn-ghost:hover { border-color: var(--white); color: var(--white); background: rgba(255,255,255,0.1); }
 
 .btn-secondary {
   display: inline-block;
@@ -496,6 +496,105 @@ img { display: block; max-width: 100%; }
   text-align: center;
 }
 
+/* ===== LOGO IMAGE ===== */
+.logo-img {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  animation: float 4s ease-in-out infinite;
+}
+.logo-img-footer {
+  height: 36px;
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ===== HERO VIDEO ===== */
+.hero-video {
+  width: 100%;
+  max-width: 520px;
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  transform: rotate(-3deg);
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ===== COMING SOON BADGE ===== */
+.coming-soon-badge {
+  display: inline-block;
+  margin-top: 16px;
+  background: #e5e7eb;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 50px;
+}
+.card-coming-soon { opacity: 0.75; }
+
+/* ===== SELL / CONSIGN ===== */
+.sell-section { background: var(--dark2); color: var(--white); }
+.sell-section .section-header h2 { color: var(--white); }
+.sell-section .section-header p { color: #9ca3af; }
+
+.sell-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  margin-bottom: 48px;
+}
+
+.sell-card {
+  background: var(--mid);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.sell-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+.sell-card-featured {
+  border: 2px solid var(--yellow);
+  background: var(--dark);
+}
+
+.sell-icon {
+  font-size: 2.4rem;
+}
+
+.sell-card h3 {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--white);
+}
+
+.sell-card p {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.sell-note {
+  font-size: 0.85rem !important;
+  color: var(--yellow) !important;
+  font-weight: 700;
+}
+
+.sell-cta {
+  text-align: center;
+}
+.sell-cta p {
+  color: #9ca3af;
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+
 /* ===== ANIMATIONS ===== */
 .fade-in {
   opacity: 0;
@@ -534,6 +633,7 @@ img { display: block; max-width: 100%; }
     padding: 60px 24px;
     gap: 40px;
   }
+  .hero-video { transform: none; max-width: 100%; }
   .hero-actions { justify-content: center; }
   .hero-sub { margin: 0 auto 36px; }
   .hero-content { max-width: 100%; }
