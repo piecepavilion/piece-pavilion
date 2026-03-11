@@ -416,6 +416,36 @@ img { display: block; max-width: 100%; }
 /* ===== FEATURED PIECES ===== */
 .featured { background: var(--white); }
 
+.filter-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  background: var(--light);
+  border: 2px solid transparent;
+  color: var(--muted);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 8px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.filter-tab:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+.filter-tab.active {
+  background: var(--red);
+  color: var(--white);
+  border-color: var(--red);
+}
+
 .featured-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -491,6 +521,10 @@ img { display: block; max-width: 100%; }
 }
 .featured-item:hover .featured-cta {
   letter-spacing: 0.02em;
+}
+
+.featured-item.hidden {
+  display: none;
 }
 
 .featured-store-link {

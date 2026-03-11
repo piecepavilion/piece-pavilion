@@ -42,3 +42,24 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.15 });
 
 fadeEls.forEach(el => observer.observe(el));
+
+// ===== FEATURED FILTER TABS =====
+const filterTabs = document.querySelectorAll('.filter-tab');
+const featuredItems = document.querySelectorAll('.featured-item');
+
+filterTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const filter = tab.dataset.filter;
+
+    filterTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    featuredItems.forEach(item => {
+      if (filter === 'all' || item.dataset.category === filter) {
+        item.classList.remove('hidden');
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+  });
+});
