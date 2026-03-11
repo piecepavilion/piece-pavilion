@@ -703,6 +703,85 @@ img { display: block; max-width: 100%; }
 }
 .card-coming-soon { opacity: 0.75; }
 
+/* ===== BLOG PREVIEW (HOMEPAGE) ===== */
+.blog-preview { background: var(--light); }
+
+.blog-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;
+}
+
+.blog-preview-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-decoration: none;
+  color: inherit;
+}
+.blog-preview-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.blog-preview-thumb {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+
+.blog-preview-body {
+  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-preview-date {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.blog-preview-body h3 {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--dark);
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.blog-preview-body p {
+  color: var(--muted);
+  font-size: 0.93rem;
+  line-height: 1.6;
+  flex: 1;
+  margin-bottom: 14px;
+}
+
+.blog-preview-link {
+  color: var(--red);
+  font-weight: 800;
+  font-size: 0.9rem;
+  transition: letter-spacing 0.15s;
+}
+.blog-preview-card:hover .blog-preview-link {
+  letter-spacing: 0.02em;
+}
+
+.blog-preview-more {
+  text-align: center;
+  margin-top: 40px;
+}
+
 /* ===== SELL / CONSIGN ===== */
 .sell-section { background: var(--dark2); color: var(--white); }
 .sell-section .section-header h2 { color: var(--white); }

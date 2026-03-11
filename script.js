@@ -29,7 +29,7 @@ sidebar.querySelectorAll('a[href^="#"]').forEach(link => {
 });
 
 // ===== FADE-IN ON SCROLL =====
-const fadeEls = document.querySelectorAll('.card, .feature, .featured-item, .section-header, .contact-inner h2, .contact-inner p');
+const fadeEls = document.querySelectorAll('.card, .feature, .featured-item, .blog-preview-card, .section-header, .contact-inner h2, .contact-inner p');
 fadeEls.forEach(el => el.classList.add('fade-in'));
 
 const observer = new IntersectionObserver((entries) => {
