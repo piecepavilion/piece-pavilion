@@ -228,6 +228,14 @@ img { display: block; max-width: 100%; }
   border-left-color: var(--red);
 }
 
+.sidebar-instagram {
+  color: #c13584 !important;
+  font-weight: 800 !important;
+}
+.sidebar-instagram:hover {
+  color: #833ab4 !important;
+}
+
 .sidebar-bricklink {
   padding: 16px 20px 0;
 }
