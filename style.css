@@ -651,6 +651,17 @@ img { display: block; max-width: 100%; }
 }
 .footer-links a:hover { color: var(--white); }
 
+.footer-social {
+  display: flex;
+  gap: 16px;
+  margin: 8px 0;
+}
+.footer-social a {
+  color: #9ca3af;
+  transition: color 0.2s;
+}
+.footer-social a:hover { color: var(--white); }
+
 .trademark-notice {
   font-size: 0.76rem;
   color: #6b7280;
