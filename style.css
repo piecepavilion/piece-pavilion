@@ -914,6 +914,34 @@ img { display: block; max-width: 100%; }
   margin-top: 40px;
 }
 
+/* ===== FROM OUR INSTAGRAM ===== */
+.instagram-section {
+  background: var(--light);
+}
+
+.ig-handle {
+  color: var(--red);
+  font-weight: 800;
+}
+.ig-handle:hover { opacity: 0.8; }
+
+.instagram-grid {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.instagram-embed-wrap {
+  flex: 0 1 540px;
+  min-width: 0;
+}
+
+.instagram-follow {
+  text-align: center;
+  margin-top: 36px;
+}
+
 /* ===== SELL / CONSIGN ===== */
 .sell-section { background: var(--dark2); color: var(--white); }
 .sell-section .section-header h2 { color: var(--white); }
