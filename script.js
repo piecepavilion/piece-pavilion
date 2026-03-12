@@ -28,6 +28,19 @@ sidebar.querySelectorAll('a[href^="#"]').forEach(link => {
   link.addEventListener('click', closeSidebar);
 });
 
+// ===== ANNOUNCEMENT BANNER DISMISS =====
+document.querySelectorAll('.announcement-close').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    btn.closest('.announcement-banner').classList.add('hidden');
+    sessionStorage.setItem('banner-dismissed', '1');
+  });
+});
+if (sessionStorage.getItem('banner-dismissed')) {
+  document.querySelectorAll('.announcement-banner').forEach(b => b.classList.add('hidden'));
+}
+
 // ===== FADE-IN ON SCROLL =====
 const fadeEls = document.querySelectorAll('.card, .feature, .featured-item, .blog-preview-card, .section-header, .contact-inner h2, .contact-inner p');
 fadeEls.forEach(el => el.classList.add('fade-in'));
