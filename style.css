@@ -228,14 +228,6 @@ img { display: block; max-width: 100%; }
   border-left-color: var(--red);
 }
 
-.sidebar-instagram {
-  color: #c13584 !important;
-  font-weight: 800 !important;
-}
-.sidebar-instagram:hover {
-  color: #833ab4 !important;
-}
-
 .sidebar-bricklink {
   padding: 16px 20px 0;
 }
@@ -651,6 +643,68 @@ img { display: block; max-width: 100%; }
 .featured-store-link {
   text-align: center;
   margin-top: 44px;
+}
+
+/* ===== ABOUT US ===== */
+.about-us {
+  background: var(--white);
+}
+
+.about-content {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.about-text p {
+  color: var(--mid);
+  font-size: 1.02rem;
+  line-height: 1.8;
+  margin-bottom: 1.2rem;
+}
+.about-text p:last-child { margin-bottom: 0; }
+
+.about-values {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.about-value {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--light);
+  padding: 20px;
+  border-radius: var(--radius);
+}
+
+.about-value-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.about-value h4 {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--dark);
+  margin-bottom: 4px;
+}
+
+.about-value p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .about-content {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
 }
 
 /* ===== WHY US ===== */
