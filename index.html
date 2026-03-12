@@ -95,19 +95,23 @@
   <div class="main-content">
 
   <!-- ===== ANNOUNCEMENT BANNER =====
-       To update: swap image, text, link, and dates.
-       To hide: add class "hidden" to the <a> tag below.
+       To update: swap image, text, and dates.
+       To hide: add class "hidden" to the <div> below.
        Example: class="announcement-banner hidden" -->
-  <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
-     target="_blank" rel="noopener" class="announcement-banner">
-    <img src="Photos/St Patrick Sale.png" alt="Lucky Brick Sale" class="announcement-img" />
+  <div class="announcement-banner">
+    <img src="Photos/St Patrick Sale.png" alt="Lucky Brick Sale" class="announcement-img" data-full="Photos/St Patrick Sale.png" />
     <div class="announcement-text">
       <strong>The Lucky Brick Sale!</strong>
-      <span>3/16 &ndash; 3/18 Only &mdash; Shop deals on sets, minifigs &amp; more</span>
+      <span>3/16 &ndash; 3/18 Only &mdash; Deals on sets, minifigs &amp; more</span>
     </div>
-    <span class="announcement-cta">Shop Now &rarr;</span>
     <button class="announcement-close" aria-label="Dismiss">&times;</button>
-  </a>
+  </div>
+
+  <!-- ===== FLYER LIGHTBOX ===== -->
+  <div class="lightbox" id="flyer-lightbox">
+    <button class="lightbox-close" aria-label="Close">&times;</button>
+    <img src="" alt="Sale Flyer" class="lightbox-img" />
+  </div>
 
   <!-- ===== HERO ===== -->
   <section class="hero" id="hero">

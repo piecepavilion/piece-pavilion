@@ -41,6 +41,24 @@ if (sessionStorage.getItem('banner-dismissed')) {
   document.querySelectorAll('.announcement-banner').forEach(b => b.classList.add('hidden'));
 }
 
+// ===== FLYER LIGHTBOX =====
+const lightbox = document.getElementById('flyer-lightbox');
+if (lightbox) {
+  const lightboxImg = lightbox.querySelector('.lightbox-img');
+  document.querySelectorAll('.announcement-img').forEach(img => {
+    img.addEventListener('click', () => {
+      lightboxImg.src = img.dataset.full || img.src;
+      lightbox.classList.add('open');
+    });
+  });
+  lightbox.querySelector('.lightbox-close').addEventListener('click', () => {
+    lightbox.classList.remove('open');
+  });
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) lightbox.classList.remove('open');
+  });
+}
+
 // ===== FADE-IN ON SCROLL =====
 const fadeEls = document.querySelectorAll('.card, .feature, .featured-item, .blog-preview-card, .section-header, .contact-inner h2, .contact-inner p');
 fadeEls.forEach(el => el.classList.add('fade-in'));
