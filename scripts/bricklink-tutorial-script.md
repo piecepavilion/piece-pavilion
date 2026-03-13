@@ -12,9 +12,8 @@
 ## PRE-RECORDING CHECKLIST
 
 - [ ] BrickLink open in browser (logged in)
-- [ ] Have a set search ready (e.g., Bonsai Tree 10281)
-- [ ] Have a part search ready (e.g., 2x4 brick 3001)
-- [ ] Piece Pavilion store open in a tab
+- [ ] Piece Pavilion store page open: store.bricklink.com/PiecePavilion
+- [ ] Pick a set currently in your store inventory to demo (e.g., Series 28 71051)
 - [ ] Clean desktop, notifications off
 - [ ] Mic tested
 
@@ -24,57 +23,53 @@
 
 **[0:00 - 0:10] HOOK**
 
-**[Screen: BrickLink homepage]**
+**[Screen: Piece Pavilion BrickLink store page]**
 
-> "Need a specific LEGO piece and can't find it anywhere? Let me introduce you to BrickLink — the world's largest LEGO marketplace. Here's how to buy on it in under two minutes."
-
----
-
-**[0:10 - 0:25] SEARCH**
-
-**[Screen: Type a set number into the search bar, e.g., "10281"]**
-
-> "Search works just like you'd expect. Type in a set number, a part number, or just describe what you're looking for. Let me search the Bonsai Tree."
-
-**[Click into the result]**
-
-> "Every item has a catalog page showing photos, details, and — this is the good part — every store that has it in stock right now."
+> "Need a specific LEGO piece and can't find it anywhere? Let me show you how easy it is to order on BrickLink. We'll find a set in our store and check out — takes two minutes."
 
 ---
 
-**[0:25 - 0:45] PICK A SELLER**
+**[0:10 - 0:30] BROWSE OUR STORE**
 
-**[Screen: Scroll through the 'For Sale' listings]**
+**[Screen: Navigate through Piece Pavilion's store categories]**
 
-> "You'll see prices, condition — new or used — and each seller's feedback score. Look for stores with high ratings and a solid number of orders. That's your trust signal."
+> "This is our store — Piece Pavilion on BrickLink. We carry sets, individual parts, minifigures, keychains, and custom builds. Everything is sorted into categories so you can browse, or you can search for something specific."
 
-**[Hover over a seller's feedback]**
+**[Screen: Search or click into a set you currently have listed, e.g., Series 28 Minifigures 71051]**
 
-> "Quick tip: used LEGO is perfectly fine for building. It's plastic — it doesn't wear out. Save 'new' for display pieces."
-
----
-
-**[0:45 - 1:05] PLACE YOUR ORDER**
-
-**[Screen: Add item to cart, show cart page]**
-
-> "Add to cart, just like any other site. One thing that's different: each store has its own cart. So try to buy everything from one seller to save on shipping."
-
-**[Screen: Click checkout]**
-
-> "When you check out, the seller sends you an invoice with shipping included. You pay — most stores take PayPal — and your bricks are on the way. Domestic orders usually arrive in about a week."
+> "Let's grab this one. You can see the photos, condition — new or used — price, and how many we have in stock."
 
 ---
 
-**[1:05 - 1:25] PIECE PAVILION PLUG + CLOSE**
+**[0:30 - 0:50] ADD TO CART + PRO TIP**
 
-**[Screen: Navigate to Piece Pavilion's BrickLink store]**
+**[Screen: Add the set to cart, then browse a couple more items]**
 
-> "If you're looking for a good store to start with — we'd love to be it. Piece Pavilion is family-owned, every piece is quality-checked, and we carry thousands of parts, sets, and minifigures so you can get what you need in one order."
+> "Add to cart — just like any other site. Now here's a tip: since each BrickLink store has its own cart, the more you buy from one store, the more you save on shipping. So while you're here, grab those parts or minifigures you've been eyeing too."
 
-**[Screen: Show the store inventory briefly]**
+**[Screen: Show a few more items being added]**
 
-> "Check us out at piecepavilion.com or find us directly on BrickLink. Link's in the bio."
+> "Every piece in our store is quality-checked before it ships, so what you see is what you get."
+
+---
+
+**[0:50 - 1:10] CHECKOUT**
+
+**[Screen: Open the cart, review items]**
+
+> "When you're ready, hit checkout. One thing that's different from Amazon — you don't pay right away. We'll send you an invoice with shipping included. You pay through PayPal, and your bricks are on the way."
+
+**[Screen: Show the checkout / order submission]**
+
+> "Domestic orders usually arrive in about a week. That's it — that's the whole process."
+
+---
+
+**[1:10 - 1:25] CLOSE**
+
+**[Screen: Piece Pavilion store page or piecepavilion.com]**
+
+> "Piece Pavilion is family-owned, based in Massachusetts, and we started this because we love building just as much as you do. Find us on BrickLink or at piecepavilion.com — link's in the bio."
 
 ---
 
