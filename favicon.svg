@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Piece Pavilion">
+  <rect width="32" height="32" rx="7" fill="#e3000b"/>
+  <g fill="#ffffff">
+    <!-- roof -->
+    <path d="M16 5 L5.5 13.5 L26.5 13.5 Z"/>
+    <!-- architrave beam -->
+    <rect x="6" y="14" width="20" height="2.6" rx="0.7"/>
+    <!-- columns -->
+    <rect x="8" y="17.4" width="2.8" height="7.2" rx="0.6"/>
+    <rect x="14.6" y="17.4" width="2.8" height="7.2" rx="0.6"/>
+    <rect x="21.2" y="17.4" width="2.8" height="7.2" rx="0.6"/>
+    <!-- base -->
+    <rect x="6" y="25" width="20" height="2.6" rx="0.7"/>
+  </g>
+</svg>

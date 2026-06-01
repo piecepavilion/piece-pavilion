@@ -8,6 +8,12 @@
   <meta name="keywords" content="LEGO bricks, BrickLink store, LEGO sets, bulk LEGO, LEGO parts, buy LEGO, sell LEGO, consign LEGO, Piece Pavilion" />
   <link rel="canonical" href="https://piecepavilion.com/" />
 
+  <!-- Favicon / tab identity -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/logoPP1.jpg" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#e3000b" />
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://piecepavilion.com/" />
@@ -55,12 +61,11 @@
   </script>
 
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
 <body>
-
-  <!-- ===== SIDEBAR TOGGLE TAB ===== -->
-  <button class="sidebar-tab" id="sidebar-tab" aria-label="Toggle menu">&#9776;</button>
 
   <!-- ===== SIDEBAR OVERLAY ===== -->
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -99,11 +104,11 @@
        To update: swap image, text, and dates.
        To hide: add class "hidden" to the <div> below.
        Example: class="announcement-banner hidden" -->
-  <div class="announcement-banner hidden">
-    <div class="announcement-text">
-      <strong>Lucky Brick at the End of the Rainbow Sale (3/16&ndash;3/18)</strong>
-      <span>10% off everything (sets excluded)</span>
-    </div>
+  <div class="announcement-banner">
+    <a class="announcement-text" href="/blog/summer-lego-building-ideas/">
+      <strong>&#10024; New on the Blog: 10 Summer LEGO Building Ideas</strong>
+      <span>Read the latest &rarr;</span>
+    </a>
     <button class="announcement-close" aria-label="Dismiss">&times;</button>
   </div>
 
@@ -112,6 +117,46 @@
     <button class="lightbox-close" aria-label="Close">&times;</button>
     <img src="" alt="Sale Flyer" class="lightbox-img" />
   </div>
+
+  <!-- ===== STICKY HEADER ===== -->
+  <header class="site-header" id="site-header">
+    <div class="header-inner">
+      <a href="/" class="header-brand" aria-label="Piece Pavilion home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="#14161d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+              <circle cx="24" cy="5.5" r="1.7" fill="#e3000b"/>
+              <path d="M24 6 L7 19 L41 19 Z" fill="#e3000b"/>
+              <rect x="7" y="19" width="34" height="4.2" rx="1.2" fill="#e3000b"/>
+              <rect x="10" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+              <rect x="21.5" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+              <rect x="33" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+              <rect x="7" y="36.5" width="34" height="4" rx="1.2" fill="#1a8a3c"/>
+              <rect x="4.5" y="40.5" width="39" height="4" rx="1.2" fill="#0057a8"/>
+            </g>
+          </svg>
+        </span>
+        <span class="brand-word">Piece&#8203;Pavilion</span>
+      </a>
+      <nav class="header-nav">
+        <a href="#shop">What We Carry</a>
+        <a href="#featured">Featured</a>
+        <a href="#about">About</a>
+        <a href="/blog/">Blog <span class="nav-new">New</span></a>
+        <a href="#sell">Sell</a>
+      </nav>
+      <div class="header-actions">
+        <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
+           target="_blank" rel="noopener" class="header-rating"
+           aria-label="100% positive feedback across 15 reviews">
+          <span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 100%
+        </a>
+        <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
+           target="_blank" rel="noopener" class="btn-primary header-shop">Shop Now &rarr;</a>
+        <button class="header-burger" id="header-burger" aria-label="Open menu">&#9776;</button>
+      </div>
+    </div>
+  </header>
 
   <!-- ===== HERO ===== -->
   <section class="hero" id="hero">
@@ -129,11 +174,45 @@
         </a>
         <a href="#shop" class="btn-ghost">See What We Carry</a>
       </div>
+      <div class="hero-trust">
+        <span><span class="star">&#9733;</span> 100% positive feedback</span>
+        <span class="dot">&bull;</span>
+        <span>33 orders shipped</span>
+        <span class="dot">&bull;</span>
+        <span>Ships in 1&ndash;2 days</span>
+        <span class="dot">&bull;</span>
+        <span>Every piece hand-checked</span>
+      </div>
     </div>
     <div class="hero-visual" aria-hidden="true">
-      <video class="hero-video" autoplay muted loop playsinline>
-        <source src="gemini_generated_video_1C61A175.mov" type="video/mp4" />
-      </video>
+      <div class="brick-grid">
+        <div class="b b1"></div><div class="b b2"></div><div class="b b3"></div>
+        <div class="b b4"></div><div class="b b5"></div><div class="b b6"></div>
+        <div class="b b7"></div><div class="b b8"></div><div class="b b9"></div>
+        <div class="b b10"></div><div class="b b11"></div><div class="b b12"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SOCIAL PROOF BAR ===== -->
+  <section class="proof-bar" aria-label="Store highlights">
+    <div class="proof-inner">
+      <div class="proof-stat">
+        <div class="proof-num"><span class="star">&#9733;</span> 100%</div>
+        <div class="proof-label">Positive Feedback</div>
+      </div>
+      <div class="proof-stat">
+        <div class="proof-num">33</div>
+        <div class="proof-label">Orders Shipped</div>
+      </div>
+      <div class="proof-stat">
+        <div class="proof-num">15</div>
+        <div class="proof-label">5-Star Reviews</div>
+      </div>
+      <div class="proof-stat">
+        <div class="proof-num">1&ndash;2</div>
+        <div class="proof-label">Day Handling</div>
+      </div>
     </div>
   </section>
 
@@ -373,21 +452,27 @@
         </div>
         <div class="about-values">
           <div class="about-value">
-            <span class="about-value-icon">&#129521;</span>
+            <span class="icon-tile" style="background:#fff0f0; color:#e3000b;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="8" y="13" width="8" height="8" rx="1"/></svg>
+            </span>
             <div>
               <h4>Built by a Builder</h4>
               <p>Founded by a young entrepreneur with a real passion for LEGO — not a corporation.</p>
             </div>
           </div>
           <div class="about-value">
-            <span class="about-value-icon">&#128106;</span>
+            <span class="icon-tile" style="background:#fff8e0; color:#d4a000;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
             <div>
               <h4>Family First</h4>
               <p>Every order is handled by our family. We take pride in every package that goes out.</p>
             </div>
           </div>
           <div class="about-value">
-            <span class="about-value-icon">&#127968;</span>
+            <span class="icon-tile" style="background:#f0fff4; color:#1a8a3c;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
             <div>
               <h4>Based in Massachusetts</h4>
               <p>A small, local business shipping nationwide — with the personal touch only a family store can offer.</p>
@@ -407,22 +492,30 @@
       </div>
       <div class="features-grid">
         <div class="feature">
-          <div class="feature-icon">&#10003;</div>
+          <div class="feature-icon" style="background:#f0fff4; color:#1a8a3c;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
           <h4>Quality Checked</h4>
           <p>Every piece is inspected before it ships. No surprises in your order.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">&#128640;</div>
+          <div class="feature-icon" style="background:#fff0f0; color:#e3000b;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
           <h4>Fast Shipping</h4>
           <p>Orders packed and out the door quickly — so you can start building sooner.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">&#128269;</div>
+          <div class="feature-icon" style="background:#eef4fb; color:#0057a8;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
           <h4>Huge Selection</h4>
           <p>Thousands of parts across every color and theme, constantly updated.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">&#128106;</div>
+          <div class="feature-icon" style="background:#fff8e0; color:#d4a000;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
           <h4>Family Owned &amp; Operated</h4>
           <p>We're not a faceless warehouse — we're a family that loves bricks as much as you do.</p>
         </div>
@@ -542,14 +635,18 @@
         <div class="sell-card">
           <div class="sell-card-header">
             <h3>We Buy Your Bricks</h3>
-            <span class="sell-icon-right">&#128230;</span>
+            <span class="sell-icon-right" style="color:#cbd0d8;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+            </span>
           </div>
           <p>Don't know what to do with your old sets or loose pieces? We'll buy them outright. No sorting required — just box them up and we'll handle the rest. Fast, easy, and fair.</p>
         </div>
         <div class="sell-card sell-card-featured">
           <div class="sell-card-header">
             <h3>Consignment Program</h3>
-            <span class="sell-icon-right">&#128176;</span>
+            <span class="sell-icon-right" style="color:#ffce00;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.4" fill="currentColor"/></svg>
+            </span>
           </div>
           <p>Have a higher-value set or rare find? List it through us on BrickLink and we'll sell it on your behalf. We split the profits — you get more than a quick sale, we do the work.</p>
           <p class="sell-note">Ideal for retired sets, minifigures, and premium lots.</p>
@@ -582,7 +679,7 @@
       <a href="#" class="logo logo-footer">
         <img src="logoPP1.jpg" alt="Piece Pavilion" class="logo-img logo-img-footer" />
       </a>
-      <p class="footer-tagline">Your brick destination.</p>
+      <p class="footer-tagline">Where every piece finds its place.</p>
       <nav class="footer-links">
         <a href="#shop">Shop</a>
         <a href="#featured">Featured</a>

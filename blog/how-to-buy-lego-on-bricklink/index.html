@@ -53,12 +53,17 @@
 
   <link rel="stylesheet" href="../../style.css" />
   <link rel="stylesheet" href="../blog.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <!-- Favicon / tab identity -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/logoPP1.jpg" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#e3000b" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
 <body>
-
-  <!-- ===== SIDEBAR TOGGLE TAB ===== -->
-  <button class="sidebar-tab" id="sidebar-tab" aria-label="Toggle menu">&#9776;</button>
 
   <!-- ===== SIDEBAR OVERLAY ===== -->
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -94,17 +99,57 @@
   <div class="main-content">
 
   <!-- ===== ANNOUNCEMENT BANNER ===== -->
-  <div class="announcement-banner hidden">
-    <div class="announcement-text">
-      <strong>Lucky Brick at the End of the Rainbow Sale (3/16&ndash;3/18)</strong>
-      <span>10% off everything (sets excluded)</span>
-    </div>
+  <div class="announcement-banner">
+    <a class="announcement-text" href="/blog/summer-lego-building-ideas/">
+      <strong>&#10024; New on the Blog: 10 Summer LEGO Building Ideas</strong>
+      <span>Read the latest &rarr;</span>
+    </a>
     <button class="announcement-close" aria-label="Dismiss">&times;</button>
   </div>
   <div class="lightbox" id="flyer-lightbox">
     <button class="lightbox-close" aria-label="Close">&times;</button>
     <img src="" alt="Sale Flyer" class="lightbox-img" />
   </div>
+
+  <!-- ===== STICKY HEADER ===== -->
+  <header class="site-header" id="site-header">
+    <div class="header-inner">
+      <a href="/" class="header-brand" aria-label="Piece Pavilion home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="#14161d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+              <circle cx="24" cy="5.5" r="1.7" fill="#e3000b"/>
+              <path d="M24 6 L7 19 L41 19 Z" fill="#e3000b"/>
+              <rect x="7" y="19" width="34" height="4.2" rx="1.2" fill="#e3000b"/>
+              <rect x="10" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+              <rect x="21.5" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+              <rect x="33" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+              <rect x="7" y="36.5" width="34" height="4" rx="1.2" fill="#1a8a3c"/>
+              <rect x="4.5" y="40.5" width="39" height="4" rx="1.2" fill="#0057a8"/>
+            </g>
+          </svg>
+        </span>
+        <span class="brand-word">Piece&#8203;Pavilion</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/#shop">What We Carry</a>
+        <a href="/#featured">Featured</a>
+        <a href="/#about">About</a>
+        <a href="/blog/">Blog <span class="nav-new">New</span></a>
+        <a href="/#sell">Sell</a>
+      </nav>
+      <div class="header-actions">
+        <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
+           target="_blank" rel="noopener" class="header-rating"
+           aria-label="100% positive feedback across 15 reviews">
+          <span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 100%
+        </a>
+        <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
+           target="_blank" rel="noopener" class="btn-primary header-shop">Shop Now &rarr;</a>
+        <button class="header-burger" id="header-burger" aria-label="Open menu">&#9776;</button>
+      </div>
+    </div>
+  </header>
 
   <!-- ===== BREADCRUMBS ===== -->
   <div class="breadcrumbs">
@@ -268,7 +313,7 @@
       <a href="/" class="logo logo-footer">
         <img src="../../logoPP1.jpg" alt="Piece Pavilion" class="logo-img logo-img-footer" />
       </a>
-      <p class="footer-tagline">Your brick destination.</p>
+      <p class="footer-tagline">Where every piece finds its place.</p>
       <nav class="footer-links">
         <a href="/#shop">Shop</a>
         <a href="/#featured">Featured</a>

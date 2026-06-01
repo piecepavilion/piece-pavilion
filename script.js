@@ -1,5 +1,6 @@
-// ===== SIDEBAR TOGGLE =====
-const sidebarTab     = document.getElementById('sidebar-tab');
+// ===== SIDEBAR / DRAWER TOGGLE =====
+const sidebarTab     = document.getElementById('sidebar-tab');     // legacy left-edge tab (blog pages)
+const headerBurger   = document.getElementById('header-burger');   // new header hamburger
 const sidebar        = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const sidebarClose   = document.getElementById('sidebar-close');
@@ -7,26 +8,38 @@ const sidebarClose   = document.getElementById('sidebar-close');
 function openSidebar() {
   sidebar.classList.add('open');
   sidebarOverlay.classList.add('open');
-  sidebarTab.classList.add('open');
+  if (sidebarTab) sidebarTab.classList.add('open');
 }
 
 function closeSidebar() {
   sidebar.classList.remove('open');
   sidebarOverlay.classList.remove('open');
-  sidebarTab.classList.remove('open');
+  if (sidebarTab) sidebarTab.classList.remove('open');
 }
 
-sidebarTab.addEventListener('click', () => {
+function toggleSidebar() {
   sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-});
+}
 
-sidebarClose.addEventListener('click', closeSidebar);
-sidebarOverlay.addEventListener('click', closeSidebar);
+if (sidebar) {
+  if (sidebarTab)    sidebarTab.addEventListener('click', toggleSidebar);
+  if (headerBurger)  headerBurger.addEventListener('click', toggleSidebar);
+  if (sidebarClose)  sidebarClose.addEventListener('click', closeSidebar);
+  if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
-// Close on link click
-sidebar.querySelectorAll('a[href^="#"]').forEach(link => {
-  link.addEventListener('click', closeSidebar);
-});
+  // Close on link click
+  sidebar.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', closeSidebar);
+  });
+}
+
+// ===== STICKY HEADER SHRINK ON SCROLL =====
+const siteHeader = document.getElementById('site-header');
+if (siteHeader) {
+  const onScroll = () => siteHeader.classList.toggle('scrolled', window.scrollY > 40);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+}
 
 // ===== ANNOUNCEMENT BANNER DISMISS =====
 document.querySelectorAll('.announcement-close').forEach(btn => {
