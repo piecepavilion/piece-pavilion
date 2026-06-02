@@ -269,6 +269,25 @@
     </div>
   </section>
 
+  <!-- ===== NEWSLETTER (wired to Kit form 9514041) ===== -->
+  <section class="newsletter section" id="newsletter">
+    <div class="container newsletter-inner">
+      <div class="newsletter-copy">
+        <h2>Never miss a brick drop</h2>
+        <p>New inventory, restocks, and subscriber-only deals — straight to your inbox.</p>
+      </div>
+      <form class="newsletter-form seva-form formkit-form"
+            action="https://app.kit.com/forms/9514041/subscriptions" method="post"
+            data-sv-form="9514041" data-uid="42e73e4009" data-format="inline" data-version="5">
+        <label class="visually-hidden" for="nl-email">Email address</label>
+        <input id="nl-email" class="formkit-input" type="email" name="email_address" required placeholder="you@email.com" autocomplete="email" aria-label="Email address" />
+        <button type="submit" class="btn-primary" data-element="submit">Subscribe &rarr;</button>
+        <ul class="formkit-alert formkit-alert-error" data-element="errors" data-group="alert"></ul>
+        <p class="newsletter-note">No spam — just drops and deals. Unsubscribe anytime.</p>
+      </form>
+    </div>
+  </section>
+
   <!-- ===== FOOTER ===== -->
   <footer class="footer">
     <div class="container footer-inner">
@@ -298,6 +317,7 @@
 
   </div><!-- end .main-content -->
 
+  <script src="https://f.convertkit.com/ckjs/ck.5.js"></script>
   <script src="../../script.js"></script>
 </body>
 </html>
