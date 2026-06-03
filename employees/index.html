@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — Employees</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:#f7f8fa;color:#14161d;min-height:100vh}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    .bar{background:linear-gradient(135deg,#e3000b,#9b0008);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:14px}
+    .bar svg{height:40px;width:auto}
+    .bar .t{line-height:1.1}
+    .bar .t .sub{font-size:.8rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.08em}
+    .bar h1{font-size:1.5rem}
+    .wrap{max-width:1000px;margin:0 auto;padding:36px 24px 60px}
+    .lead{color:#3a4150;margin-bottom:28px;font-size:1.05rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+    .tile{background:#fff;border-radius:16px;padding:26px;box-shadow:0 6px 20px rgba(20,22,29,.07);
+      display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;border:1px solid #eef0f3}
+    .tile:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(20,22,29,.12)}
+    .tile .ico{font-size:2rem;margin-bottom:14px}
+    .tile h3{font-size:1.2rem;margin-bottom:8px}
+    .tile p{color:#6b7280;font-size:.92rem;flex:1;line-height:1.55}
+    .tile .go{margin-top:16px;font-weight:800;color:#e3000b;font-size:.9rem}
+    .tile.soon{opacity:.6}
+    .tile.soon .go{color:#9ca3af}
+    .note{margin-top:32px;font-size:.82rem;color:#9ca3af;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g stroke="#14161d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+        <circle cx="24" cy="5.5" r="1.7" fill="#fff"/>
+        <path d="M24 6 L7 19 L41 19 Z" fill="#fff"/>
+        <rect x="7" y="19" width="34" height="4.2" rx="1.2" fill="#fff"/>
+        <rect x="10" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+        <rect x="21.5" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+        <rect x="33" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
+        <rect x="7" y="36.5" width="34" height="4" rx="1.2" fill="#1a8a3c"/>
+        <rect x="4.5" y="40.5" width="39" height="4" rx="1.2" fill="#0057a8"/>
+      </g>
+    </svg>
+    <div class="t"><div class="sub">Employees</div><h1>Piece Pavilion</h1></div>
+  </div>
+
+  <div class="wrap">
+    <p class="lead">Welcome, team. Internal tools and dashboards — staff access only.</p>
+    <div class="grid">
+
+      <a class="tile" href="https://lookerstudio.google.com/reporting/a5ce8b82-2836-4fcb-bfd4-1239859e2e24" target="_blank" rel="noopener">
+        <div class="ico">📊</div>
+        <h3>KPI Dashboard</h3>
+        <p>Live inventory + shipping KPIs: stock value, low-stock, aging lots, orders in transit, and trends.</p>
+        <span class="go">Open dashboard &rarr;</span>
+      </a>
+
+      <a class="tile" href="https://docs.google.com/spreadsheets/d/1YvWzKs_lGC539pMlYhausqp52O2VNmMgKPWOTaju8fU/edit" target="_blank" rel="noopener">
+        <div class="ico">📦</div>
+        <h3>Inventory</h3>
+        <p>Full live inventory from BrickLink — search, sort, restock list, and aging stock.</p>
+        <span class="go">Open inventory &rarr;</span>
+      </a>
+
+      <a class="tile" href="https://docs.google.com/spreadsheets/d/1rMNHgywvTNQv9ivBVinMy9nPZIjeCFadOjdx9Lw77f4/edit" target="_blank" rel="noopener">
+        <div class="ico">🚚</div>
+        <h3>Shipment Tracking</h3>
+        <p>Every order's scan status from LetterTrack Pro — in transit, delivered, and anything that needs attention.</p>
+        <span class="go">Open tracker &rarr;</span>
+      </a>
+
+      <a class="tile" href="https://www.bricklink.com/v2/mystore/inventory.page" target="_blank" rel="noopener">
+        <div class="ico">🛒</div>
+        <h3>BrickLink Store</h3>
+        <p>Manage listings, orders, and inventory directly on BrickLink.</p>
+        <span class="go">Open BrickLink &rarr;</span>
+      </a>
+
+    </div>
+    <p class="note">🔒 Piece Pavilion internal — for staff use only.</p>
+  </div>
+</body>
+</html>

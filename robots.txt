@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /employees/
 
 Sitemap: https://piecepavilion.com/sitemap.xml
