@@ -18,19 +18,25 @@
     .bar .t{line-height:1.1}
     .bar .t .sub{font-size:.8rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.08em}
     .bar h1{font-size:1.5rem}
-    .wrap{max-width:1000px;margin:0 auto;padding:36px 24px 60px}
-    .lead{color:#3a4150;margin-bottom:28px;font-size:1.05rem}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-    .tile{background:#fff;border-radius:16px;padding:26px;box-shadow:0 6px 20px rgba(20,22,29,.07);
-      display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;border:1px solid #eef0f3}
-    .tile:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(20,22,29,.12)}
-    .tile .ico{font-size:2rem;margin-bottom:14px}
-    .tile h3{font-size:1.2rem;margin-bottom:8px}
-    .tile p{color:#6b7280;font-size:.92rem;flex:1;line-height:1.55}
-    .tile .go{margin-top:16px;font-weight:800;color:#e3000b;font-size:.9rem}
-    .tile.soon{opacity:.6}
-    .tile.soon .go{color:#9ca3af}
-    .note{margin-top:32px;font-size:.82rem;color:#9ca3af;text-align:center}
+    .wrap{max-width:1140px;margin:0 auto;padding:30px 24px 60px}
+    .lead{color:#3a4150;margin-bottom:22px;font-size:1.05rem}
+    .dash{background:#fff;border-radius:16px;box-shadow:0 6px 20px rgba(20,22,29,.07);border:1px solid #eef0f3;padding:14px;margin-bottom:26px}
+    .dash-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 8px 12px}
+    .dash-head h2{font-size:1.2rem}
+    .dash-head a{font-size:.82rem;font-weight:800;color:#e3000b;text-decoration:none;white-space:nowrap}
+    .dash-head a:hover{text-decoration:underline}
+    .dash iframe{width:100%;height:760px;border:0;border-radius:10px;display:block;background:#f7f8fa}
+    @media(max-width:700px){.dash iframe{height:620px}}
+    .sub-h{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.15rem;margin:6px 4px 14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+    .tile{background:#fff;border-radius:14px;padding:22px;box-shadow:0 4px 16px rgba(20,22,29,.06);
+      display:flex;flex-direction:column;text-decoration:none;color:inherit;border:1px solid #eef0f3;transition:transform .15s,box-shadow .15s}
+    .tile:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(20,22,29,.12)}
+    .tile .ico{font-size:1.7rem;margin-bottom:10px}
+    .tile h3{font-size:1.1rem;margin-bottom:6px}
+    .tile p{color:#6b7280;font-size:.9rem;flex:1;line-height:1.5}
+    .tile .go{margin-top:12px;font-weight:800;color:#e3000b;font-size:.85rem}
+    .note{margin-top:30px;font-size:.82rem;color:#9ca3af;text-align:center}
   </style>
 </head>
 <body>
@@ -51,46 +57,50 @@
   </div>
 
   <div class="wrap">
-    <p class="lead">Welcome, team. Internal tools and dashboards — staff access only.</p>
+    <p class="lead">Welcome, team. Live sales, inventory, and shipping — updated automatically every morning.</p>
+
+    <!-- ORDER KPIs (embedded Looker report) -->
+    <div class="dash">
+      <div class="dash-head">
+        <h2>📈 Order KPIs</h2>
+        <a href="https://lookerstudio.google.com/reporting/afbe5220-2877-41be-999f-5b11e1059555" target="_blank" rel="noopener">Open full report ↗</a>
+      </div>
+      <iframe src="https://datastudio.google.com/embed/reporting/afbe5220-2877-41be-999f-5b11e1059555/page/GQJ0F" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Order KPIs"></iframe>
+    </div>
+
+    <!-- INVENTORY KPIs (embedded Looker report) -->
+    <div class="dash">
+      <div class="dash-head">
+        <h2>📊 Inventory KPIs</h2>
+        <a href="https://lookerstudio.google.com/reporting/a5ce8b82-2836-4fcb-bfd4-1239859e2e24" target="_blank" rel="noopener">Open full report ↗</a>
+      </div>
+      <iframe src="https://datastudio.google.com/embed/reporting/a5ce8b82-2836-4fcb-bfd4-1239859e2e24/page/4jC0F" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Inventory KPIs"></iframe>
+    </div>
+
+    <!-- QUICK LINKS -->
+    <h2 class="sub-h">Quick links</h2>
     <div class="grid">
-
-      <a class="tile" href="https://lookerstudio.google.com/reporting/a5ce8b82-2836-4fcb-bfd4-1239859e2e24" target="_blank" rel="noopener">
-        <div class="ico">📊</div>
-        <h3>Inventory KPIs</h3>
-        <p>Live stock value, low-stock and aging lots, and value by category.</p>
-        <span class="go">Open dashboard &rarr;</span>
-      </a>
-
-      <a class="tile" href="https://lookerstudio.google.com/reporting/afbe5220-2877-41be-999f-5b11e1059555" target="_blank" rel="noopener">
-        <div class="ico">📈</div>
-        <h3>Order KPIs</h3>
-        <p>Sales by month, order counts &amp; dollars, average order value, and a heat map of where orders ship.</p>
-        <span class="go">Open dashboard &rarr;</span>
-      </a>
-
       <a class="tile" href="https://docs.google.com/spreadsheets/d/1YvWzKs_lGC539pMlYhausqp52O2VNmMgKPWOTaju8fU/edit" target="_blank" rel="noopener">
         <div class="ico">📦</div>
         <h3>Inventory</h3>
-        <p>Full live inventory from BrickLink — search, sort, restock list, and aging stock.</p>
-        <span class="go">Open inventory &rarr;</span>
+        <p>Full live inventory — search, sort, restock and aging lists.</p>
+        <span class="go">Open sheet &rarr;</span>
       </a>
-
       <a class="tile" href="https://docs.google.com/spreadsheets/d/1rMNHgywvTNQv9ivBVinMy9nPZIjeCFadOjdx9Lw77f4/edit" target="_blank" rel="noopener">
         <div class="ico">🚚</div>
         <h3>Shipment Tracking</h3>
-        <p>Every order's scan status from LetterTrack Pro — in transit, delivered, and anything that needs attention.</p>
+        <p>Order scan status — in transit, delivered, needs attention.</p>
         <span class="go">Open tracker &rarr;</span>
       </a>
-
       <a class="tile" href="https://www.bricklink.com/v2/mystore/inventory.page" target="_blank" rel="noopener">
         <div class="ico">🛒</div>
         <h3>BrickLink Store</h3>
-        <p>Manage listings, orders, and inventory directly on BrickLink.</p>
+        <p>Manage listings, orders, and inventory on BrickLink.</p>
         <span class="go">Open BrickLink &rarr;</span>
       </a>
-
     </div>
-    <p class="note">🔒 Piece Pavilion internal — for staff use only.</p>
+
+    <p class="note">🔒 Piece Pavilion internal — staff only. Charts load for signed-in team members.</p>
   </div>
 </body>
 </html>
