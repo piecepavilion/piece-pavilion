@@ -89,7 +89,7 @@ fadeEls.forEach(el => observer.observe(el));
 
 // ===== FEATURED FILTER TABS =====
 const filterTabs = document.querySelectorAll('.filter-tab');
-const featuredItems = document.querySelectorAll('.featured-item');
+const featuredItems = document.querySelectorAll('#featured-grid .featured-item');
 
 filterTabs.forEach(tab => {
   tab.addEventListener('click', () => {
