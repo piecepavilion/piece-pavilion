@@ -21,7 +21,8 @@
       background-attachment:fixed;
       display:flex;align-items:flex-start;justify-content:center;padding:40px 18px 60px}
     .card{width:100%;max-width:460px;text-align:center}
-    .mark{height:64px;width:auto;margin:0 auto 14px;display:block}
+    .mark{height:92px;width:92px;margin:0 auto 14px;display:block;border-radius:50%;
+      box-shadow:0 8px 22px rgba(20,22,29,.22)}
     h1{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.9rem;color:#14161d}
     .tag{font-weight:700;color:#2c313c;margin:4px 0 4px;font-size:.95rem}
     .rating{font-size:.85rem;font-weight:800;color:#14161d;margin-bottom:22px}
@@ -41,18 +42,7 @@
 </head>
 <body>
   <main class="card">
-    <svg class="mark" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-label="Piece Pavilion">
-      <g stroke="#14161d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
-        <circle cx="24" cy="5.5" r="1.7" fill="#e3000b"/>
-        <path d="M24 6 L7 19 L41 19 Z" fill="#e3000b"/>
-        <rect x="7" y="19" width="34" height="4.2" rx="1.2" fill="#e3000b"/>
-        <rect x="10" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
-        <rect x="21.5" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
-        <rect x="33" y="23.5" width="5" height="13" rx="1.2" fill="#ffce00"/>
-        <rect x="7" y="36.5" width="34" height="4" rx="1.2" fill="#1a8a3c"/>
-        <rect x="4.5" y="40.5" width="39" height="4" rx="1.2" fill="#0057a8"/>
-      </g>
-    </svg>
+    <img class="mark" src="/logo-white.png" alt="Piece Pavilion" />
     <h1>Piece Pavilion</h1>
     <p class="tag">Where every piece finds its place.</p>
     <p class="rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 100% positive on BrickLink</p>

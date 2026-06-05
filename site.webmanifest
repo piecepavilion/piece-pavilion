@@ -4,7 +4,7 @@
   "description": "Family-owned BrickLink store — LEGO bricks, sets, and bulk lots.",
   "icons": [
     { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
-    { "src": "/logoPP1.jpg", "sizes": "512x512", "type": "image/jpeg" }
+    { "src": "/logo-white.png", "sizes": "512x512", "type": "image/jpeg" }
   ],
   "theme_color": "#e3000b",
   "background_color": "#ffffff",
