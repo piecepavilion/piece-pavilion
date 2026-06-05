@@ -9,6 +9,14 @@
   <link rel="canonical" href="https://piecepavilion.com/links/" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#e3000b" />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-X3DK777DPM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-X3DK777DPM');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -68,5 +76,19 @@
 
     <p class="foot">Follow <a href="https://www.instagram.com/piecepavilion" target="_blank" rel="noopener">@piecepavilion</a></p>
   </main>
+  <script>
+    // Track which link-in-bio button gets tapped, and flag BrickLink clicks
+    // as conversions (same `bricklink_click` event used site-wide).
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a');
+      if (!a || typeof gtag !== 'function') return;
+      var href = a.getAttribute('href') || '';
+      var label = (a.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+      gtag('event', 'link_in_bio_click', { link_url: href, link_text: label });
+      if (href.indexOf('store.bricklink.com') > -1) {
+        gtag('event', 'bricklink_click', { link_url: href, click_location: 'link_in_bio' });
+      }
+    }, { capture: true });
+  </script>
 </body>
 </html>

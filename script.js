@@ -87,6 +87,23 @@ const observer = new IntersectionObserver((entries) => {
 
 fadeEls.forEach(el => observer.observe(el));
 
+// ===== BRICKLINK OUTBOUND CLICK TRACKING =====
+// Fires a `bricklink_click` GA4 event on any link to the BrickLink store.
+// Mark this event as a Key Event in GA4 (Admin > Events) to measure conversions.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href*="store.bricklink.com"]');
+  if (!a || typeof gtag !== 'function') return;
+  const href = a.getAttribute('href') || '';
+  const itemMatch = href.match(/itemID=(\d+)/);
+  gtag('event', 'bricklink_click', {
+    link_url: href,
+    item_id: itemMatch ? itemMatch[1] : '',
+    link_text: (a.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+    click_location: itemMatch ? 'featured_product' : 'shop_cta',
+    page_path: location.pathname
+  });
+}, { capture: true });
+
 // ===== FEATURED FILTER TABS =====
 const filterTabs = document.querySelectorAll('.filter-tab');
 const featuredItems = document.querySelectorAll('#featured-grid .featured-item');
