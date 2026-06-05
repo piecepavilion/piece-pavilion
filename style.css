@@ -173,8 +173,8 @@ img { display: block; max-width: 100%; }
 /* brand lockup: recreated pavilion mark + wordmark */
 .header-brand { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
 .brand-mark { display: flex; }
-.brand-mark svg { height: 42px; width: auto; transition: height 0.25s; }
-.site-header.scrolled .brand-mark svg { height: 36px; }
+.brand-mark svg, .brand-mark img { height: 42px; width: auto; transition: height 0.25s; display: block; }
+.site-header.scrolled .brand-mark svg, .site-header.scrolled .brand-mark img { height: 36px; }
 .brand-word {
   font-family: var(--font-display);
   font-weight: 700;
