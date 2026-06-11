@@ -125,33 +125,40 @@ filterTabs.forEach(tab => {
   });
 });
 
-// ===== HERO PRODUCT CAROUSEL =====
+// ===== HERO PRODUCT CAROUSEL (sliding, arrows, dots, swipe, 5s auto) =====
 const heroCarousel = document.getElementById('hero-carousel');
 if (heroCarousel) {
-  const cards = heroCarousel.querySelectorAll('.hero-card');
+  const track = heroCarousel.querySelector('.hero-track');
+  const cards = track.querySelectorAll('.hero-card');
   const dots = heroCarousel.querySelectorAll('.hero-dots .dot');
   let idx = 0;
   let timer = null;
 
-  const show = (i) => {
-    cards[idx].classList.remove('active');
-    if (dots[idx]) dots[idx].classList.remove('active');
-    idx = (i + cards.length) % cards.length;
-    cards[idx].classList.add('active');
-    if (dots[idx]) dots[idx].classList.add('active');
+  const render = () => {
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
   };
+  const go = (i) => { idx = (i + cards.length) % cards.length; render(); };
+  // manual navigation resets the clock so the slide you picked stays put
+  const restart = () => { clearInterval(timer); timer = setInterval(() => go(idx + 1), 5000); };
 
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (cards.length > 1 && !reducedMotion) {
-    const start = () => { if (!timer) timer = setInterval(() => show(idx + 1), 3200); };
-    const stop = () => { clearInterval(timer); timer = null; };
-    start();
-    // pause while the visitor is looking at / about to click a card
-    heroCarousel.addEventListener('mouseenter', stop);
-    heroCarousel.addEventListener('mouseleave', start);
-    heroCarousel.addEventListener('focusin', stop);
-    heroCarousel.addEventListener('focusout', start);
-  }
+  const prev = heroCarousel.querySelector('.hero-arrow.prev');
+  const next = heroCarousel.querySelector('.hero-arrow.next');
+  if (prev) prev.addEventListener('click', () => { go(idx - 1); restart(); });
+  if (next) next.addEventListener('click', () => { go(idx + 1); restart(); });
+  dots.forEach((d, i) => d.addEventListener('click', () => { go(i); restart(); }));
+
+  // touch swipe
+  let touchX = null;
+  heroCarousel.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  heroCarousel.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 40) { go(idx + (dx < 0 ? 1 : -1)); restart(); }
+    touchX = null;
+  }, { passive: true });
+
+  if (cards.length > 1) restart();
 }
 
 // ===== HEADER "SHOP" DROPDOWN (click to toggle) =====

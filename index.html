@@ -63,7 +63,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20260611c" />
+  <link rel="stylesheet" href="style.css?v=20260611d" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -187,7 +187,9 @@
     </div>
     <div class="hero-visual">
       <div class="hero-carousel" id="hero-carousel" aria-label="Featured products from our store">
-        <a class="hero-card active" href="https://store.bricklink.com/PiecePavilion?itemID=516736229"
+        <div class="hero-viewport">
+        <div class="hero-track" id="hero-track">
+        <a class="hero-card" href="https://store.bricklink.com/PiecePavilion?itemID=516736229"
            target="_blank" rel="noopener">
           <img src="https://img.bricklink.com/ItemImage/SN/0/40779-1.png" alt="LEGO Year of the Horse set" />
           <span class="hero-card-tag">Set</span>
@@ -222,8 +224,12 @@
           <span class="hero-card-name">Rubeus Hagrid</span>
           <span class="hero-card-price">$10.00</span>
         </a>
-        <div class="hero-dots" aria-hidden="true">
-          <span class="dot active"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div><!-- /hero-track -->
+        </div><!-- /hero-viewport -->
+        <button class="hero-arrow prev" aria-label="Previous product">&#10094;</button>
+        <button class="hero-arrow next" aria-label="Next product">&#10095;</button>
+        <div class="hero-dots">
+          <button class="dot active" aria-label="Product 1"></button><button class="dot" aria-label="Product 2"></button><button class="dot" aria-label="Product 3"></button><button class="dot" aria-label="Product 4"></button><button class="dot" aria-label="Product 5"></button>
         </div>
       </div>
     </div>
@@ -941,7 +947,7 @@
   </div><!-- end .main-content -->
 
   <script src="https://f.convertkit.com/ckjs/ck.5.js"></script>
-  <script src="script.js?v=20260611c"></script>
+  <script src="script.js?v=20260611d"></script>
   <script async src="//www.instagram.com/embed.js"></script>
 </body>
 </html>
