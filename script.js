@@ -124,3 +124,35 @@ filterTabs.forEach(tab => {
     });
   });
 });
+
+// ===== HEADER "SHOP" DROPDOWN (click to toggle) =====
+const navDropdown = document.querySelector('.nav-dropdown');
+if (navDropdown) {
+  const navToggle = navDropdown.querySelector('.nav-dropdown-toggle');
+  navToggle.setAttribute('aria-haspopup', 'true');
+  navToggle.setAttribute('aria-expanded', 'false');
+
+  const closeDropdown = () => {
+    navDropdown.classList.remove('open');
+    navToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  navToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    const open = navDropdown.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // close after picking a category
+  navDropdown.querySelectorAll('.nav-dropdown-menu a').forEach(a => {
+    a.addEventListener('click', closeDropdown);
+  });
+
+  // close on outside click or Escape
+  document.addEventListener('click', (e) => {
+    if (!navDropdown.contains(e.target)) closeDropdown();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDropdown();
+  });
+}
