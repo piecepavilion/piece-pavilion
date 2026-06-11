@@ -125,6 +125,35 @@ filterTabs.forEach(tab => {
   });
 });
 
+// ===== HERO PRODUCT CAROUSEL =====
+const heroCarousel = document.getElementById('hero-carousel');
+if (heroCarousel) {
+  const cards = heroCarousel.querySelectorAll('.hero-card');
+  const dots = heroCarousel.querySelectorAll('.hero-dots .dot');
+  let idx = 0;
+  let timer = null;
+
+  const show = (i) => {
+    cards[idx].classList.remove('active');
+    if (dots[idx]) dots[idx].classList.remove('active');
+    idx = (i + cards.length) % cards.length;
+    cards[idx].classList.add('active');
+    if (dots[idx]) dots[idx].classList.add('active');
+  };
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (cards.length > 1 && !reducedMotion) {
+    const start = () => { if (!timer) timer = setInterval(() => show(idx + 1), 3200); };
+    const stop = () => { clearInterval(timer); timer = null; };
+    start();
+    // pause while the visitor is looking at / about to click a card
+    heroCarousel.addEventListener('mouseenter', stop);
+    heroCarousel.addEventListener('mouseleave', start);
+    heroCarousel.addEventListener('focusin', stop);
+    heroCarousel.addEventListener('focusout', start);
+  }
+}
+
 // ===== HEADER "SHOP" DROPDOWN (click to toggle) =====
 const navDropdown = document.querySelector('.nav-dropdown');
 if (navDropdown) {
