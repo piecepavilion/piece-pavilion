@@ -276,7 +276,7 @@ if (cartRoot) {
         '<a class="btn-primary" href="' + STORE_URL + '?p=PiecePavilion#/cart" target="_blank" rel="noopener">Open My BrickLink Cart →</a>' +
         '<div class="or-divider">or</div>' +
         '<h3>Not ready yet? We’ll hold everything.</h3>' +
-        '<p>Send us this cart and we’ll reserve every item with your name on it — free, no deposit. Check out whenever you’re ready. (<a href="/blog/how-to-reserve-lego/" style="color:var(--red);font-weight:700;">How reserving works</a>)</p>' +
+        '<p>Send us this cart and we’ll reserve every item with your name on it — free, no deposit. <strong>We hold reserved items for up to 2 weeks</strong>; after that they go back on the shelf. Check out any time within your hold. (<a href="/blog/how-to-reserve-lego/" style="color:var(--red);font-weight:700;">How reserving works</a>)</p>' +
         '<a class="btn-secondary" id="reserve-cart" href="' + reserveMailto(items) + '">Reserve This Cart →</a>' +
       '</div>' +
       '<button class="cart-clear" id="cart-clear">Empty cart</button>';
