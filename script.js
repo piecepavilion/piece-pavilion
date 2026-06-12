@@ -157,6 +157,7 @@ fadeEls.forEach(el => observer.observe(el));
 // Fires a `bricklink_click` GA4 event on any link to the BrickLink store.
 // Mark this event as a Key Event in GA4 (Admin > Events) to measure conversions.
 document.addEventListener('click', (e) => {
+  if (e.target.closest('.add-cart-btn')) return; // cart adds tracked separately
   const a = e.target.closest('a[href*="store.bricklink.com"]');
   if (!a || typeof gtag !== 'function') return;
   const href = a.getAttribute('href') || '';
@@ -190,6 +191,126 @@ filterTabs.forEach(tab => {
     });
   });
 });
+
+// ===== CART (localStorage; checkout hands off to BrickLink) =====
+const CART_KEY = 'pp-cart';
+const STORE_URL = 'https://store.bricklink.com/PiecePavilion';
+
+const cartGet = () => {
+  try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch (e) { return []; }
+};
+const cartSet = (items) => {
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  cartBadge();
+};
+function cartBadge() {
+  const n = cartGet().reduce((s, i) => s + i.qty, 0);
+  document.querySelectorAll('.cart-count').forEach((b) => {
+    b.textContent = n;
+    b.style.display = n ? 'flex' : 'none';
+  });
+}
+cartBadge();
+
+// Add-to-cart buttons live INSIDE the product-card links — swallow the click.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.add-cart-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const d = btn.dataset;
+  const items = cartGet();
+  const existing = items.find((i) => i.lot === d.lot);
+  if (existing) existing.qty += 1;
+  else items.push({ lot: d.lot, no: d.no, name: d.name, price: parseFloat(d.price) || 0, img: d.img, qty: 1 });
+  cartSet(items);
+  btn.textContent = 'Added ✓';
+  btn.classList.add('added');
+  setTimeout(() => { btn.textContent = '+ Cart'; btn.classList.remove('added'); }, 1300);
+  if (typeof gtag === 'function') gtag('event', 'cart_add', { item_id: d.no, lot_id: d.lot, price: d.price });
+}, true);
+
+// ----- cart page -----
+const cartRoot = document.getElementById('cart-root');
+if (cartRoot) {
+  const money = (n) => '$' + n.toFixed(2);
+
+  const reserveMailto = (items) => {
+    const lines = items.map((i) =>
+      '- ' + i.name + ' (' + i.no + ') x' + i.qty + '  ' + STORE_URL + '?itemID=' + i.lot);
+    const body = 'Hi Piece Pavilion,\n\nPlease reserve my cart:\n\n' + lines.join('\n') +
+      '\n\nMy BrickLink username:\n\nWhen I plan to check out:\n\nThanks!';
+    return 'mailto:piecepavilion@gmail.com?subject=' + encodeURIComponent('Reserve My Cart') +
+      '&body=' + encodeURIComponent(body);
+  };
+
+  const render = () => {
+    const items = cartGet();
+    if (!items.length) {
+      cartRoot.innerHTML =
+        '<div class="cart-empty"><div class="big">🧱</div>' +
+        '<p>Your cart is empty &mdash; let’s fix that.</p><br>' +
+        '<a class="btn-primary" href="/#featured">Browse the Store &rarr;</a></div>';
+      return;
+    }
+    const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+    const rows = items.map((i, idx) =>
+      '<div class="cart-row">' +
+        '<img src="' + i.img + '" alt="" loading="lazy" />' +
+        '<div class="cart-row-info"><h4>' + i.name + '</h4>' +
+        '<span class="cart-row-id">' + i.no + '</span></div>' +
+        '<span class="cart-qty"><button data-q="-1" data-i="' + idx + '" aria-label="Less">&minus;</button>' +
+        i.qty +
+        '<button data-q="1" data-i="' + idx + '" aria-label="More">+</button></span>' +
+        '<span class="cart-row-price">' + money(i.price * i.qty) + '</span>' +
+        '<a class="cart-bl-link" href="' + STORE_URL + '?itemID=' + i.lot + '" target="_blank" rel="noopener">Add on BrickLink ↗</a>' +
+        '<button class="cart-remove" data-rm="' + idx + '" aria-label="Remove">&times;</button>' +
+      '</div>').join('');
+
+    cartRoot.innerHTML = rows +
+      '<div class="cart-summary"><span>' + items.length + ' item' + (items.length > 1 ? 's' : '') +
+      '</span><span class="total">' + money(total) + '</span></div>' +
+      '<div class="cart-checkout">' +
+        '<h3>Ready to check out?</h3>' +
+        '<p><strong>Click “Add on BrickLink” next to each item.</strong> Each one opens that exact listing in our BrickLink store — one more click there drops it in your BrickLink cart. Then check out once on BrickLink (secure payment, one shipping charge).</p>' +
+        '<a class="btn-primary" href="' + STORE_URL + '?p=PiecePavilion#/cart" target="_blank" rel="noopener">Open My BrickLink Cart →</a>' +
+        '<div class="or-divider">or</div>' +
+        '<h3>Not ready yet? We’ll hold everything.</h3>' +
+        '<p>Send us this cart and we’ll reserve every item with your name on it — free, no deposit. Check out whenever you’re ready. (<a href="/blog/how-to-reserve-lego/" style="color:var(--red);font-weight:700;">How reserving works</a>)</p>' +
+        '<a class="btn-secondary" id="reserve-cart" href="' + reserveMailto(items) + '">Reserve This Cart →</a>' +
+      '</div>' +
+      '<button class="cart-clear" id="cart-clear">Empty cart</button>';
+  };
+
+  cartRoot.addEventListener('click', (e) => {
+    const rm = e.target.closest('[data-rm]');
+    const q = e.target.closest('[data-q]');
+    const items = cartGet();
+    if (rm) {
+      items.splice(parseInt(rm.dataset.rm, 10), 1);
+      cartSet(items); render(); return;
+    }
+    if (q) {
+      const it = items[parseInt(q.dataset.i, 10)];
+      it.qty = Math.max(1, it.qty + parseInt(q.dataset.q, 10));
+      cartSet(items); render(); return;
+    }
+    if (e.target.closest('#cart-clear')) {
+      cartSet([]); render(); return;
+    }
+    const bl = e.target.closest('.cart-bl-link');
+    if (bl) {
+      bl.classList.add('clicked');
+      bl.textContent = 'Opened ✓';
+      if (typeof gtag === 'function') gtag('event', 'cart_bricklink_click', { link_url: bl.href });
+    }
+    if (e.target.closest('#reserve-cart') && typeof gtag === 'function') {
+      gtag('event', 'cart_reserve_click', { items: cartGet().length });
+    }
+  });
+
+  render();
+}
 
 // ===== HERO US MAP (real-outline SVG, colored by order counts) =====
 // Counts come from the #state-data JSON island (refreshed daily by
