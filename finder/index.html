@@ -56,6 +56,9 @@
   .buy{display:inline-block;margin-top:8px;font-weight:800;font-size:13px;background:var(--red);color:#fff;
     border:0;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;line-height:1}
   .buy:hover{background:var(--red-dark);text-decoration:none}
+  .buy.added{background:var(--ok)}
+  .cartlink{display:inline-flex;align-items:center;gap:6px}
+  .cartn{background:var(--red);color:#fff;border-radius:20px;padding:1px 8px;font-size:12px;min-width:20px;text-align:center;line-height:1.5}
   .empty{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
   .empty a{font-weight:800}
   footer{max-width:1040px;margin:0 auto;padding:0 22px 50px;color:var(--muted);font-size:13px}
@@ -69,6 +72,7 @@
     <span class="word">Piece&#8203;Pavilion</span>
   </a>
   <nav>
+    <a href="/cart/" class="cartlink" id="cartlink" aria-label="View cart">&#128722; Cart <span class="cartn" id="cartn" style="display:none">0</span></a>
     <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener">Shop &#8599;</a>
   </nav>
 </header>
@@ -161,21 +165,33 @@ function run(){
     </div>`).join('');
 }
 
-// Add the chosen item to the shared site cart, then go to the cart page.
-function addToCart(it){
-  let items=[];
-  try{ items=JSON.parse(localStorage.getItem(CART_KEY))||[]; }catch(e){}
+// Shared site cart (localStorage key pp-cart, same as the rest of the site).
+function cartItems(){ try{ return JSON.parse(localStorage.getItem(CART_KEY))||[]; }catch(e){ return []; } }
+function updateBadge(){
+  const n=cartItems().reduce((s,i)=>s+(i.qty||0),0);
+  const el=document.getElementById('cartn');
+  if(el){ el.textContent=n; el.style.display=n>0?'inline-block':'none'; }
+}
+// Add inline — stay on the page so they can keep adding; badge updates live.
+function addToCart(it,btn){
+  const items=cartItems();
   const ex=items.find(i=>i.lot===it.lot);
   if(ex) ex.qty+=1;
   else items.push({lot:it.lot,no:it.no,name:it.name,price:Number(it.price)||0,img:img(it),qty:1});
   localStorage.setItem(CART_KEY,JSON.stringify(items));
   if(typeof gtag==="function") gtag('event','cart_add',{item_id:it.no,lot_id:it.lot,price:it.price});
-  location.href="/cart/";
+  updateBadge();
+  if(btn){
+    btn.innerHTML='Added &#10003;'; btn.classList.add('added');
+    clearTimeout(btn._t);
+    btn._t=setTimeout(()=>{ btn.innerHTML='+ Add to Cart &rarr;'; btn.classList.remove('added'); },1300);
+  }
 }
 resEl.addEventListener('click',e=>{
   const b=e.target.closest('.add'); if(!b) return;
-  const it=SHOWN[+b.dataset.idx]; if(it) addToCart(it);
+  const it=SHOWN[+b.dataset.idx]; if(it) addToCart(it,b);
 });
+updateBadge();
 
 // debounce typing
 let t;qEl.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(run,180);});
