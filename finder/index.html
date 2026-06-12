@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Finder — Piece Pavilion</title>
+<meta name="description" content="Search Piece Pavilion's live LEGO inventory — bricks, minifigures, sets and keychains in stock now, with prices and direct links to buy.">
+<link rel="canonical" href="https://piecepavilion.com/finder/">
+<link rel="icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--red:#e3000b;--red-dark:#b8000a;--yellow:#ffce00;--ink:#14161d;--muted:#6b7280;
+        --line:#e6e8ec;--bg:#f7f8fa;--ok:#1a9e4b}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Nunito',system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  a{color:var(--red);text-decoration:none}a:hover{text-decoration:underline}
+  .bar{display:flex;align-items:center;gap:14px;padding:16px 22px;background:#fff;border-bottom:1px solid var(--line)}
+  .bar .logo{font-weight:900;font-size:22px;color:var(--ink)}
+  .bar .logo b{color:var(--red)}
+  .bar nav{margin-left:auto;display:flex;gap:20px;font-weight:800}
+  .bar nav a{color:var(--ink)}.bar nav a:hover{color:var(--red);text-decoration:none}
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-weight:900;margin:.1em 0;font-size:34px}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 6px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 4px}
+  input[type=search]{flex:1;min-width:220px;font-family:inherit;font-size:17px;padding:14px 16px;
+    border:2px solid var(--line);border-radius:12px;background:#fff}
+  input[type=search]:focus{outline:none;border-color:var(--red)}
+  select{font-family:inherit;font-size:15px;padding:12px;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+  .find{background:var(--red);color:#fff;border:0;font-weight:800;font-size:16px;padding:0 22px;border-radius:12px;cursor:pointer}
+  .find:hover{background:var(--red-dark)}
+  .status{color:var(--muted);font-size:14px;margin:10px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:8px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;gap:12px;
+    transition:box-shadow .12s,border-color .12s}
+  .card:hover{box-shadow:0 6px 22px rgba(0,0,0,.07);border-color:var(--red)}
+  .card img{width:58px;height:58px;object-fit:contain;flex:0 0 auto;background:#fff}
+  .nm{font-weight:800;font-size:14px;line-height:1.25}
+  .meta{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .price{font-weight:900;color:var(--ink);font-size:16px;margin-top:5px}
+  .buy{display:inline-block;margin-top:6px;font-weight:800;font-size:13px}
+  .empty{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
+  .empty a{font-weight:800}
+  footer{max-width:1040px;margin:0 auto;padding:0 22px 50px;color:var(--muted);font-size:13px}
+  @media(max-width:560px){h1{font-size:28px}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="logo"><a href="/" style="color:inherit"><b>Piece</b> Pavilion</a></div>
+  <nav>
+    <a href="/">Home</a>
+    <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener">Shop ↗</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <h1>Product Finder</h1>
+  <p class="sub">Search everything we have in stock — bricks, minifigures, sets and keychains — by name, color, or number.</p>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Try “red 2x4 brick”, “Hagrid”, “Star Wars”, a part number…" autocomplete="off">
+    <select id="type">
+      <option value="">All types</option>
+      <option value="PART">Parts</option>
+      <option value="MINIFIG">Minifigures</option>
+      <option value="SET">Sets</option>
+      <option value="GEAR">Keychains</option>
+    </select>
+    <select id="sort">
+      <option value="rel">Best match</option>
+      <option value="asc">Price: low → high</option>
+      <option value="desc">Price: high → low</option>
+    </select>
+    <button class="find" id="go">Search</button>
+  </div>
+
+  <div id="status" class="status">Loading our inventory…</div>
+  <div id="results" class="grid"></div>
+</div>
+<footer>
+  Live from our BrickLink store · updated daily. Don’t see it?
+  <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener">Browse the full store ↗</a>
+</footer>
+
+<script>
+const STORE="https://store.bricklink.com/PiecePavilion";
+const TLET={PART:"P",SET:"S",MINIFIG:"M",GEAR:"G",BOOK:"B",INSTRUCTION:"I"};
+let ITEMS=[];
+
+function img(it){return `https://img.bricklink.com/ItemImage/${TLET[it.type]||"P"}N/${it.color_id||0}/${it.no}.png`;}
+function blLink(it){const k=TLET[it.type]||"P";let u=`https://www.bricklink.com/v2/catalog/catalogitem.page?${k}=${encodeURIComponent(it.no)}`;if(it.color_id&&it.color_id!=="0")u+=`&idColor=${it.color_id}`;return u;}
+function storeLink(it){return it.lot?`${STORE}?itemID=${it.lot}`:STORE;}
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+const qEl=document.getElementById('q'),typeEl=document.getElementById('type'),
+      sortEl=document.getElementById('sort'),statusEl=document.getElementById('status'),
+      resEl=document.getElementById('results');
+
+function run(){
+  const q=qEl.value.trim().toLowerCase();
+  const type=typeEl.value, sort=sortEl.value;
+  const terms=q.split(/\s+/).filter(Boolean);
+  let hits=[];
+  for(const it of ITEMS){
+    if(type && it.type!==type) continue;
+    const name=(it.name||"").toLowerCase(), no=(it.no||"").toLowerCase();
+    const hay=name+" "+no+" "+(it.cat||"").toLowerCase()+" "+(it.color||"").toLowerCase();
+    if(terms.length && !terms.every(t=>hay.includes(t))) continue;
+    let score=0;
+    if(terms.length){
+      if(no===q) score+=1000;
+      if(name.startsWith(q)) score+=200;
+      if(terms.some(t=>name.startsWith(t)||name.includes(" "+t))) score+=50;
+    }
+    hits.push({it,score});
+  }
+  if(sort==="asc") hits.sort((a,b)=>a.it.price-b.it.price);
+  else if(sort==="desc") hits.sort((a,b)=>b.it.price-a.it.price);
+  else hits.sort((a,b)=>b.score-a.score || (a.it.name||"").localeCompare(b.it.name||""));
+
+  if(!q && !type){statusEl.textContent=`Search ${ITEMS.length} items in stock.`;resEl.innerHTML="";return;}
+  if(!hits.length){
+    statusEl.textContent="";
+    resEl.innerHTML=`<div class="empty" style="grid-column:1/-1">No in-stock matches. Try fewer or different words —
+      or <a href="${STORE}?p=PiecePavilion#/shop" target="_blank" rel="noopener">browse the full store ↗</a></div>`;
+    return;
+  }
+  const shown=hits.slice(0,120);
+  statusEl.innerHTML=`<b>${hits.length}</b> item${hits.length===1?"":"s"} in stock${hits.length>120?" (showing first 120)":""}`;
+  resEl.innerHTML=shown.map(({it})=>`
+    <div class="card">
+      <img src="${img(it)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div>
+        <div class="nm">${esc(it.name)||esc(it.no)}</div>
+        <div class="meta">${it.color?esc(it.color)+" · ":""}${esc(it.cond)}${it.qty>1?" · "+it.qty+" avail":""}</div>
+        <div class="price">$${Number(it.price).toFixed(2)}</div>
+        <a class="buy" href="${storeLink(it)}" target="_blank" rel="noopener">Buy from us →</a>
+      </div>
+    </div>`).join('');
+}
+
+// debounce typing
+let t;qEl.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(run,180);});
+typeEl.addEventListener('change',run);sortEl.addEventListener('change',run);
+document.getElementById('go').addEventListener('click',run);
+qEl.addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+
+// load data, then honor ?q= / ?type= deep links from the homepage bubble
+fetch('/finder-data.json?t='+Date.now()).then(r=>r.json()).then(d=>{
+  ITEMS=d.items||[];
+  const p=new URLSearchParams(location.search);
+  if(p.get('q')) qEl.value=p.get('q');
+  if(p.get('type')) typeEl.value=p.get('type');
+  qEl.focus();
+  run();
+}).catch(()=>{statusEl.innerHTML='<span style="color:var(--red)">Couldn’t load inventory right now. Please refresh.</span>';});
+</script>
+</body>
+</html>

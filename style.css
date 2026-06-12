@@ -676,8 +676,50 @@ img { display: block; max-width: 100%; }
   color: #2c313c;
   font-size: 1.12rem;
   font-weight: 600;
-  margin-bottom: 36px;
+  margin-bottom: 24px;
   max-width: 460px;
+}
+
+/* Product Finder search bubble in the hero */
+.hero-search { max-width: 480px; margin: 0 0 28px; }
+.hero-search-label {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+.hero-search-bar {
+  display: flex;
+  gap: 8px;
+  background: #fff;
+  border: 2px solid rgba(20,22,29,0.12);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 6px 20px rgba(20,22,29,0.06);
+  transition: border-color .12s, box-shadow .12s;
+}
+.hero-search-bar:focus-within {
+  border-color: var(--red);
+  box-shadow: 0 8px 26px rgba(227,0,11,0.14);
+}
+.hero-search-bar input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 8px 12px;
+}
+.hero-search-bar .btn-primary {
+  padding: 10px 20px;
+  border-radius: 10px;
+  white-space: nowrap;
 }
 
 /* ghost button + trust strip adapt to the bright hero */
