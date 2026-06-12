@@ -125,6 +125,133 @@ filterTabs.forEach(tab => {
   });
 });
 
+// ===== STATE TILE MAP =====
+// Tile-grid USA: [col, row, full name]. Order counts come from the
+// #state-data JSON island, refreshed daily by build_state_map.py.
+const STATE_GRID = {
+  ME: [12, 1, 'Maine'],
+  WI: [7, 2, 'Wisconsin'], VT: [11, 2, 'Vermont'], NH: [12, 2, 'New Hampshire'],
+  WA: [2, 3, 'Washington'], ID: [3, 3, 'Idaho'], MT: [4, 3, 'Montana'], ND: [5, 3, 'North Dakota'],
+  MN: [6, 3, 'Minnesota'], IL: [7, 3, 'Illinois'], MI: [8, 3, 'Michigan'], NY: [10, 3, 'New York'], MA: [11, 3, 'Massachusetts'],
+  OR: [2, 4, 'Oregon'], NV: [3, 4, 'Nevada'], WY: [4, 4, 'Wyoming'], SD: [5, 4, 'South Dakota'],
+  IA: [6, 4, 'Iowa'], IN: [7, 4, 'Indiana'], OH: [8, 4, 'Ohio'], PA: [9, 4, 'Pennsylvania'],
+  NJ: [10, 4, 'New Jersey'], CT: [11, 4, 'Connecticut'], RI: [12, 4, 'Rhode Island'],
+  CA: [2, 5, 'California'], UT: [3, 5, 'Utah'], CO: [4, 5, 'Colorado'], NE: [5, 5, 'Nebraska'],
+  MO: [6, 5, 'Missouri'], KY: [7, 5, 'Kentucky'], WV: [8, 5, 'West Virginia'], VA: [9, 5, 'Virginia'],
+  MD: [10, 5, 'Maryland'], DE: [11, 5, 'Delaware'],
+  AZ: [3, 6, 'Arizona'], NM: [4, 6, 'New Mexico'], KS: [5, 6, 'Kansas'], AR: [6, 6, 'Arkansas'],
+  TN: [7, 6, 'Tennessee'], NC: [8, 6, 'North Carolina'], SC: [9, 6, 'South Carolina'],
+  OK: [5, 7, 'Oklahoma'], LA: [6, 7, 'Louisiana'], MS: [7, 7, 'Mississippi'], AL: [8, 7, 'Alabama'], GA: [9, 7, 'Georgia'],
+  HI: [1, 8, 'Hawaii'], AK: [2, 8, 'Alaska'], TX: [5, 8, 'Texas'], FL: [10, 8, 'Florida']
+};
+
+const stateMap = document.getElementById('state-map');
+if (stateMap) {
+  let counts = {};
+  try { counts = JSON.parse(document.getElementById('state-data').textContent) || {}; } catch (e) { /* leave empty */ }
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'state-tooltip';
+  tooltip.hidden = true;
+  stateMap.appendChild(tooltip);
+
+  const showTip = (tile, code) => {
+    const n = counts[code] || 0;
+    const name = STATE_GRID[code][2];
+    tooltip.textContent = n > 0
+      ? name + ' — ' + n + (n === 1 ? ' order' : ' orders')
+      : name + ' — nothing yet, be the first!';
+    tooltip.hidden = false;
+    tooltip.style.left = (tile.offsetLeft + tile.offsetWidth / 2) + 'px';
+    tooltip.style.top = tile.offsetTop + 'px';
+  };
+  const hideTip = () => { tooltip.hidden = true; };
+
+  Object.keys(STATE_GRID).forEach((code) => {
+    const [col, row, name] = STATE_GRID[code];
+    const n = counts[code] || 0;
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'state-tile' + (n > 0 ? ' sold' : '');
+    tile.style.gridColumn = col;
+    tile.style.gridRow = row;
+    tile.textContent = code;
+    tile.setAttribute('aria-label', name + ': ' + n + (n === 1 ? ' order' : ' orders'));
+    tile.addEventListener('mouseenter', () => showTip(tile, code));
+    tile.addEventListener('mouseleave', hideTip);
+    tile.addEventListener('focus', () => showTip(tile, code));
+    tile.addEventListener('blur', hideTip);
+    tile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tooltip.hidden ? showTip(tile, code) : hideTip();
+    });
+    stateMap.appendChild(tile);
+  });
+  document.addEventListener('click', (e) => {
+    if (!stateMap.contains(e.target)) hideTip();
+  });
+}
+
+// ===== CONFETTI BURST (homepage, once per browser session) =====
+(function () {
+  if (!document.getElementById('hero')) return;                 // homepage only
+  if (sessionStorage.getItem('pp-confetti')) return;            // once per session
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  sessionStorage.setItem('pp-confetti', '1');
+
+  const cv = document.createElement('canvas');
+  cv.className = 'confetti-canvas';
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = window.innerWidth * dpr;
+  cv.height = window.innerHeight * dpr;
+
+  const COLORS = ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
+  // two cannons: bottom-left firing up-right, bottom-right firing up-left
+  const parts = [];
+  for (let i = 0; i < 170; i++) {
+    const fromLeft = i % 2 === 0;
+    const angle = (fromLeft ? -75 : -105) + (Math.random() - 0.5) * 50; // degrees, up & inward
+    const speed = (11 + Math.random() * 9) * dpr;
+    const rad = angle * Math.PI / 180;
+    parts.push({
+      x: (fromLeft ? 0.08 : 0.92) * cv.width,
+      y: cv.height + 10 * dpr,
+      vx: Math.cos(rad) * speed,
+      vy: Math.sin(rad) * speed,
+      w: (5 + Math.random() * 6) * dpr,
+      h: (8 + Math.random() * 10) * dpr,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.25,
+      color: COLORS[(Math.random() * COLORS.length) | 0]
+    });
+  }
+
+  const t0 = performance.now();
+  const DURATION = 3000;
+  (function frame(t) {
+    const elapsed = (t || performance.now()) - t0;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = elapsed > DURATION - 700 ? Math.max(0, (DURATION - elapsed) / 700) : 1;
+    for (const p of parts) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.22 * dpr;          // gravity
+      p.vx *= 0.992;               // drag
+      p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    if (elapsed < DURATION) requestAnimationFrame(frame);
+    else cv.remove();
+  })(t0);
+})();
+
 // ===== HERO PRODUCT CAROUSEL (sliding, arrows, dots, swipe, 5s auto) =====
 const heroCarousel = document.getElementById('hero-carousel');
 if (heroCarousel) {
