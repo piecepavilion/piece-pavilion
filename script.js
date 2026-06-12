@@ -62,18 +62,34 @@ if (sessionStorage.getItem('banner-dismissed')) {
 (function loadBannerConfig() {
   const banner = document.querySelector('.announcement-banner');
   if (!banner) return;
-  // cache-busting query so edits appear in ~1 min despite CDN caching
-  fetch('/banner.txt?_=' + Date.now()).then((r) => {
-    if (!r.ok) throw new Error('no banner.txt');
-    return r.text();
-  }).then((txt) => {
+
+  // Primary source: the staff "PiecePavilion Site Banner" Google Sheet
+  // (edited from /employees — same Google login). Fallback: /banner.txt.
+  const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/gviz/tq?tqx=out:csv&sheet=Banner';
+
+  const parseSheetCsv = (txt) => {
+    const cfg = {};
+    txt.split(/\r?\n/).forEach((line) => {
+      const m = line.match(/^"((?:[^"]|"")*)","((?:[^"]|"")*)"/);
+      if (!m) return;
+      const key = m[1].replace(/""/g, '"').trim();
+      const val = m[2].replace(/""/g, '"').trim();
+      if (key && key !== 'field' && key !== 'HOW TO USE') cfg[key] = val;
+    });
+    return cfg;
+  };
+
+  const parseTxt = (txt) => {
     const cfg = {};
     txt.split(/\r?\n/).forEach((line) => {
       if (!line || line.charAt(0) === '#') return;
       const i = line.indexOf('=');
       if (i > 0) cfg[line.slice(0, i).trim()] = line.slice(i + 1).trim();
     });
+    return cfg;
+  };
 
+  const apply = (cfg) => {
     if ((cfg.enabled || '').toUpperCase() !== 'YES') {
       banner.classList.add('hidden');
       return;
@@ -91,7 +107,17 @@ if (sessionStorage.getItem('banner-dismissed')) {
     } else {
       banner.classList.remove('hidden');
     }
-  }).catch(() => { /* fetch failed — keep the hardcoded fallback banner */ });
+  };
+
+  // cache-busting query so edits appear in ~1 min
+  fetch(SHEET_CSV + '&_=' + Date.now())
+    .then((r) => { if (!r.ok) throw new Error('sheet unavailable'); return r.text(); })
+    .then(parseSheetCsv)
+    .catch(() => fetch('/banner.txt?_=' + Date.now())
+      .then((r) => { if (!r.ok) throw new Error('no banner.txt'); return r.text(); })
+      .then(parseTxt))
+    .then(apply)
+    .catch(() => { /* both failed — keep the hardcoded fallback banner */ });
 })();
 
 // ===== FLYER LIGHTBOX =====

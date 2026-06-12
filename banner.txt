@@ -1,7 +1,8 @@
 # ============================================================
-#  PIECE PAVILION — SITE ANNOUNCEMENT BANNER
-#  Edit the lines below, then click "Commit changes" (top right).
-#  The live site updates within about a minute.
+#  PIECE PAVILION — SITE ANNOUNCEMENT BANNER (FALLBACK ONLY)
+#  The banner is normally edited in the "PiecePavilion Site Banner"
+#  Google Sheet (tile on /employees). This file is only used if the
+#  sheet can't be reached. Edits here go live ~1 min after commit.
 #
 #  enabled    YES shows the banner on every page, NO hides it
 #  message    the bold headline (emoji welcome — paste them in)
