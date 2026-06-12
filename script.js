@@ -41,18 +41,58 @@ if (siteHeader) {
   window.addEventListener('scroll', onScroll, { passive: true });
 }
 
-// ===== ANNOUNCEMENT BANNER DISMISS =====
+// ===== ANNOUNCEMENT BANNER (content managed in /banner.txt) =====
+// Staff edit banner.txt via the GitHub editor (tile on /employees).
+// Dismissing remembers the MESSAGE — so a new announcement still shows
+// even if a visitor dismissed the previous one this session.
 document.querySelectorAll('.announcement-close').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    btn.closest('.announcement-banner').classList.add('hidden');
-    sessionStorage.setItem('banner-dismissed', '1');
+    const banner = btn.closest('.announcement-banner');
+    banner.classList.add('hidden');
+    const strong = banner.querySelector('strong');
+    sessionStorage.setItem('banner-dismissed', strong ? strong.textContent : '1');
   });
 });
 if (sessionStorage.getItem('banner-dismissed')) {
   document.querySelectorAll('.announcement-banner').forEach(b => b.classList.add('hidden'));
 }
+
+(function loadBannerConfig() {
+  const banner = document.querySelector('.announcement-banner');
+  if (!banner) return;
+  // cache-busting query so edits appear in ~1 min despite CDN caching
+  fetch('/banner.txt?_=' + Date.now()).then((r) => {
+    if (!r.ok) throw new Error('no banner.txt');
+    return r.text();
+  }).then((txt) => {
+    const cfg = {};
+    txt.split(/\r?\n/).forEach((line) => {
+      if (!line || line.charAt(0) === '#') return;
+      const i = line.indexOf('=');
+      if (i > 0) cfg[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+    });
+
+    if ((cfg.enabled || '').toUpperCase() !== 'YES') {
+      banner.classList.add('hidden');
+      return;
+    }
+    const textLink = banner.querySelector('.announcement-text');
+    const strong = banner.querySelector('strong');
+    const span = banner.querySelector('.announcement-text span');
+    if (cfg.message && strong) strong.textContent = cfg.message;
+    if (cfg.link_text && span) span.textContent = cfg.link_text;
+    if (cfg.link && textLink) textLink.setAttribute('href', cfg.link);
+
+    // show unless THIS exact message was already dismissed this session
+    if (sessionStorage.getItem('banner-dismissed') === (cfg.message || '')) {
+      banner.classList.add('hidden');
+    } else {
+      banner.classList.remove('hidden');
+    }
+  }).catch(() => { /* fetch failed — keep the hardcoded fallback banner */ });
+})();
 
 // ===== FLYER LIGHTBOX =====
 const lightbox = document.getElementById('flyer-lightbox');

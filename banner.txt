@@ -1,0 +1,15 @@
+# ============================================================
+#  PIECE PAVILION — SITE ANNOUNCEMENT BANNER
+#  Edit the lines below, then click "Commit changes" (top right).
+#  The live site updates within about a minute.
+#
+#  enabled    YES shows the banner on every page, NO hides it
+#  message    the bold headline (emoji welcome — paste them in)
+#  link_text  the smaller call-to-action after the headline
+#  link       where clicking goes: a site page (/blog/...) or full https:// URL
+#  Lines starting with # are ignored.
+# ============================================================
+enabled=YES
+message=🎁 New on the Blog: The Best LEGO Gifts for Dad
+link_text=Read the latest →
+link=/blog/best-lego-gifts-for-dad/
