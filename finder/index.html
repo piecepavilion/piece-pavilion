@@ -7,6 +7,14 @@
 <meta name="description" content="Search Piece Pavilion's live LEGO inventory — bricks, minifigures, sets and keychains in stock now, with prices and direct links to buy.">
 <link rel="canonical" href="https://piecepavilion.com/finder/">
 <link rel="icon" href="/favicon.svg">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-X3DK777DPM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-X3DK777DPM');
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -45,7 +53,9 @@
   .nm{font-weight:800;font-size:14px;line-height:1.25}
   .meta{font-size:12.5px;color:var(--muted);margin-top:3px}
   .price{font-weight:900;color:var(--ink);font-size:16px;margin-top:5px}
-  .buy{display:inline-block;margin-top:6px;font-weight:800;font-size:13px}
+  .buy{display:inline-block;margin-top:8px;font-weight:800;font-size:13px;background:var(--red);color:#fff;
+    border:0;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;line-height:1}
+  .buy:hover{background:var(--red-dark);text-decoration:none}
   .empty{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
   .empty a{font-weight:800}
   footer{max-width:1040px;margin:0 auto;padding:0 22px 50px;color:var(--muted);font-size:13px}
@@ -96,7 +106,8 @@
 <script>
 const STORE="https://store.bricklink.com/PiecePavilion";
 const TLET={PART:"P",SET:"S",MINIFIG:"M",GEAR:"G",BOOK:"B",INSTRUCTION:"I"};
-let ITEMS=[];
+const CART_KEY="pp-cart";   // shared with the rest of the site (script.js)
+let ITEMS=[], SHOWN=[];
 
 function img(it){return `https://img.bricklink.com/ItemImage/${TLET[it.type]||"P"}N/${it.color_id||0}/${it.no}.png`;}
 function blLink(it){const k=TLET[it.type]||"P";let u=`https://www.bricklink.com/v2/catalog/catalogitem.page?${k}=${encodeURIComponent(it.no)}`;if(it.color_id&&it.color_id!=="0")u+=`&idColor=${it.color_id}`;return u;}
@@ -136,19 +147,35 @@ function run(){
       or <a href="${STORE}?p=PiecePavilion#/shop" target="_blank" rel="noopener">browse the full store ↗</a></div>`;
     return;
   }
-  const shown=hits.slice(0,120);
+  SHOWN=hits.slice(0,120).map(h=>h.it);
   statusEl.innerHTML=`<b>${hits.length}</b> item${hits.length===1?"":"s"} in stock${hits.length>120?" (showing first 120)":""}`;
-  resEl.innerHTML=shown.map(({it})=>`
+  resEl.innerHTML=SHOWN.map((it,i)=>`
     <div class="card">
       <img src="${img(it)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
       <div>
         <div class="nm">${esc(it.name)||esc(it.no)}</div>
         <div class="meta">${it.color?esc(it.color)+" · ":""}${esc(it.cond)}${it.qty>1?" · "+it.qty+" avail":""}</div>
         <div class="price">$${Number(it.price).toFixed(2)}</div>
-        <a class="buy" href="${storeLink(it)}" target="_blank" rel="noopener">Buy from us →</a>
+        <button class="buy add" data-idx="${i}">+ Add to Cart &rarr;</button>
       </div>
     </div>`).join('');
 }
+
+// Add the chosen item to the shared site cart, then go to the cart page.
+function addToCart(it){
+  let items=[];
+  try{ items=JSON.parse(localStorage.getItem(CART_KEY))||[]; }catch(e){}
+  const ex=items.find(i=>i.lot===it.lot);
+  if(ex) ex.qty+=1;
+  else items.push({lot:it.lot,no:it.no,name:it.name,price:Number(it.price)||0,img:img(it),qty:1});
+  localStorage.setItem(CART_KEY,JSON.stringify(items));
+  if(typeof gtag==="function") gtag('event','cart_add',{item_id:it.no,lot_id:it.lot,price:it.price});
+  location.href="/cart/";
+}
+resEl.addEventListener('click',e=>{
+  const b=e.target.closest('.add'); if(!b) return;
+  const it=SHOWN[+b.dataset.idx]; if(it) addToCart(it);
+});
 
 // debounce typing
 let t;qEl.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(run,180);});
