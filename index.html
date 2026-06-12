@@ -63,7 +63,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20260612a" />
+  <link rel="stylesheet" href="style.css?v=20260612b" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -231,6 +231,12 @@
         <div class="hero-dots">
           <button class="dot active" aria-label="Product 1"></button><button class="dot" aria-label="Product 2"></button><button class="dot" aria-label="Product 3"></button><button class="dot" aria-label="Product 4"></button><button class="dot" aria-label="Product 5"></button>
         </div>
+      </div>
+
+      <div class="hero-map" id="map">
+        <div class="hero-map-canvas" id="us-map" aria-label="Map of US states we have shipped to"></div>
+        <p class="hero-map-caption">Shipped to <strong><!--STATECOUNT-->19<!--/STATECOUNT--> states</strong> and counting &mdash; tap a state</p>
+        <script type="application/json" id="state-data">{"CA":3,"CO":1,"DE":1,"FL":2,"IA":2,"IL":1,"IN":1,"MA":5,"MI":1,"MN":1,"NC":1,"NV":1,"NY":4,"OH":3,"PA":2,"RI":1,"TX":1,"VA":2,"WA":2}</script>
       </div>
     </div>
   </section>
@@ -699,21 +705,6 @@
     </div>
   </section>
 
-  <!-- ===== STATE MAP ===== -->
-  <section class="state-map-section section" id="map">
-    <div class="container">
-      <div class="section-header">
-        <h2>Where Our Bricks Have Landed</h2>
-        <p>Orders shipped to <strong><!--STATECOUNT-->19<!--/STATECOUNT--> states</strong> and counting &mdash; tap a state to see its orders</p>
-      </div>
-      <div class="state-map" id="state-map" role="group" aria-label="US states we have shipped to"></div>
-      <div class="state-legend">
-        <span class="legend-item"><span class="legend-swatch sold"></span> Bricks delivered</span>
-        <span class="legend-item"><span class="legend-swatch"></span> Not yet &mdash; help us light it up</span>
-      </div>
-      <script type="application/json" id="state-data">{"CA":3,"CO":1,"DE":1,"FL":2,"IA":2,"IL":1,"IN":1,"MA":5,"MI":1,"MN":1,"NC":1,"NV":1,"NY":4,"OH":3,"PA":2,"RI":1,"TX":1,"VA":2,"WA":2}</script>
-    </div>
-  </section>
 
   <!-- ===== ABOUT US (includes former Why-Us; #why anchor kept for old links) ===== -->
   <section class="about-us section" id="about">
@@ -963,7 +954,7 @@
   </div><!-- end .main-content -->
 
   <script src="https://f.convertkit.com/ckjs/ck.5.js"></script>
-  <script src="script.js?v=20260612a"></script>
+  <script src="script.js?v=20260612b"></script>
   <script async src="//www.instagram.com/embed.js"></script>
 </body>
 </html>

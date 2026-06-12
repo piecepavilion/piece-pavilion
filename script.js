@@ -125,78 +125,74 @@ filterTabs.forEach(tab => {
   });
 });
 
-// ===== STATE TILE MAP =====
-// Tile-grid USA: [col, row, full name]. Order counts come from the
-// #state-data JSON island, refreshed daily by build_state_map.py.
-const STATE_GRID = {
-  ME: [12, 1, 'Maine'],
-  WI: [7, 2, 'Wisconsin'], VT: [11, 2, 'Vermont'], NH: [12, 2, 'New Hampshire'],
-  WA: [2, 3, 'Washington'], ID: [3, 3, 'Idaho'], MT: [4, 3, 'Montana'], ND: [5, 3, 'North Dakota'],
-  MN: [6, 3, 'Minnesota'], IL: [7, 3, 'Illinois'], MI: [8, 3, 'Michigan'], NY: [10, 3, 'New York'], MA: [11, 3, 'Massachusetts'],
-  OR: [2, 4, 'Oregon'], NV: [3, 4, 'Nevada'], WY: [4, 4, 'Wyoming'], SD: [5, 4, 'South Dakota'],
-  IA: [6, 4, 'Iowa'], IN: [7, 4, 'Indiana'], OH: [8, 4, 'Ohio'], PA: [9, 4, 'Pennsylvania'],
-  NJ: [10, 4, 'New Jersey'], CT: [11, 4, 'Connecticut'], RI: [12, 4, 'Rhode Island'],
-  CA: [2, 5, 'California'], UT: [3, 5, 'Utah'], CO: [4, 5, 'Colorado'], NE: [5, 5, 'Nebraska'],
-  MO: [6, 5, 'Missouri'], KY: [7, 5, 'Kentucky'], WV: [8, 5, 'West Virginia'], VA: [9, 5, 'Virginia'],
-  MD: [10, 5, 'Maryland'], DE: [11, 5, 'Delaware'],
-  AZ: [3, 6, 'Arizona'], NM: [4, 6, 'New Mexico'], KS: [5, 6, 'Kansas'], AR: [6, 6, 'Arkansas'],
-  TN: [7, 6, 'Tennessee'], NC: [8, 6, 'North Carolina'], SC: [9, 6, 'South Carolina'],
-  OK: [5, 7, 'Oklahoma'], LA: [6, 7, 'Louisiana'], MS: [7, 7, 'Mississippi'], AL: [8, 7, 'Alabama'], GA: [9, 7, 'Georgia'],
-  HI: [1, 8, 'Hawaii'], AK: [2, 8, 'Alaska'], TX: [5, 8, 'Texas'], FL: [10, 8, 'Florida']
+// ===== HERO US MAP (real-outline SVG, colored by order counts) =====
+// Counts come from the #state-data JSON island (refreshed daily by
+// build_state_map.py). The SVG (public-domain Wikimedia US map) is fetched
+// and inlined so each state path is styleable + clickable.
+const STATE_NAMES = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire',
+  NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina',
+  ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania',
+  RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee',
+  TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington',
+  WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
 };
 
-const stateMap = document.getElementById('state-map');
-if (stateMap) {
+const usMap = document.getElementById('us-map');
+if (usMap) {
   let counts = {};
-  try { counts = JSON.parse(document.getElementById('state-data').textContent) || {}; } catch (e) { /* leave empty */ }
+  try { counts = JSON.parse(document.getElementById('state-data').textContent) || {}; } catch (e) { /* empty */ }
 
-  const tooltip = document.createElement('div');
-  tooltip.className = 'state-tooltip';
-  tooltip.hidden = true;
-  stateMap.appendChild(tooltip);
+  fetch('/us-map.svg').then((r) => r.text()).then((svg) => {
+    usMap.innerHTML = svg;
 
-  const showTip = (tile, code) => {
-    const n = counts[code] || 0;
-    const name = STATE_GRID[code][2];
-    tooltip.textContent = n > 0
-      ? name + ' — ' + n + (n === 1 ? ' order' : ' orders')
-      : name + ' — nothing yet, be the first!';
-    tooltip.hidden = false;
-    tooltip.style.left = (tile.offsetLeft + tile.offsetWidth / 2) + 'px';
-    tooltip.style.top = tile.offsetTop + 'px';
-  };
-  const hideTip = () => { tooltip.hidden = true; };
+    const tooltip = document.createElement('div');
+    tooltip.className = 'state-tooltip';
+    tooltip.hidden = true;
+    usMap.appendChild(tooltip);
 
-  Object.keys(STATE_GRID).forEach((code) => {
-    const [col, row, name] = STATE_GRID[code];
-    const n = counts[code] || 0;
-    const tile = document.createElement('button');
-    tile.type = 'button';
-    tile.className = 'state-tile' + (n > 0 ? ' sold' : '');
-    tile.style.gridColumn = col;
-    tile.style.gridRow = row;
-    tile.textContent = code;
-    tile.setAttribute('aria-label', name + ': ' + n + (n === 1 ? ' order' : ' orders'));
-    tile.addEventListener('mouseenter', () => showTip(tile, code));
-    tile.addEventListener('mouseleave', hideTip);
-    tile.addEventListener('focus', () => showTip(tile, code));
-    tile.addEventListener('blur', hideTip);
-    tile.addEventListener('click', (e) => {
-      e.stopPropagation();
-      tooltip.hidden ? showTip(tile, code) : hideTip();
+    const showTip = (el, code) => {
+      const n = counts[code] || 0;
+      tooltip.textContent = n > 0
+        ? STATE_NAMES[code] + ' — ' + n + (n === 1 ? ' order' : ' orders')
+        : STATE_NAMES[code] + ' — nothing yet, be the first!';
+      tooltip.hidden = false;
+      const r = el.getBoundingClientRect();
+      const host = usMap.getBoundingClientRect();
+      tooltip.style.left = (r.left - host.left + r.width / 2) + 'px';
+      tooltip.style.top = (r.top - host.top) + 'px';
+    };
+    const hideTip = () => { tooltip.hidden = true; };
+
+    Object.keys(STATE_NAMES).forEach((code) => {
+      // some states are drawn with multiple paths (MI peninsulas, HI islands)
+      usMap.querySelectorAll('g.state path.' + code.toLowerCase()).forEach((el) => {
+        if ((counts[code] || 0) > 0) el.classList.add('sold');
+        el.addEventListener('mouseenter', () => showTip(el, code));
+        el.addEventListener('mouseleave', hideTip);
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          tooltip.hidden ? showTip(el, code) : hideTip();
+        });
+      });
     });
-    stateMap.appendChild(tile);
-  });
-  document.addEventListener('click', (e) => {
-    if (!stateMap.contains(e.target)) hideTip();
-  });
+    document.addEventListener('click', (e) => {
+      if (!usMap.contains(e.target)) hideTip();
+    });
+  }).catch(() => { /* map is decorative — fail quietly */ });
 }
 
 // ===== CONFETTI BURST (homepage, once per browser session) =====
 (function () {
   if (!document.getElementById('hero')) return;                 // homepage only
-  if (sessionStorage.getItem('pp-confetti')) return;            // once per session
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const forced = location.search.indexOf('confetti') !== -1;    // ?confetti = always fire (for testing/demos)
+  if (!forced && sessionStorage.getItem('pp-confetti')) return; // once per session
+  if (!forced && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   sessionStorage.setItem('pp-confetti', '1');
 
   const cv = document.createElement('canvas');
@@ -208,18 +204,14 @@ if (stateMap) {
   cv.height = window.innerHeight * dpr;
 
   const COLORS = ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
-  // two cannons: bottom-left firing up-right, bottom-right firing up-left
+  // burst from the top edge: pieces explode outward/down across the full width
   const parts = [];
-  for (let i = 0; i < 170; i++) {
-    const fromLeft = i % 2 === 0;
-    const angle = (fromLeft ? -75 : -105) + (Math.random() - 0.5) * 50; // degrees, up & inward
-    const speed = (11 + Math.random() * 9) * dpr;
-    const rad = angle * Math.PI / 180;
+  for (let i = 0; i < 180; i++) {
     parts.push({
-      x: (fromLeft ? 0.08 : 0.92) * cv.width,
-      y: cv.height + 10 * dpr,
-      vx: Math.cos(rad) * speed,
-      vy: Math.sin(rad) * speed,
+      x: Math.random() * cv.width,
+      y: -(Math.random() * 0.25 + 0.02) * cv.height,   // staggered above the top edge
+      vx: (Math.random() - 0.5) * 5 * dpr,
+      vy: (4 + Math.random() * 6) * dpr,               // downward burst
       w: (5 + Math.random() * 6) * dpr,
       h: (8 + Math.random() * 10) * dpr,
       rot: Math.random() * Math.PI,
@@ -228,8 +220,8 @@ if (stateMap) {
     });
   }
 
-  const t0 = performance.now();
-  const DURATION = 3000;
+  const t0 = performance.now() + 350;   // let the page paint first
+  const DURATION = 3800;
   (function frame(t) {
     const elapsed = (t || performance.now()) - t0;
     ctx.clearRect(0, 0, cv.width, cv.height);
@@ -237,8 +229,8 @@ if (stateMap) {
     for (const p of parts) {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.22 * dpr;          // gravity
-      p.vx *= 0.992;               // drag
+      p.vy += 0.06 * dpr;          // light gravity — graceful fall
+      p.vx *= 0.995;               // drag
       p.rot += p.vr;
       ctx.save();
       ctx.translate(p.x, p.y);

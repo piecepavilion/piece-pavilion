@@ -642,8 +642,8 @@ img { display: block; max-width: 100%; }
 }
 
 .hero-content {
-  flex: 1;
-  max-width: 560px;
+  flex: 0 1 420px;
+  max-width: 420px;
   margin: 0 auto;
   position: relative;
   z-index: 1;
@@ -705,6 +705,8 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
   position: relative;
   z-index: 1;
 }
@@ -1143,59 +1145,36 @@ img { display: block; max-width: 100%; }
   box-shadow: 0 8px 30px rgba(0,0,0,0.3);
 }
 
-/* ===== STATE TILE MAP ===== */
-.state-map-section { background: var(--light); }
-
-.state-map {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 6px;
-  max-width: 760px;
-  margin: 0 auto;
+/* ===== HERO US MAP (SVG injected by script.js) ===== */
+.hero-map {
+  flex: 0 1 400px;
+  max-width: 420px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 20px;
+  box-shadow: 0 18px 44px rgba(20,22,29,0.18);
+  padding: 22px 22px 16px;
 }
+.hero-map-canvas { position: relative; }
+.hero-map-canvas svg { width: 100%; height: auto; display: block; }
 
-.state-tile {
-  position: relative;
-  aspect-ratio: 1;
-  border: none;
-  border-radius: 8px;
-  background: #e5e7eb;
-  color: #9ca3af;
-  font-family: 'Nunito', sans-serif;
-  font-size: clamp(0.5rem, 1.4vw, 0.78rem);
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* injected SVG: state shapes */
+.hero-map-canvas g.state path {
+  fill: #e2e5ea;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
-  padding: 0;
+  transition: fill 0.2s;
 }
-/* LEGO stud shine on delivered states */
-.state-tile.sold {
-  background: var(--red);
-  color: var(--white);
-  box-shadow: 0 4px 12px rgba(227,0,11,0.35);
+.hero-map-canvas g.state path:hover { fill: #c8cdd6; }
+.hero-map-canvas g.state path.sold { fill: var(--red); }
+.hero-map-canvas g.state path.sold:hover { fill: var(--red-dark); }
+
+.hero-map-caption {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--slate);
 }
-.state-tile.sold::after {
-  content: '';
-  position: absolute;
-  top: 12%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 42%;
-  height: 16%;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.35);
-  pointer-events: none;
-}
-.state-tile:hover, .state-tile:focus-visible {
-  transform: translateY(-2px) scale(1.08);
-  z-index: 2;
-  outline: none;
-}
-.state-tile:hover { box-shadow: 0 6px 16px rgba(20,22,29,0.2); }
+.hero-map-caption strong { color: var(--red); }
 
 .state-tooltip {
   position: absolute;
@@ -1222,25 +1201,6 @@ img { display: block; max-width: 100%; }
 }
 .state-tooltip[hidden] { display: none; }
 
-.state-legend {
-  display: flex;
-  justify-content: center;
-  gap: 28px;
-  flex-wrap: wrap;
-  margin-top: 28px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--muted);
-}
-.legend-item { display: inline-flex; align-items: center; gap: 8px; }
-.legend-swatch {
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
-  background: #e5e7eb;
-  display: inline-block;
-}
-.legend-swatch.sold { background: var(--red); box-shadow: 0 2px 6px rgba(227,0,11,0.35); }
 
 /* ===== CONFETTI ===== */
 .confetti-canvas {
@@ -1753,6 +1713,15 @@ img { display: block; max-width: 100%; }
 }
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 1240px) {
+  /* hero: text full-width on top, carousel + map row beneath */
+  .hero { flex-wrap: wrap; gap: 44px; }
+  .hero-content { flex: 1 1 100%; max-width: 640px; text-align: center; }
+  .hero-sub { margin-left: auto; margin-right: auto; }
+  .hero-actions { justify-content: center; }
+  .hero-trust { justify-content: center; }
+}
+
 @media (max-width: 768px) {
   .hero {
     flex-direction: column;
@@ -1762,6 +1731,7 @@ img { display: block; max-width: 100%; }
     gap: 40px;
   }
   .hero-carousel { width: 270px; height: 310px; }
+  .hero-map { flex: 1 1 100%; max-width: 340px; padding: 16px 16px 12px; }
   .hero-arrow { width: 34px; height: 34px; font-size: 0.9rem; }
   .hero-arrow.prev { left: -12px; }
   .hero-arrow.next { right: -12px; }
