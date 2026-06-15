@@ -29,7 +29,7 @@ INDEX = os.path.join(REPO, "blog", "index.html")
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 LOGO = "file:///" + os.path.join(REPO, "logo-white.png").replace("\\", "/")
 
-VER = "2"  # bump to cache-bust the thumbnail URLs in blog/index.html
+VER = "3"  # bump to cache-bust the thumbnail URLs in blog/index.html
 
 # Brand-derived accent palette (from the logo's quadrant colors + brand red/gold)
 RED, GOLD, GREEN, BLUE = "#e3000b", "#ffce00", "#3c9e4f", "#1c8ad6"
@@ -66,8 +66,10 @@ body{font-family:'Nunito',system-ui,sans-serif;-webkit-font-smoothing:antialiase
    background:radial-gradient(circle,{accent}26 0%,transparent 65%)}
 .t::after{content:'';position:absolute;left:0;right:0;bottom:0;height:7px;
    background:linear-gradient(90deg,#e3000b 0%,#ffce00 100%)}
-.mark{height:118px;width:auto;position:relative;
-   filter:drop-shadow(0 12px 26px rgba(0,0,0,.45))}
+.coin{position:relative;width:150px;height:150px;border-radius:50%;background:#fff;
+   display:flex;align-items:center;justify-content:center;
+   box-shadow:0 14px 30px rgba(0,0,0,.50)}
+.coin img{height:140px;width:140px;border-radius:50%;object-fit:contain}
 .label{position:relative;margin-top:26px;color:#fff;font-weight:800;font-size:26px;
    letter-spacing:.16em;text-transform:uppercase}
 .rule{position:relative;margin-top:16px;width:64px;height:4px;border-radius:999px;
@@ -82,7 +84,7 @@ PAGE = ('<!DOCTYPE html><html><head><meta charset="utf-8">'
 
 def card(label):
     return ('<div class="t">'
-            '<img class="mark" src="' + LOGO + '" alt="" />'
+            '<div class="coin"><img src="' + LOGO + '" alt="" /></div>'
             '<div class="label">' + label + '</div>'
             '<div class="rule"></div>'
             '</div>')
