@@ -52,8 +52,10 @@ body{font-family:'Nunito',system-ui,sans-serif;-webkit-font-smoothing:antialiase
     justify-content:center;padding:84px 88px;
     background:linear-gradient(135deg,#e3000b 0%,#9b0008 100%);color:#fff}
 .fred{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
-.og .mark{height:104px;width:auto;align-self:flex-start;margin-bottom:40px;
-          filter:drop-shadow(0 10px 28px rgba(0,0,0,.30))}
+.og .coin{width:112px;height:112px;border-radius:50%;background:#fff;align-self:flex-start;
+          margin-bottom:40px;display:flex;align-items:center;justify-content:center;
+          box-shadow:0 10px 28px rgba(0,0,0,.30)}
+.og .coin img{height:104px;width:104px;border-radius:50%;object-fit:contain}
 .og .kicker{font-weight:800;letter-spacing:.13em;text-transform:uppercase;
             font-size:26px;opacity:.92;margin-bottom:22px}
 .og h1{font-size:74px;line-height:1.04;max-width:1010px}
@@ -69,7 +71,7 @@ PAGE = ('<!DOCTYPE html><html><head><meta charset="utf-8">'
 
 def slide(kicker, title):
     return ('<div class="og">'
-            '<img class="mark" src="' + LOGO_URL + '" alt="Piece Pavilion" />'
+            '<div class="coin"><img src="' + LOGO_URL + '" alt="Piece Pavilion" /></div>'
             '<div class="kicker">' + kicker + '</div>'
             '<h1 class="fred">' + title + '</h1>'
             '<div class="url">piecepavilion.com</div>'
