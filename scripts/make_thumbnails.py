@@ -36,6 +36,7 @@ RED, GOLD, GREEN, BLUE = "#e3000b", "#ffce00", "#3c9e4f", "#1c8ad6"
 
 # slug -> (category label, accent color)
 THUMBS = {
+    "lego-sets-retiring-2026":         ("Retiring Soon",  RED),
     "best-lego-gifts-for-dad":         ("Gift Guide",     RED),
     "how-much-is-your-lego-worth":     ("LEGO Values",    GOLD),
     "how-to-buy-lego-on-bricklink":    ("Buying Guide",   BLUE),
