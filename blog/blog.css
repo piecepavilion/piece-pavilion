@@ -16,7 +16,7 @@
   background: radial-gradient(ellipse at 30% 50%, rgba(227,0,11,0.12) 0%, transparent 70%);
   pointer-events: none;
 }
- {
+.blog-header h1 {
   font-size: clamp(2rem, 4vw, 2.8rem);
   font-weight: 700;
   margin-bottom: 12px;
@@ -105,7 +105,7 @@
   margin-bottom: 8px;
 }
 
- {
+.blog-card-body h2 {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--dark);
@@ -138,7 +138,7 @@
   padding: 48px 24px 80px;
 }
 
- {
+.blog-article h1 {
   font-size: clamp(1.8rem, 4vw, 2.4rem);
   font-weight: 700;
   color: var(--dark);
@@ -155,7 +155,7 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
- {
+.blog-article h2 {
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--dark);
@@ -204,6 +204,73 @@
   font-weight: 800;
 }
 
+/* ===== ARTICLE IMAGES ===== */
+.blog-hero {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  margin: 4px 0 36px;
+}
+
+.blog-figure {
+  margin: 0 0 1.6rem;
+}
+.blog-figure img {
+  display: block;
+  width: 100%;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius);
+}
+.blog-figure figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.blog-figure figcaption a {
+  color: var(--red);
+  font-weight: 800;
+  text-decoration: none;
+}
+.blog-figure figcaption a:hover {
+  text-decoration: underline;
+}
+
+/* Product card floated beside the text on wider screens */
+.blog-figure.product {
+  float: right;
+  width: 232px;
+  margin: 6px 0 18px 28px;
+  padding: 18px 18px 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+}
+.blog-figure.product img {
+  border: 0;
+  background: transparent;
+  width: 100%;
+  max-height: 190px;
+  object-fit: contain;
+}
+.blog-figure.product figcaption {
+  margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .blog-figure.product {
+    float: none;
+    width: 100%;
+    margin: 0 0 1.6rem;
+  }
+}
+
 /* ===== ARTICLE CTA BOX ===== */
 .blog-cta {
   background: linear-gradient(135deg, #e3000b 0%, #9b0008 100%);
@@ -214,7 +281,7 @@
   margin-top: 48px;
 }
 
- {
+.blog-cta h3 {
   font-size: 1.4rem;
   font-weight: 700;
   margin-bottom: 12px;
