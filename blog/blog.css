@@ -87,6 +87,13 @@
   align-items: center;
   justify-content: center;
   font-size: 3.5rem;
+  overflow: hidden;
+}
+.blog-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .blog-card-body {
