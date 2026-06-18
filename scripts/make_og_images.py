@@ -34,6 +34,7 @@ LOGO_URL = "file:///" + os.path.join(REPO, "logo-white.png").replace("\\", "/")
 # Posts not in CAROUSELS, plus the homepage + category-page cards.
 # {slug: (kicker, title)}
 EXTRA = {
+    "lego-world-cup-2026": ("Game On", "LEGO Meets the 2026 World Cup"),
     "lego-sets-retiring-2026": ("Retiring Soon", "120+ LEGO Sets Retiring in 2026"),
     "now-on-instagram": ("We're on Instagram", "Follow @piecepavilion"),
     "_home": ("Family-Owned BrickLink Store", "Your Brick Destination"),
