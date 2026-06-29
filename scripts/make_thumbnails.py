@@ -36,6 +36,7 @@ RED, GOLD, GREEN, BLUE = "#e3000b", "#ffce00", "#3c9e4f", "#1c8ad6"
 
 # slug -> (category label, accent color)
 THUMBS = {
+    "most-valuable-lego-minifigures":  ("Minifig Values", GOLD),
     "lego-fourth-of-july-builds":      ("Fourth of July", BLUE),
     "spotting-valuable-lego-bulk-lots":("Buyer's Guide",  GOLD),
     "used-parts-sale-june-2026":       ("10% Off Sale",   RED),
