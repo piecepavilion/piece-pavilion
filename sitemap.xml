@@ -32,7 +32,13 @@
   </url>
   <url>
     <loc>https://piecepavilion.com/blog/</loc>
-    <lastmod>2026-07-13</lastmod>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://piecepavilion.com/blog/lego-pokemon-sets-2026/</loc>
+    <lastmod>2026-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
