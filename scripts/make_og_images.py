@@ -41,6 +41,7 @@ EXTRA = {
     "used-parts-sale-june-2026": ("10% Off &middot; Ends June 30", "Used Parts Sale"),
     "lego-world-cup-2026": ("Game On", "LEGO Meets the 2026 World Cup"),
     "lego-pokemon-sets-2026": ("Gotta Build &rsquo;Em All", "LEGO Pok&eacute;mon Is Here"),
+    "lego-olivia-rodrigo-2026": ("New for August 1", "Olivia Rodrigo Gets Her Own LEGO"),
     "lego-sets-retiring-2026": ("Retiring Soon", "120+ LEGO Sets Retiring in 2026"),
     "now-on-instagram": ("We're on Instagram", "Follow @piecepavilion"),
     "_home": ("Family-Owned BrickLink Store", "Your Brick Destination"),

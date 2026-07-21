@@ -279,6 +279,27 @@
 }
 
 /* ===== ARTICLE CTA BOX ===== */
+/* ===== PULL QUOTE ===== */
+.blog-quote {
+  margin: 32px 0;
+  padding: 8px 0 8px 24px;
+  border-left: 4px solid var(--red);
+  font-size: 1.2rem;
+  line-height: 1.5;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--dark, #1a1a1a);
+}
+
+.blog-quote cite {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--red);
+}
+
 .blog-cta {
   background: linear-gradient(135deg, #e3000b 0%, #9b0008 100%);
   color: var(--white);

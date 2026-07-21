@@ -43,6 +43,7 @@ THUMBS = {
     "used-parts-sale-june-2026":       ("10% Off Sale",   RED),
     "lego-world-cup-2026":             ("World Cup",      GREEN),
     "lego-pokemon-sets-2026":          ("Pok&eacute;mon",       GOLD),
+    "lego-olivia-rodrigo-2026":        ("Minifig News",   GOLD),
     "lego-sets-retiring-2026":         ("Retiring Soon",  RED),
     "best-lego-gifts-for-dad":         ("Gift Guide",     RED),
     "how-much-is-your-lego-worth":     ("LEGO Values",    GOLD),
