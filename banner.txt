@@ -7,10 +7,11 @@
 #  enabled    YES shows the banner on every page, NO hides it
 #  message    the bold headline (emoji welcome — paste them in)
 #  link_text  the smaller call-to-action after the headline
-#  link       where clicking goes: a site page (/blog/...) or full https:// URL
+#  link       where clicking goes: a site page (/blog/...), a full https:// URL,
+#             or the word LATEST to auto-point at the newest blog post.
 #  Lines starting with # are ignored.
 # ============================================================
 enabled=YES
-message=🎁 New on the Blog: The Best LEGO Gifts for Dad
-link_text=Read the latest →
-link=/blog/best-lego-gifts-for-dad/
+message=🎵 New on the Blog: Olivia Rodrigo Gets Her Own LEGO
+link_text=Read the latest blog post here →
+link=LATEST

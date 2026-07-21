@@ -99,7 +99,23 @@ if (sessionStorage.getItem('banner-dismissed')) {
     const span = banner.querySelector('.announcement-text span');
     if (cfg.message && strong) strong.textContent = cfg.message;
     if (cfg.link_text && span) span.textContent = cfg.link_text;
-    if (cfg.link && textLink) textLink.setAttribute('href', cfg.link);
+    if (cfg.link && textLink) {
+      // link=LATEST auto-points at the newest blog post (top card in /blog/),
+      // so the banner never needs its URL hand-edited when a new post ships.
+      if (cfg.link.trim().toUpperCase() === 'LATEST') {
+        fetch('/blog/?_=' + Date.now())
+          .then((r) => { if (!r.ok) throw new Error('no blog index'); return r.text(); })
+          .then((html) => {
+            const card = new DOMParser()
+              .parseFromString(html, 'text/html')
+              .querySelector('a.blog-card');
+            textLink.setAttribute('href', card ? card.getAttribute('href') : '/blog/');
+          })
+          .catch(() => textLink.setAttribute('href', '/blog/'));
+      } else {
+        textLink.setAttribute('href', cfg.link);
+      }
+    }
 
     // show unless THIS exact message was already dismissed this session
     if (sessionStorage.getItem('banner-dismissed') === (cfg.message || '')) {
