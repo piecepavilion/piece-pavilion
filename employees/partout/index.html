@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — Part-Out Tracker</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:#f7f8fa;color:#14161d;min-height:100vh}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    .bar{background:linear-gradient(135deg,#e3000b,#9b0008);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:14px}
+    .bar img{height:46px;width:auto;display:block;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+    .bar .t{line-height:1.1}
+    .bar .t .sub{font-size:.8rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.08em}
+    .bar h1{font-size:1.5rem}
+    .bar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.92rem;
+      border:2px solid rgba(255,255,255,.45);border-radius:50px;padding:8px 18px;white-space:nowrap}
+    .bar .back:hover{background:rgba(255,255,255,.14);border-color:#fff}
+    .wrap{max-width:1140px;margin:0 auto;padding:28px 24px 60px}
+    .lead{color:#3a4150;margin-bottom:18px;font-size:1.02rem}
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:22px}
+    .controls input,.controls select{font:inherit;padding:11px 14px;border:1px solid #d7dbe0;border-radius:10px;background:#fff}
+    .controls input{flex:1;min-width:220px}
+    .addbtn{font:inherit;font-weight:800;text-decoration:none;background:#e3000b;color:#fff;
+      padding:11px 16px;border-radius:10px;white-space:nowrap}
+    .addbtn:hover{background:#c40009}
+    .hint{font-size:.85rem;color:#6b7280;margin:-8px 0 18px}
+    .rm{flex:none;border:0;background:#f2f3f5;color:#8a92a0;font-size:1.1rem;line-height:1;
+      width:28px;height:28px;border-radius:8px;cursor:pointer}
+    .rm:hover{background:#ffd9d9;color:#c62222}
+    #addmsg.err{color:#c62222}#addmsg.ok{color:#2e7d3e}
+    .meta{margin-left:auto;font-size:.82rem;color:#9ca3af}
+    .totals{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px}
+    .kpi{background:#fff;border:1px solid #eef0f3;border-radius:14px;padding:14px 18px;box-shadow:0 4px 16px rgba(20,22,29,.06);min-width:150px;flex:1}
+    .kpi .lab{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8a92a0}
+    .kpi .val{font-size:1.4rem;font-weight:800;margin-top:4px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+    .card{background:#fff;border:1px solid #eef0f3;border-radius:16px;box-shadow:0 4px 16px rgba(20,22,29,.06);padding:18px;display:flex;flex-direction:column}
+    .card .head{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+    .card .head img{width:64px;height:52px;object-fit:contain;background:#f2f3f5;border-radius:8px;flex:none}
+    .card .head .no{font-size:.78rem;color:#8a92a0;font-weight:700}
+    .card .head h3{font-size:1.02rem;line-height:1.15}
+    .barwrap{background:#eef0f3;border-radius:999px;height:22px;overflow:hidden;position:relative;margin:4px 0 6px}
+    .barfill{height:100%;background:linear-gradient(90deg,#3c9e4f,#2e7d3e);border-radius:999px;transition:width .4s}
+    .barwrap .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#14161d}
+    .subline{font-size:.8rem;color:#6b7280;margin-bottom:12px}
+    .rows{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:.9rem}
+    .rows .r{display:flex;justify-content:space-between;border-bottom:1px dashed #eef0f3;padding:3px 0}
+    .rows .r .k{color:#6b7280}
+    .rows .r .v{font-weight:800}
+    .pos{color:#2e7d3e}.neg{color:#c62222}
+    .foot{margin-top:12px;font-size:.76rem;color:#9ca3af}
+    .empty{background:#fff;border:1px dashed #d7dbe0;border-radius:14px;padding:40px;text-align:center;color:#6b7280}
+    .note{margin-top:26px;font-size:.8rem;color:#9ca3af;text-align:center}
+    a.setlink{color:#e3000b;text-decoration:none;font-weight:800}
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div class="t"><div class="sub">Employees</div><h1>Part-Out Tracker</h1></div>
+    <a class="back" href="/employees/">&larr; Staff home</a>
+  </div>
+
+  <div class="wrap">
+    <p class="lead">Type a set number — we'll pull its 6-month part-out value, match it to our stock, and track profit as it clears. Cost is optional (add it for profit).</p>
+
+    <form class="controls" id="addform" autocomplete="off">
+      <input id="set" type="text" inputmode="numeric" placeholder="Set number — e.g. 75192" required />
+      <input id="cost" type="text" inputmode="decimal" placeholder="Cost (optional)" style="max-width:150px" />
+      <button class="addbtn" id="addbtn" type="submit">➕ Add &amp; track</button>
+      <span class="meta" id="addmsg"></span>
+    </form>
+    <div class="controls">
+      <input id="q" type="search" placeholder="Filter tracked sets — set number or name" autocomplete="off" />
+      <select id="sort">
+        <option value="pct">Sort: % sold</option>
+        <option value="profit">Sort: profit</option>
+        <option value="remaining">Sort: value remaining</option>
+        <option value="set">Sort: set number</option>
+      </select>
+      <span class="meta" id="meta"></span>
+    </div>
+
+    <div class="totals" id="totals"></div>
+    <div class="cards" id="cards"></div>
+    <p class="note">🔒 Staff only · profit &amp; cost shown here are behind Cloudflare Access.
+       Add a set above to track it; sell-through refreshes hourly from BrickLink.</p>
+  </div>
+
+  <script>
+    var DATA = {sets: []};
+    var money = function(n){ return (n<0?"-$":"$") + Math.abs(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
+    var pctTxt = function(f){ return (Math.round((f||0)*1000)/10) + "%"; };
+
+    function card(s){
+      var pct = s.pct_sold_value || 0;
+      var prof = s.profit_realized || 0;
+      var profCls = prof >= 0 ? "pos" : "neg";
+      var projCls = (s.profit_projected||0) >= 0 ? "pos" : "neg";
+      var left = (s.est_total_kinds||0) - (s.est_priced_kinds||0);
+      var unpriced = left > 0 ? (" · still pricing " + left + " of " + s.est_total_kinds + " kinds") : "";
+      return (
+        '<div class="card">' +
+          '<div class="head">' +
+            '<img src="' + s.set_image + '" alt="" onerror="this.style.visibility=\'hidden\'" />' +
+            '<div style="flex:1"><div class="no">Set ' + s.set_no + (s.label ? ' · ' + s.label : '') + '</div>' +
+            '<h3>' + (s.set_name || s.set_no) + '</h3></div>' +
+            '<button class="rm" title="Stop tracking" data-set="' + s.set_no + '">&times;</button>' +
+          '</div>' +
+          '<div class="barwrap"><div class="barfill" style="width:' + Math.min(pct*100,100) + '%"></div>' +
+            '<div class="pct">' + pctTxt(pct) + ' sold</div></div>' +
+          '<div class="subline">' + s.lots_sold_out + '/' + s.lots_total + ' lots cleared · ' +
+            s.pieces_sold + '/' + s.pieces_total + ' pieces' + '</div>' +
+          '<div class="rows">' +
+            row('Est. part-out value', money(s.est_value)) +
+            row('Our listed value', money(s.listed_value)) +
+            row('Collected', money(s.collected)) +
+            row('Remaining', money(s.remaining_value)) +
+            row('Cost', money(s.cost)) +
+            row('Fees', Math.round((s.fee_rate||0)*100) + '%') +
+            row('Profit so far', '<span class="'+profCls+'">'+money(prof)+'</span>') +
+            row('Projected profit', '<span class="'+projCls+'">'+money(s.profit_projected)+'</span>') +
+          '</div>' +
+          '<div class="foot">Est. value' + unpriced +
+            ' · <a class="setlink" target="_blank" rel="noopener" href="https://www.bricklink.com/v2/catalog/catalogitem.page?S=' + s.set_no + '">BrickLink catalog ↗</a></div>' +
+        '</div>');
+    }
+    function row(k,v){ return '<div class="r"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+
+    function totals(sets){
+      var t = {cost:0, collected:0, remaining:0, prof:0};
+      sets.forEach(function(s){ t.cost+=s.cost||0; t.collected+=s.collected||0;
+        t.remaining+=s.remaining_value||0; t.prof+=s.profit_realized||0; });
+      var kpi = function(l,v,cls){ return '<div class="kpi"><div class="lab">'+l+'</div><div class="val '+(cls||'')+'">'+v+'</div></div>'; };
+      return kpi('Sets tracked', sets.length) +
+             kpi('Collected', money(t.collected)) +
+             kpi('Value remaining', money(t.remaining)) +
+             kpi('Total cost', money(t.cost)) +
+             kpi('Profit so far', money(t.prof), t.prof>=0?'pos':'neg');
+    }
+
+    function render(){
+      var q = (document.getElementById('q').value||'').toLowerCase().trim();
+      var sort = document.getElementById('sort').value;
+      var sets = DATA.sets.filter(function(s){
+        if(!q) return true;
+        return (s.set_no||'').toLowerCase().indexOf(q)>=0 ||
+               (s.set_name||'').toLowerCase().indexOf(q)>=0 ||
+               (s.label||'').toLowerCase().indexOf(q)>=0;
+      });
+      sets.sort(function(a,b){
+        if(sort==='profit') return (b.profit_realized||0)-(a.profit_realized||0);
+        if(sort==='remaining') return (b.remaining_value||0)-(a.remaining_value||0);
+        if(sort==='set') return (a.set_no||'').localeCompare(b.set_no||'');
+        return (b.pct_sold_value||0)-(a.pct_sold_value||0);
+      });
+      document.getElementById('totals').innerHTML = sets.length ? totals(sets) : '';
+      document.getElementById('cards').innerHTML = sets.length
+        ? sets.map(card).join('')
+        : '<div class="empty">' + (DATA.sets.length
+            ? 'No sets match “' + q + '”.'
+            : 'No sets tracked yet. Add rows to the <strong>Part-Out</strong> Google Sheet (Sets + Lots tabs); they appear here after the next hourly refresh.') + '</div>';
+    }
+
+    var API = '/employees/api/partout';
+
+    function loadList(){
+      return fetch(API + '/list?_=' + Date.now())
+        .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(j){
+          DATA = j;
+          var when = j.generated ? new Date(j.generated).toLocaleString() : '';
+          document.getElementById('meta').textContent = when ? ('Updated ' + when) : '';
+          render();
+        })
+        .catch(function(){
+          document.getElementById('cards').innerHTML =
+            '<div class="empty">Couldn\'t reach the tracker service. If this is the first run, make sure the Worker is deployed (see partout-worker/README).</div>';
+        });
+    }
+
+    function addSet(e){
+      e.preventDefault();
+      var setEl = document.getElementById('set'), costEl = document.getElementById('cost');
+      var msg = document.getElementById('addmsg'), btn = document.getElementById('addbtn');
+      var set = setEl.value.trim();
+      if(!set) return;
+      var body = { set: set };
+      if(costEl.value.trim()) body.cost = parseFloat(costEl.value.replace(/[$,]/g,''));
+      btn.disabled = true; msg.className = 'meta'; msg.textContent = 'Pulling ' + set + ' from BrickLink…';
+      fetch(API + '/add', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+        .then(function(res){
+          btn.disabled = false;
+          if(!res.ok || res.j.error){ msg.className='meta err'; msg.textContent = res.j.error || 'Add failed.'; return; }
+          msg.className='meta ok';
+          msg.textContent = 'Added ' + (res.j.set.set_name || set) + '.';
+          setEl.value=''; costEl.value='';
+          loadList();
+        })
+        .catch(function(){ btn.disabled=false; msg.className='meta err'; msg.textContent='Network error.'; });
+    }
+
+    function removeSet(setNo){
+      fetch(API + '/remove', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({set:setNo}) })
+        .then(function(){ loadList(); });
+    }
+
+    document.getElementById('addform').addEventListener('submit', addSet);
+    document.getElementById('q').addEventListener('input', render);
+    document.getElementById('sort').addEventListener('change', render);
+    document.getElementById('cards').addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('.rm');
+      if(b && confirm('Stop tracking set ' + b.dataset.set + '?')) removeSet(b.dataset.set);
+    });
+    loadList();
+  </script>
+</body>
+</html>
