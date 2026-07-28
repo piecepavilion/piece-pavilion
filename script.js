@@ -136,6 +136,42 @@ if (sessionStorage.getItem('banner-dismissed')) {
     .catch(() => { /* both failed — keep the hardcoded fallback banner */ });
 })();
 
+// ===== HOMEPAGE "FROM THE BLOG" — auto-fill the 3 newest posts from /blog/ =====
+// Reads the blog index (newest-first) and rebuilds the preview grid, so the
+// homepage never shows stale posts. Falls back to the hardcoded cards on error.
+(function loadBlogPreview() {
+  const grid = document.querySelector('.blog-preview-grid');
+  if (!grid) return;
+  const esc = (s) => (s || '').replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  fetch('/blog/?_=' + Date.now())
+    .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
+    .then((html) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const cards = Array.from(doc.querySelectorAll('a.blog-card')).slice(0, 3);
+      if (!cards.length) return;
+      grid.innerHTML = cards.map((c) => {
+        const href = c.getAttribute('href') || '/blog/';
+        const img = c.querySelector('.blog-card-thumb img');
+        const thumb = img ? img.getAttribute('src') : '';
+        const date = (c.querySelector('.blog-card-date') || {}).textContent || '';
+        const title = (c.querySelector('h2') || {}).textContent || '';
+        const desc = (c.querySelector('.blog-card-body p') || {}).textContent || '';
+        return '<a href="' + esc(href) + '" class="blog-preview-card">' +
+          '<div class="blog-preview-thumb"' + (thumb
+            ? ' style="background-image:url(\'' + esc(thumb) + '\');background-size:cover;background-position:center;"'
+            : '') + '></div>' +
+          '<div class="blog-preview-body">' +
+            '<span class="blog-preview-date">' + esc(date) + '</span>' +
+            '<h3>' + esc(title) + '</h3>' +
+            '<p>' + esc(desc) + '</p>' +
+            '<span class="blog-preview-link">Read More &rarr;</span>' +
+          '</div></a>';
+      }).join('');
+    })
+    .catch(() => { /* keep the hardcoded fallback cards */ });
+})();
+
 // ===== FLYER LIGHTBOX =====
 const lightbox = document.getElementById('flyer-lightbox');
 if (lightbox) {
