@@ -15,11 +15,16 @@
     a{text-decoration:none;color:inherit}
     .wrap{max-width:900px;margin:0 auto;padding:14px}
     .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .topbar .brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
     .topbar img{height:34px;width:34px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.15)}
     .topbar .name{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.05rem}
-    .topbar .shop{margin-left:auto;background:#e3000b;color:#fff;font-weight:800;font-size:.85rem;
+    .topbar .home{margin-left:auto;font-weight:800;font-size:.85rem;color:#14161d;
+      border:2px solid #d4d7dd;padding:7px 14px;border-radius:50px;white-space:nowrap}
+    .topbar .home:hover{border-color:#e3000b;color:#e3000b}
+    .topbar .shop{background:#e3000b;color:#fff;font-weight:800;font-size:.85rem;
       padding:8px 16px;border-radius:50px;white-space:nowrap}
     .topbar .shop:hover{background:#c40009}
+    @media(max-width:430px){.topbar .name{display:none}}
     /* slideshow */
     .stage{position:relative;width:100%;aspect-ratio:16/9;background:#f4f5f7;border-radius:14px;
       overflow:hidden;box-shadow:0 6px 22px rgba(20,22,29,.10)}
@@ -49,8 +54,11 @@
 <body>
   <div class="wrap">
     <div class="topbar">
-      <img src="/logo-white.png" alt="Piece Pavilion" />
-      <span class="name">Piece Pavilion</span>
+      <a class="brand" href="/" target="_top">
+        <img src="/logo-white.png" alt="Piece Pavilion" />
+        <span class="name">Piece Pavilion</span>
+      </a>
+      <a class="home" href="/" target="_top">&#8962; Home</a>
       <a class="shop" href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener">Shop Now &rarr;</a>
     </div>
     <div id="root"></div>
