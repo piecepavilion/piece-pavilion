@@ -66,7 +66,7 @@
         <button class="btn" id="uploadBtn" type="button">&#8593; Upload image(s)</button>
         <span class="msg" id="msg"></span>
       </div>
-      <p class="hint">JPG, PNG, WEBP or GIF, up to 2&nbsp;MB each. Use web-sized images (wide/landscape looks best). You can select several at once.</p>
+      <p class="hint">JPG, PNG, WEBP or GIF — <strong>any size is fine</strong>, big photos are automatically shrunk to a fast web size before uploading. Wide/landscape looks best. You can select several at once.</p>
     </div>
 
     <div class="panel">
@@ -117,13 +117,39 @@
           '<p class="empty">Couldn\'t load — make sure you\'re signed in, then refresh.</p>'; });
     }
 
+    // Shrink big photos in the browser before upload: fast splash + no size limits for D.
+    // Small images pass through untouched (keeps PNG transparency etc.).
+    function resizeImage(file){
+      if(!/^image\//.test(file.type) || file.size <= 1200 * 1024) return Promise.resolve(file);
+      if(typeof createImageBitmap !== 'function') return Promise.resolve(file);
+      return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function(bmp){
+        var maxDim = 1600;
+        var scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+        var w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+        var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(bmp, 0, 0, w, h);
+        return new Promise(function(res){
+          canvas.toBlob(function(blob){
+            if(blob && blob.size < file.size){
+              res(new File([blob], (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+            } else { res(file); }
+          }, 'image/jpeg', 0.85);
+        });
+      }).catch(function(){ return file; });
+    }
+
     document.getElementById('uploadBtn').addEventListener('click', function(){
       var input = document.getElementById('files');
       if(!input.files || !input.files.length){ setMsg('Choose an image first.', 'err'); return; }
-      var fd = new FormData();
-      Array.prototype.forEach.call(input.files, function(f){ fd.append('file', f); });
-      var btn = this; btn.disabled = true; setMsg('Uploading…');
-      fetch(API + '/upload', { method: 'POST', body: fd })
+      var btn = this; btn.disabled = true; setMsg('Optimizing…');
+      Promise.all(Array.prototype.map.call(input.files, resizeImage)).then(function(files){
+        var fd = new FormData();
+        files.forEach(function(f){ fd.append('file', f); });
+        setMsg('Uploading…');
+        return fetch(API + '/upload', { method: 'POST', body: fd });
+      })
         .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
         .then(function(res){
           btn.disabled = false;
