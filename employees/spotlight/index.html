@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — Spotlight Editor</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:#f7f8fa;color:#14161d;min-height:100vh}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    .bar{background:linear-gradient(135deg,#e3000b,#9b0008);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:14px}
+    .bar img{height:46px;width:auto;display:block;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+    .bar .t{line-height:1.1}
+    .bar .t .sub{font-size:.8rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.08em}
+    .bar h1{font-size:1.5rem}
+    .bar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.92rem;
+      border:2px solid rgba(255,255,255,.45);border-radius:50px;padding:8px 18px;white-space:nowrap}
+    .bar .back:hover{background:rgba(255,255,255,.14);border-color:#fff}
+    .wrap{max-width:900px;margin:0 auto;padding:26px 24px 60px}
+    .lead{color:#3a4150;margin-bottom:18px;font-size:1.02rem}
+    .lead a{color:#e3000b;font-weight:800;text-decoration:none}
+    .panel{background:#fff;border:1px solid #eef0f3;border-radius:14px;box-shadow:0 4px 16px rgba(20,22,29,.06);padding:18px;margin-bottom:20px}
+    .uploader{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .uploader input[type=file]{font:inherit}
+    .btn{font:inherit;font-weight:800;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;background:#e3000b;color:#fff}
+    .btn:hover{background:#c40009}.btn:disabled{opacity:.5;cursor:default}
+    .btn.sm{padding:7px 12px;font-size:.85rem}
+    .btn.ghost{background:#f2f3f5;color:#14161d}.btn.ghost:hover{background:#e6e8ec}
+    .btn.danger{background:#fff;color:#c62222;border:1px solid #f0c4c4}.btn.danger:hover{background:#ffe9e9}
+    .msg{font-size:.9rem;font-weight:700}.msg.err{color:#c62222}.msg.ok{color:#2e7d3e}
+    .hint{font-size:.82rem;color:#8a92a0;margin-top:8px}
+    .item{display:grid;grid-template-columns:120px 1fr auto;gap:16px;align-items:center;
+      padding:14px 0;border-top:1px solid #eef0f3}
+    .item:first-of-type{border-top:0}
+    .item .thumb{width:120px;height:80px;border-radius:8px;background:#f2f3f5;object-fit:contain}
+    .item .fields{display:flex;flex-direction:column;gap:8px}
+    .item input[type=text]{font:inherit;padding:8px 10px;border:1px solid #d7dbe0;border-radius:8px;width:100%}
+    .item .row2{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .item label.chk{display:flex;gap:6px;align-items:center;font-size:.9rem;font-weight:700;color:#3a4150}
+    .item .actions{display:flex;flex-direction:column;gap:6px}
+    .ordbtns{display:flex;gap:6px}
+    .empty{color:#6b7280;padding:20px 0}
+    .note{margin-top:24px;font-size:.82rem;color:#9ca3af;text-align:center}
+    @media(max-width:640px){.item{grid-template-columns:1fr}.item .thumb{width:100%;height:120px}}
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div class="t"><div class="sub">Employees</div><h1>Spotlight Editor</h1></div>
+    <a class="back" href="/employees/">&larr; Staff home</a>
+  </div>
+
+  <div class="wrap">
+    <p class="lead">Add and arrange the images shown on our BrickLink store splash. Changes go live on the
+      <a href="/spotlight/" target="_blank" rel="noopener">public Spotlight page &#8599;</a> within about a minute.</p>
+
+    <div class="panel">
+      <div class="uploader">
+        <input id="files" type="file" accept="image/*" multiple />
+        <button class="btn" id="uploadBtn" type="button">&#8593; Upload image(s)</button>
+        <span class="msg" id="msg"></span>
+      </div>
+      <p class="hint">JPG, PNG, WEBP or GIF, up to 2&nbsp;MB each. Use web-sized images (wide/landscape looks best). You can select several at once.</p>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:6px;">Current spotlight <span id="count" style="color:#8a92a0;font-weight:700;"></span></h3>
+      <p class="hint" style="margin-bottom:6px;">Drag isn't needed — use &#9650;/&#9660; to order. Add a caption and an optional link (opens when a visitor clicks the image). Untick <em>Show</em> to hide one without deleting it.</p>
+      <div id="list"><p class="empty">Loading…</p></div>
+    </div>
+
+    <p class="note">🔒 Staff only. Point BrickLink → Store Settings → Splash at <strong>https://piecepavilion.com/spotlight/</strong></p>
+  </div>
+
+  <script>
+    var API = '/employees/api/spotlight';
+    var ITEMS = [];
+    var msg = document.getElementById('msg');
+    function setMsg(t, cls){ msg.textContent = t || ''; msg.className = 'msg' + (cls ? ' ' + cls : ''); }
+    function esc(s){ return (s || '').replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); }
+
+    function render(){
+      var list = document.getElementById('list');
+      document.getElementById('count').textContent = ITEMS.length ? '(' + ITEMS.length + ')' : '';
+      if(!ITEMS.length){ list.innerHTML = '<p class="empty">No images yet — upload one above to get started.</p>'; return; }
+      list.innerHTML = ITEMS.map(function(it, i){
+        return '<div class="item" data-id="' + it.id + '">' +
+          '<img class="thumb" src="' + it.url + '" alt="" />' +
+          '<div class="fields">' +
+            '<input type="text" class="cap" placeholder="Caption (optional)" value="' + esc(it.caption) + '" />' +
+            '<input type="text" class="link" placeholder="Link when clicked (optional) — e.g. a store or product URL" value="' + esc(it.link) + '" />' +
+            '<div class="row2">' +
+              '<label class="chk"><input type="checkbox" class="en" ' + (it.enabled !== false ? 'checked' : '') + ' /> Show</label>' +
+              '<button class="btn sm ghost save" type="button">Save</button>' +
+              '<span class="ordbtns">' +
+                '<button class="btn sm ghost up" type="button" ' + (i === 0 ? 'disabled' : '') + '>&#9650;</button>' +
+                '<button class="btn sm ghost down" type="button" ' + (i === ITEMS.length - 1 ? 'disabled' : '') + '>&#9660;</button>' +
+              '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="actions"><button class="btn sm danger del" type="button">Delete</button></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function load(){
+      return fetch(API + '/list?_=' + Date.now())
+        .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(j){ ITEMS = j.items || []; render(); })
+        .catch(function(){ document.getElementById('list').innerHTML =
+          '<p class="empty">Couldn\'t load — make sure you\'re signed in, then refresh.</p>'; });
+    }
+
+    document.getElementById('uploadBtn').addEventListener('click', function(){
+      var input = document.getElementById('files');
+      if(!input.files || !input.files.length){ setMsg('Choose an image first.', 'err'); return; }
+      var fd = new FormData();
+      Array.prototype.forEach.call(input.files, function(f){ fd.append('file', f); });
+      var btn = this; btn.disabled = true; setMsg('Uploading…');
+      fetch(API + '/upload', { method: 'POST', body: fd })
+        .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+        .then(function(res){
+          btn.disabled = false;
+          if(!res.ok || res.j.error){ setMsg(res.j.error || 'Upload failed.', 'err'); return; }
+          setMsg('Added ' + (res.j.added ? res.j.added.length : 0) + ' image(s).', 'ok');
+          input.value = ''; load();
+        })
+        .catch(function(){ btn.disabled = false; setMsg('Network error.', 'err'); });
+    });
+
+    document.getElementById('list').addEventListener('click', function(e){
+      var itemEl = e.target.closest('.item'); if(!itemEl) return;
+      var id = itemEl.dataset.id;
+      var idx = ITEMS.findIndex(function(x){ return x.id === id; });
+      if(e.target.closest('.del')){
+        if(!confirm('Delete this image?')) return;
+        fetch(API + '/delete', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ id: id }) })
+          .then(function(){ setMsg('Deleted.', 'ok'); load(); });
+      } else if(e.target.closest('.save')){
+        var body = { id: id,
+          caption: itemEl.querySelector('.cap').value,
+          link: itemEl.querySelector('.link').value,
+          enabled: itemEl.querySelector('.en').checked };
+        fetch(API + '/update', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
+          .then(function(){ setMsg('Saved.', 'ok'); load(); });
+      } else if(e.target.closest('.up') || e.target.closest('.down')){
+        var to = e.target.closest('.up') ? idx - 1 : idx + 1;
+        if(to < 0 || to >= ITEMS.length) return;
+        var order = ITEMS.map(function(x){ return x.id; });
+        order.splice(to, 0, order.splice(idx, 1)[0]);
+        fetch(API + '/reorder', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ order: order }) })
+          .then(function(){ load(); });
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

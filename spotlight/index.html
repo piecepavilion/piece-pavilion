@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — Spotlight</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:#fff;color:#14161d}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:900px;margin:0 auto;padding:14px}
+    .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .topbar img{height:34px;width:34px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+    .topbar .name{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.05rem}
+    .topbar .shop{margin-left:auto;background:#e3000b;color:#fff;font-weight:800;font-size:.85rem;
+      padding:8px 16px;border-radius:50px;white-space:nowrap}
+    .topbar .shop:hover{background:#c40009}
+    /* slideshow */
+    .stage{position:relative;width:100%;aspect-ratio:16/9;background:#f4f5f7;border-radius:14px;
+      overflow:hidden;box-shadow:0 6px 22px rgba(20,22,29,.10)}
+    .slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      opacity:0;transition:opacity .6s ease;background:#f4f5f7}
+    .slide.on{opacity:1}
+    .slide img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
+    .slide .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 16px;color:#fff;font-weight:700;
+      font-size:1rem;background:linear-gradient(transparent,rgba(0,0,0,.65))}
+    .nav{position:absolute;top:50%;transform:translateY(-50%);border:0;cursor:pointer;
+      width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);color:#14161d;
+      font-size:1.2rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .nav:hover{background:#fff}
+    .nav.prev{left:10px}.nav.next{right:10px}
+    .dots{display:flex;gap:7px;justify-content:center;margin-top:12px}
+    .dots button{width:9px;height:9px;border-radius:50%;border:0;background:#d4d7dd;cursor:pointer;padding:0}
+    .dots button.on{background:#e3000b}
+    /* empty / fallback state */
+    .empty{text-align:center;padding:40px 20px}
+    .empty img{height:70px;width:70px;border-radius:50%;margin-bottom:14px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+    .empty h1{font-family:'Fredoka',sans-serif;font-size:1.5rem;margin-bottom:8px}
+    .empty p{color:#6b7280;margin-bottom:18px}
+    .empty .shop{display:inline-block;background:#e3000b;color:#fff;font-weight:800;padding:11px 22px;border-radius:50px}
+    @media(max-width:520px){.stage{aspect-ratio:4/3}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <img src="/logo-white.png" alt="Piece Pavilion" />
+      <span class="name">Piece Pavilion</span>
+      <a class="shop" href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener">Shop Now &rarr;</a>
+    </div>
+    <div id="root"></div>
+  </div>
+
+  <script>
+    var STORE = 'https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop';
+    var root = document.getElementById('root');
+
+    function emptyState(){
+      root.innerHTML =
+        '<div class="empty">' +
+          '<img src="/logo-white.png" alt="Piece Pavilion" />' +
+          '<h1>Welcome to Piece Pavilion</h1>' +
+          '<p>Authentic LEGO&reg; parts, minifigures, and retired sets — every piece finds its place.</p>' +
+          '<a class="shop" href="' + STORE + '" target="_blank" rel="noopener">Browse the Store &rarr;</a>' +
+        '</div>';
+    }
+
+    function slideshow(items){
+      var slides = items.map(function(it, i){
+        var img = '<img src="' + it.url + '" alt="' + (it.caption ? it.caption.replace(/"/g,'&quot;') : 'Piece Pavilion spotlight') + '" />';
+        var cap = it.caption ? '<div class="cap">' + it.caption.replace(/</g,'&lt;') + '</div>' : '';
+        var inner = img + cap;
+        var cls = 'slide' + (i === 0 ? ' on' : '');
+        return it.link
+          ? '<a class="' + cls + '" href="' + it.link + '" target="_blank" rel="noopener">' + inner + '</a>'
+          : '<div class="' + cls + '">' + inner + '</div>';
+      }).join('');
+      var arrows = items.length > 1
+        ? '<button class="nav prev" aria-label="Previous">&#8249;</button><button class="nav next" aria-label="Next">&#8250;</button>'
+        : '';
+      var dots = items.length > 1
+        ? '<div class="dots">' + items.map(function(_, i){ return '<button data-i="' + i + '"' + (i === 0 ? ' class="on"' : '') + '></button>'; }).join('') + '</div>'
+        : '';
+      root.innerHTML = '<div class="stage">' + slides + arrows + '</div>' + dots;
+
+      if (items.length < 2) return;
+      var els = root.querySelectorAll('.slide');
+      var dotEls = root.querySelectorAll('.dots button');
+      var cur = 0, timer;
+      function show(n){
+        cur = (n + els.length) % els.length;
+        els.forEach(function(e, i){ e.classList.toggle('on', i === cur); });
+        dotEls.forEach(function(d, i){ d.classList.toggle('on', i === cur); });
+      }
+      function next(){ show(cur + 1); }
+      function reset(){ clearInterval(timer); timer = setInterval(next, 5000); }
+      root.querySelector('.next').addEventListener('click', function(){ next(); reset(); });
+      root.querySelector('.prev').addEventListener('click', function(){ show(cur - 1); reset(); });
+      dotEls.forEach(function(d){ d.addEventListener('click', function(){ show(+d.dataset.i); reset(); }); });
+      reset();
+    }
+
+    fetch('/spotlight/data.json?_=' + Date.now())
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(j){
+        var items = (j.items || []);
+        if (items.length) slideshow(items); else emptyState();
+      })
+      .catch(emptyState);
+  </script>
+  <!-- Lets BrickLink's splash iframe auto-size to this page's height (optional per BrickLink docs). -->
+  <script src="https://cdn.jsdelivr.net/npm/iframe-resizer@4.3.9/js/iframeResizer.contentWindow.min.js"></script>
+</body>
+</html>
