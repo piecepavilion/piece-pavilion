@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — Bulk Tracker</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:#f7f8fa;color:#14161d;min-height:100vh}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    .bar{background:linear-gradient(135deg,#e3000b,#9b0008);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:14px}
+    .bar img{height:46px;width:auto;display:block;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+    .bar .t{line-height:1.1}
+    .bar .t .sub{font-size:.8rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.08em}
+    .bar h1{font-size:1.5rem}
+    .bar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.92rem;
+      border:2px solid rgba(255,255,255,.45);border-radius:50px;padding:8px 18px;white-space:nowrap}
+    .bar .back:hover{background:rgba(255,255,255,.14);border-color:#fff}
+    .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px}
+    .lead{color:#3a4150;margin-bottom:10px;font-size:1.02rem}
+    .hint{font-size:.85rem;color:#6b7280;margin-bottom:18px;line-height:1.55}
+    .hint code{background:#eef0f3;border-radius:5px;padding:1px 6px;font-size:.92em}
+    a.lnk{color:#e3000b;text-decoration:none;font-weight:800}
+    a.lnk:hover{text-decoration:underline}
+
+    .totals{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:20px}
+    .kpi{background:#fff;border:1px solid #eef0f3;border-radius:14px;padding:14px 18px;
+      box-shadow:0 4px 16px rgba(20,22,29,.06);min-width:150px;flex:1}
+    .kpi .lab{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8a92a0}
+    .kpi .val{font-size:1.4rem;font-weight:800;margin-top:4px}
+    .kpi .sub{font-size:.76rem;color:#9ca3af;margin-top:2px}
+
+    .flags{margin-bottom:20px;display:flex;flex-direction:column;gap:10px}
+    .flag{background:#fff8e6;border:1px solid #f5d98a;border-radius:12px;padding:12px 16px;font-size:.88rem;color:#6b5312}
+    .flag.bad{background:#fdecec;border-color:#f3b3b3;color:#8c2020}
+    .flag strong{font-weight:900}
+
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px}
+    .controls input,.controls select{font:inherit;padding:11px 14px;border:1px solid #d7dbe0;border-radius:10px;background:#fff}
+    .controls input{flex:1;min-width:220px}
+    .tabs{display:inline-flex;background:#eef0f3;border-radius:10px;padding:3px}
+    .tabs button{font:inherit;font-weight:800;font-size:.9rem;border:0;background:none;color:#6b7280;
+      padding:8px 16px;border-radius:8px;cursor:pointer}
+    .tabs button.on{background:#fff;color:#14161d;box-shadow:0 2px 6px rgba(20,22,29,.1)}
+    .meta{margin-left:auto;font-size:.82rem;color:#9ca3af}
+
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));gap:18px}
+    .card{background:#fff;border:1px solid #eef0f3;border-radius:16px;
+      box-shadow:0 4px 16px rgba(20,22,29,.06);padding:18px;display:flex;flex-direction:column}
+    .card .no{font-size:.78rem;color:#8a92a0;font-weight:700}
+    .card h3{font-size:1.05rem;line-height:1.2;margin-top:2px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+    .chip{background:#eef0f3;color:#3a4150;border-radius:6px;padding:2px 8px;font-size:.76rem;font-weight:800}
+    .chip.warn{background:#fff8e6;color:#6b5312}
+    .barwrap{background:#eef0f3;border-radius:999px;height:22px;overflow:hidden;position:relative;margin:10px 0 6px}
+    .barfill{height:100%;background:linear-gradient(90deg,#3c9e4f,#2e7d3e);border-radius:999px;transition:width .4s}
+    .barwrap .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-size:.8rem;font-weight:800;color:#14161d}
+    .subline{font-size:.8rem;color:#6b7280;margin-bottom:10px}
+    .rows{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:.9rem}
+    .rows .r{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #eef0f3;padding:4px 0}
+    .rows .r .k{color:#6b7280}
+    .rows .r .v{font-weight:800;white-space:nowrap}
+    .pos{color:#2e7d3e}.neg{color:#c62222}.dim{color:#9ca3af;font-weight:700}
+
+    details{margin-top:12px;border-top:1px solid #eef0f3;padding-top:10px}
+    details+details{border-top:1px dashed #eef0f3}
+    summary{cursor:pointer;font-size:.83rem;font-weight:800;color:#e3000b;list-style:none}
+    summary::-webkit-details-marker{display:none}
+    summary::before{content:"\25B8 ";display:inline-block;transition:transform .15s}
+    details[open] summary::before{transform:rotate(90deg)}
+    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.8rem}
+    th{text-align:left;color:#8a92a0;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;
+      padding:4px 6px 4px 0;border-bottom:1px solid #eef0f3;white-space:nowrap}
+    td{padding:4px 6px 4px 0;border-bottom:1px solid #f5f6f8;vertical-align:top}
+    td.n,th.n{text-align:right;white-space:nowrap}
+    td.b,th.b{white-space:nowrap}
+    .scroll{max-height:320px;overflow:auto}
+    .empty{background:#fff;border:1px dashed #d7dbe0;border-radius:14px;padding:40px;text-align:center;color:#6b7280}
+    .note{margin-top:26px;font-size:.8rem;color:#9ca3af;text-align:center;line-height:1.6}
+    @media(max-width:520px){.rows{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div class="t"><div class="sub">Employees</div><h1>Bulk Tracker</h1></div>
+    <a class="back" href="/employees/">&larr; Staff home</a>
+  </div>
+
+  <div class="wrap">
+    <p class="lead">Every sale traced back to the bulk buy it came out of — by the <strong>location tag in the lot's BrickLink remarks</strong>.</p>
+    <p class="hint">
+      Tag a lot <code>B-4</code> or <code>B-4/F</code> in remarks and it belongs to bin 4 (sub-bin F). BrickLink returns those
+      remarks on every sold order line, so each sale attributes back to its bin — that's real history, not an estimate.
+      Bins roll up to a <strong>purchase</strong> via the <code>Bulk Bins</code> column on the
+      <a class="lnk" href="https://docs.google.com/spreadsheets/d/1PKc6WzElm8DSQ7lQlNgKpPjcaX6JkGL8EOzpQr1sNtU/edit" target="_blank" rel="noopener">Purchases sheet</a>
+      — that's the only place cost is entered, and the only thing standing between you and profit per buy.
+      <br /><strong>% sold</strong> on the bar is by <em>value</em> (revenue &divide; revenue + what's still on the shelf at our ask); the pieces count is shown underneath.
+    </p>
+
+    <div class="totals" id="totals"></div>
+    <div class="flags" id="flags"></div>
+
+    <div class="controls">
+      <div class="tabs" id="tabs">
+        <button data-view="purchases" class="on">By purchase</button>
+        <button data-view="bins">By bin</button>
+      </div>
+      <input id="q" type="search" placeholder="Filter — bin, seller, description…" autocomplete="off" />
+      <select id="sort">
+        <option value="pct">Sort: % sold</option>
+        <option value="profit">Sort: profit</option>
+        <option value="remaining">Sort: value left</option>
+        <option value="revenue">Sort: revenue</option>
+        <option value="name">Sort: name / bin</option>
+      </select>
+      <span class="meta" id="meta"></span>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <p class="note">🔒 Staff only — cost and profit on this page are behind Cloudflare Access.<br />
+      Rebuilt hourly from BrickLink. Cost comes from the Purchases sheet; per-bin labels from the Bulk Breakdown sheet's <em>Lot Config</em> tab.</p>
+  </div>
+
+  <script>
+  (function () {
+    var DATA = null, view = "purchases";
+    var $ = function (id) { return document.getElementById(id); };
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function money(n) {
+      if (n == null) return "—";
+      return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(undefined,
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function pctTxt(f) { return f == null ? "—" : (Math.round(f * 1000) / 10) + "%"; }
+    // Store-defined lots ("P*143") carry no catalogue name; the item number is
+    // the only handle staff have on them, so fall back to it.
+    function iname(r) { return esc(r.item_name || r.item_no || "(unnamed lot)"); }
+    function binCell(r) {
+      return '<td class="b">' + esc(r.bulk_id) +
+        (r.sub && r.sub !== "-" ? "/" + esc(r.sub) : "") + "</td>";
+    }
+    // Share of value cleared: what we took in, against that plus what is still
+    // sitting on the shelf at our ask. Pieces alone hide that one minifig can
+    // outweigh a thousand common bricks.
+    function pctValue(o) {
+      var d = (o.revenue || 0) + (o.ask_value_remaining || 0);
+      return d > 0 ? (o.revenue || 0) / d : 0;
+    }
+    function cls(n) { return n == null ? "dim" : (n >= 0 ? "pos" : "neg"); }
+    function row(k, v, c) {
+      return '<div class="r"><span class="k">' + k + '</span><span class="v ' + (c || "") + '">' + v + "</span></div>";
+    }
+
+    // ---- sold / in-stock lines belonging to a set of (bin, sub) pairs
+    function keyset(binDetail) {
+      var s = {};
+      (binDetail || []).forEach(function (b) { s[b.bulk_id + "|" + b.sub] = 1; });
+      return s;
+    }
+    function linesFor(keys, field) {
+      var out = [];
+      (DATA.lots || []).forEach(function (l) {
+        (l[field] || []).forEach(function (ln) {
+          if (keys[l.bulk_id + "|" + ln.sub]) {
+            out.push(Object.assign({ bulk_id: l.bulk_id }, ln));
+          }
+        });
+      });
+      return out;
+    }
+
+    function soldTable(lines) {
+      if (!lines.length) return '<p class="subline">Nothing sold from these bins yet.</p>';
+      var rows = lines.slice(0, 300).map(function (r) {
+        return '<tr><td class="b">' + esc(r.date) + "</td>" + binCell(r) + "<td>" + iname(r) +
+          (r.color && r.color !== "(Not Applicable)" ? ' <span class="dim">' + esc(r.color) + "</span>" : "") +
+          '</td><td class="n">' + r.qty + '</td><td class="n">' + money(r.value) + "</td></tr>";
+      }).join("");
+      return '<div class="scroll"><table><thead><tr><th class="b">Date</th><th class="b">Bin</th><th>Item</th>' +
+        '<th class="n">Qty</th><th class="n">Total</th></tr></thead><tbody>' + rows +
+        "</tbody></table></div>" +
+        (lines.length > 300 ? '<p class="subline">Showing the 300 most recent of ' + lines.length + ".</p>" : "");
+    }
+
+    function stockTable(lines) {
+      if (!lines.length) return '<p class="subline">Nothing left in stock from these bins.</p>';
+      var rows = lines.slice(0, 300).map(function (r) {
+        return "<tr>" + binCell(r) + "<td>" + iname(r) +
+          (r.color && r.color !== "(Not Applicable)" ? ' <span class="dim">' + esc(r.color) + "</span>" : "") +
+          '</td><td class="n">' + r.qty + '</td><td class="n">' + money(r.price) +
+          '</td><td class="n">' + money(r.value) + "</td></tr>";
+      }).join("");
+      return '<div class="scroll"><table><thead><tr><th class="b">Bin</th><th>Item</th>' +
+        '<th class="n">Qty</th><th class="n">Ask</th><th class="n">Value</th></tr></thead><tbody>' + rows +
+        "</tbody></table></div>" +
+        (lines.length > 300 ? '<p class="subline">Showing the 300 largest of ' + lines.length + ".</p>" : "");
+    }
+
+    function binTable(binDetail) {
+      var rows = binDetail.map(function (b) {
+        return "<tr>" + binCell({ bulk_id: b.bulk_id, sub: b.sub }) +
+          '<td class="n">' + b.pieces_sold + '</td><td class="n">' + b.pieces_stock +
+          '</td><td class="n">' + money(b.revenue) + '</td><td class="n">' + money(b.ask_value) + "</td></tr>";
+      }).join("");
+      return "<table><thead><tr><th class=\"b\">Bin</th><th class=\"n\">Sold</th><th class=\"n\">In stock</th>" +
+        '<th class="n">Revenue</th><th class="n">Left @ ask</th></tr></thead><tbody>' + rows + "</tbody></table>";
+    }
+
+    // ---------------------------------------------------------- purchase card
+    function purchaseCard(p) {
+      var unassigned = p.purchase_id === "UNASSIGNED";
+      var pv = pctValue(p);
+      var keys = keyset(p.bin_detail);
+      var title = p.description || p.source || p.purchase_id;
+      var chips = (p.bins || []).map(function (b) { return '<span class="chip">' + esc(b) + "</span>"; }).join("");
+      (p.missing_bins || []).forEach(function (b) {
+        chips += '<span class="chip warn">' + esc(b) + " — nothing tagged</span>";
+      });
+
+      var costRows;
+      if (unassigned) {
+        costRows = row("Cost", '<span class="dim">not linked to a buy</span>') +
+          row("Net of fees", money(p.net_revenue));
+      } else if (p.has_cost) {
+        costRows = row("Cost", money(p.cost)) +
+          row("Recouped", pctTxt(p.pct_recouped), cls(p.profit_realized)) +
+          row("Profit so far", money(p.profit_realized), cls(p.profit_realized)) +
+          row("Projected", money(p.profit_projected), cls(p.profit_projected));
+      } else {
+        costRows = row("Cost", '<span class="dim">add on Purchases sheet</span>') +
+          row("Net of fees", money(p.net_revenue));
+      }
+
+      return '<div class="card">' +
+        '<div class="no">' + (unassigned ? "Unlinked bins" :
+          esc(p.purchase_id) + (p.date ? " · " + esc(p.date) : "") + (p.source ? " · " + esc(p.source) : "")) + "</div>" +
+        "<h3>" + esc(title) + "</h3>" +
+        '<div class="chips">' + (chips || '<span class="chip warn">no bins tagged yet</span>') + "</div>" +
+        '<div class="barwrap"><div class="barfill" style="width:' + Math.min(pv * 100, 100) + '%"></div>' +
+          '<div class="pct">' + pctTxt(pv) + " of value sold</div></div>" +
+        '<div class="subline">' + p.pieces_sold + " of " + p.pieces_ever + " pieces (" +
+          pctTxt(p.pct_sold_pieces) + ") · " + p.orders + " order" + (p.orders === 1 ? "" : "s") +
+          (p.last_sale ? " · last sale " + esc(p.last_sale) : "") + "</div>" +
+        '<div class="rows">' +
+          row("Revenue", money(p.revenue)) +
+          row("Left @ ask", money(p.ask_value_remaining)) +
+          costRows +
+        "</div>" +
+        (p.bin_detail.length ? "<details><summary>Bins &amp; sub-bins (" + p.bin_detail.length + ")</summary>" +
+          binTable(p.bin_detail) + "</details>" : "") +
+        "<details><summary>Sales from these bins</summary>" + soldTable(linesFor(keys, "sold_lines")) + "</details>" +
+        "<details><summary>Still in stock</summary>" + stockTable(linesFor(keys, "stock_lines")) + "</details>" +
+        (p.notes ? '<p class="subline" style="margin-top:10px">' + esc(p.notes) + "</p>" : "") +
+        "</div>";
+    }
+
+    // --------------------------------------------------------------- bin card
+    function binCard(l) {
+      var pv = pctValue(l);
+      var owner = (DATA.purchases || []).find(function (p) {
+        return (p.bins || []).indexOf(l.bulk_id) >= 0 && p.purchase_id !== "UNASSIGNED";
+      });
+      var subs = (l.subs || []).filter(function (s) { return s.sub !== "-"; });
+      return '<div class="card">' +
+        '<div class="no">Bin' + (owner ? " · " + esc(owner.purchase_id) +
+          (owner.date ? " " + esc(owner.date) : "") : ' · not linked to a purchase') + "</div>" +
+        "<h3>" + esc(l.bulk_id) + (l.label ? " — " + esc(l.label) : "") + "</h3>" +
+        (subs.length ? '<div class="chips">' + subs.map(function (s) {
+          return '<span class="chip">' + esc(l.bulk_id) + "/" + esc(s.sub) + "</span>"; }).join("") + "</div>" : "") +
+        '<div class="barwrap"><div class="barfill" style="width:' + Math.min(pv * 100, 100) + '%"></div>' +
+          '<div class="pct">' + pctTxt(pv) + " of value sold</div></div>" +
+        '<div class="subline">' + l.pieces_sold + " of " + l.pieces_ever + " pieces (" +
+          pctTxt(l.pct_sold_pieces) + ") · " + l.lots_stock + " lots on the shelf" +
+          (l.last_sale ? " · last sale " + esc(l.last_sale) : "") + "</div>" +
+        '<div class="rows">' +
+          row("Revenue", money(l.revenue)) +
+          row("Left @ ask", money(l.ask_value_remaining)) +
+          row("Avg price sold", money(l.avg_price_sold)) +
+          row("Orders", String(l.orders)) +
+        "</div>" +
+        (l.top_sellers && l.top_sellers.length ? "<details><summary>Top sellers</summary><table><tbody>" +
+          l.top_sellers.map(function (t) {
+            return "<tr><td>" + iname(t) + '</td><td class="n">' + t.qty +
+              '</td><td class="n">' + money(t.value) + "</td></tr>"; }).join("") +
+          "</tbody></table></details>" : "") +
+        "<details><summary>Sales from this bin</summary>" +
+          soldTable(linesFor(keyset((l.subs || []).map(function (s) {
+            return { bulk_id: l.bulk_id, sub: s.sub }; })), "sold_lines")) + "</details>" +
+        "</div>";
+    }
+
+    // ----------------------------------------------------------------- render
+    function totals() {
+      var ps = (DATA.purchases || []);
+      var withCost = ps.filter(function (p) { return p.has_cost; });
+      var cost = withCost.reduce(function (a, p) { return a + p.cost; }, 0);
+      var rev = ps.reduce(function (a, p) { return a + p.revenue; }, 0);
+      var net = ps.reduce(function (a, p) { return a + p.net_revenue; }, 0);
+      var left = ps.reduce(function (a, p) { return a + p.ask_value_remaining; }, 0);
+      var netCosted = withCost.reduce(function (a, p) { return a + p.net_revenue; }, 0);
+      var leftCosted = withCost.reduce(function (a, p) { return a + p.net_value_remaining; }, 0);
+      var pieces = ps.reduce(function (a, p) { return a + p.pieces_sold; }, 0);
+      var everP = ps.reduce(function (a, p) { return a + p.pieces_ever; }, 0);
+      var nBins = (DATA.lots || []).length;
+      var uncosted = ps.filter(function (p) { return !p.has_cost && p.purchase_id !== "UNASSIGNED"; }).length;
+
+      function kpi(lab, val, sub, c) {
+        return '<div class="kpi"><div class="lab">' + lab + '</div><div class="val ' + (c || "") + '">' +
+          val + "</div>" + (sub ? '<div class="sub">' + sub + "</div>" : "") + "</div>";
+      }
+      $("totals").innerHTML =
+        kpi("Revenue", money(rev), money(net) + " after fees") +
+        kpi("Still on the shelf", money(left), "at our ask") +
+        kpi("% of value sold", pctTxt(rev + left > 0 ? rev / (rev + left) : 0),
+            pieces.toLocaleString() + " of " + everP.toLocaleString() + " pieces") +
+        (cost > 0
+          ? kpi("Profit so far", money(netCosted - cost), "on " + money(cost) + " of cost", cls(netCosted - cost)) +
+            kpi("Projected", money(netCosted + leftCosted - cost), "if the rest clears at ask",
+                cls(netCosted + leftCosted - cost))
+          : kpi("Profit", "—", "no cost entered yet", "dim")) +
+        kpi("Bins", String(nBins), (DATA.purchases || []).length + " purchase rows" +
+            (uncosted ? " · " + uncosted + " without cost" : ""));
+    }
+
+    function flags() {
+      var out = [];
+      var conf = DATA.purchase_conflicts || [];
+      if (conf.length) {
+        var byPair = {};
+        conf.forEach(function (c) {
+          var k = c.claimed_by.join(" + ");
+          (byPair[k] = byPair[k] || []).push(c.bin + (c.sub !== "-" ? "/" + c.sub : ""));
+        });
+        out.push('<div class="flag bad"><strong>Two purchases claim the same bin.</strong> ' +
+          "Counted once, for the first one listed — fix the <em>Bulk Bins</em> column so the split is explicit. " +
+          Object.keys(byPair).map(function (k) {
+            return esc(k) + ": " + esc(byPair[k].join(", ")); }).join(" · ") + "</div>");
+      }
+      var bad = (DATA.purchases || []).filter(function (p) { return (p.bad_tokens || []).length; });
+      if (bad.length) {
+        out.push('<div class="flag bad"><strong>Unreadable <em>Bulk Bins</em> entries.</strong> ' +
+          bad.map(function (p) {
+            return esc(p.purchase_id) + ': "' + esc(p.bad_tokens.join('", "')) + '"'; }).join(" · ") +
+          " — use <code>B-6</code>, <code>B-6/A</code>, or <code>B-6..B-9</code>.</div>");
+      }
+      var un = (DATA.unreadable_tags || {});
+      var unKeys = Object.keys(un);
+      if (unKeys.length) {
+        out.push('<div class="flag"><strong>Location tags we could not read</strong> ' +
+          "(fix the remarks in BrickLink, or ignore if they were never bulk): " +
+          unKeys.map(function (k) { return esc(k) + " ×" + un[k]; }).join(", ") + "</div>");
+      }
+      var w = DATA.warnings || {};
+      if (w.split_estimated) {
+        out.push('<div class="flag">' + w.split_estimated + " lot(s) are tagged across several bins " +
+          "without per-bin quantities, so that split is divided evenly — an estimate. " +
+          "Write <code>B-1(3)/B-2(1)</code> to make it exact.</div>");
+      }
+      if (w.qty_mismatch) {
+        out.push('<div class="flag">' + w.qty_mismatch + " lot(s) have per-bin quantities that don't add up " +
+          "to the lot quantity. Those bins are credited as written.</div>");
+      }
+      var noBins = (DATA.purchases || []).filter(function (p) { return (p.missing_bins || []).length; });
+      if (noBins.length) {
+        out.push('<div class="flag">Bins claimed by a purchase but with nothing tagged to them yet: ' +
+          noBins.map(function (p) {
+            return esc(p.purchase_id) + " → " + esc(p.missing_bins.join(", ")); }).join(" · ") +
+          ". Normal for a buy that isn't sorted yet.</div>");
+      }
+      $("flags").innerHTML = out.join("");
+    }
+
+    function render() {
+      var q = ($("q").value || "").trim().toLowerCase();
+      var sort = $("sort").value;
+      var items, html;
+
+      if (view === "purchases") {
+        items = (DATA.purchases || []).slice();
+        if (q) items = items.filter(function (p) {
+          return (p.purchase_id + " " + p.date + " " + p.source + " " + p.description + " " +
+            (p.bins || []).join(" ")).toLowerCase().indexOf(q) >= 0;
+        });
+      } else {
+        items = (DATA.lots || []).slice();
+        if (q) items = items.filter(function (l) {
+          return (l.bulk_id + " " + (l.label || "")).toLowerCase().indexOf(q) >= 0;
+        });
+      }
+
+      items.sort(function (a, b) {
+        if (sort === "pct") return pctValue(b) - pctValue(a);
+        if (sort === "revenue") return b.revenue - a.revenue;
+        if (sort === "remaining") return b.ask_value_remaining - a.ask_value_remaining;
+        if (sort === "profit") {
+          var pa = a.profit_realized, pb = b.profit_realized;
+          if (pa == null && pb == null) return b.revenue - a.revenue;
+          if (pa == null) return 1;
+          if (pb == null) return -1;
+          return pb - pa;
+        }
+        var na = view === "purchases" ? (a.description || a.purchase_id) : a.bulk_id;
+        var nb = view === "purchases" ? (b.description || b.purchase_id) : b.bulk_id;
+        return String(na).localeCompare(String(nb), undefined, { numeric: true });
+      });
+
+      if (!items.length) {
+        html = '<div class="empty">Nothing to show' + (q ? " for “" + esc(q) + "”." : " yet.") + "</div>";
+      } else {
+        html = items.map(view === "purchases" ? purchaseCard : binCard).join("");
+      }
+      $("cards").innerHTML = html;
+      $("meta").textContent = items.length + (view === "purchases" ? " purchase" : " bin") +
+        (items.length === 1 ? "" : "s") +
+        (DATA.generated ? " · updated " + new Date(DATA.generated).toLocaleString() : "");
+    }
+
+    // ------------------------------------------------------------------ boot
+    $("q").addEventListener("input", render);
+    $("sort").addEventListener("change", render);
+    Array.prototype.forEach.call($("tabs").querySelectorAll("button"), function (b) {
+      b.addEventListener("click", function () {
+        view = b.dataset.view;
+        Array.prototype.forEach.call($("tabs").querySelectorAll("button"), function (x) {
+          x.classList.toggle("on", x === b);
+        });
+        render();
+      });
+    });
+
+    // Live data comes from Cloudflare KV through the Worker — it holds cost and
+    // profit, and the site repo is public, so it can't be a file in this repo.
+    // The static file is only the local-preview fallback.
+    function grab(url) {
+      return fetch(url, { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error(url + " → HTTP " + r.status);
+        return r.json();
+      });
+    }
+    grab("/employees/api/bulk/data")
+      .catch(function (apiErr) {
+        return grab("/employees/bulk-data.json").catch(function () { throw apiErr; });
+      })
+      .then(function (j) {
+        DATA = j;
+        totals(); flags(); render();
+      })
+      .catch(function (e) {
+        $("cards").innerHTML = '<div class="empty"><strong>No bulk data yet.</strong><br />' +
+          "The hourly pp-ops refresh runs <code>bulk_pull.py</code>, which uploads the payload " +
+          "to Cloudflare KV; the Worker serves it at <code>/employees/api/bulk/data</code>.<br />" +
+          "If this persists, check that <code>CF_API_TOKEN</code> is set for that job.<br />" +
+          '<span class="dim">' + esc(e.message) + "</span></div>";
+      });
+  })();
+  </script>
+</body>
+</html>

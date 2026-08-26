@@ -1,0 +1,5 @@
+# Staff data written by pp-ops (bulk_pull.py). This repo is PUBLIC — Cloudflare
+# Access gates the website's /employees/* path but NOT github.com, so staff
+# cost/profit data must never be committed here. It is served from Cloudflare
+# KV via the pp-partout Worker instead, the same as Part-Out and Spotlight.
+employees/bulk-data.json
