@@ -170,6 +170,15 @@
   margin-bottom: 16px;
   padding-left: 16px;
   border-left: 4px solid var(--red);
+  clear: both;
+}
+
+.blog-article h3 {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-top: 30px;
+  margin-bottom: 12px;
 }
 
 .blog-article p {
@@ -177,6 +186,50 @@
   font-size: 1.02rem;
   line-height: 1.8;
   margin-bottom: 1.4rem;
+}
+
+/* ===== ARTICLE TABLES ===== */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 0 1.6rem;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  background: #fff;
+}
+.post-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.post-table thead th {
+  background: var(--dark);
+  color: #fff;
+  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 14px;
+  white-space: nowrap;
+}
+.post-table tbody td {
+  color: var(--mid);
+  padding: 11px 14px;
+  border-top: 1px solid #eef0f3;
+  line-height: 1.5;
+  vertical-align: top;
+}
+.post-table tbody tr:nth-child(even) td {
+  background: var(--light);
+}
+.post-table tbody td:first-child {
+  font-weight: 700;
+  color: var(--dark);
+  white-space: nowrap;
+}
+.post-table tbody td strong {
+  color: var(--red);
 }
 
 .blog-article ul, .blog-article ol {

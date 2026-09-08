@@ -46,6 +46,7 @@ THUMBS = {
     "lego-olivia-rodrigo-2026":        ("Minifig News",   GOLD),
     "lego-et-2026":                    ("New Release",    BLUE),
     "lego-shrek-minifigures-2026":     ("Minifig News",   GREEN),
+    "lego-super-mario-minifigures-2027":("Minifig Values", RED),
     "lego-sets-retiring-2026":         ("Retiring Soon",  RED),
     "best-lego-gifts-for-dad":         ("Gift Guide",     RED),
     "how-much-is-your-lego-worth":     ("LEGO Values",    GOLD),
