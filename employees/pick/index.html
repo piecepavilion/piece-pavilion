@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Piece Pavilion — Pick Sheet</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#e3000b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* Palette — light by default, dark for basements and warehouses (spec 5). */
+    :root{
+      --bg:#f7f8fa; --card:#fff; --ink:#14161d; --mid:#3a4150; --muted:#8a92a0;
+      --line:#e5e7eb; --line2:#eef0f3; --red:#e3000b; --red-d:#9b0008;
+      --green:#2e7d3e; --green-l:#e8f6ea; --amber:#b26a00; --amber-l:#fff5e3;
+      --swatch:#f2f3f5; --shadow:0 4px 16px rgba(20,22,29,.06);
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#12141a; --card:#1b1e26; --ink:#f2f4f8; --mid:#c2c8d4; --muted:#8b93a3;
+        --line:#2b3040; --line2:#232833; --green:#5bc46f; --green-l:#16301c;
+        --amber:#e0a04a; --amber-l:#332412; --swatch:#232833;
+        --shadow:0 4px 16px rgba(0,0,0,.35);
+      }
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-text-size-adjust:100%}
+    body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+      min-height:100vh;-webkit-font-smoothing:antialiased}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    button{font:inherit;color:inherit}
+
+    /* Header bar — not sticky, deliberately (spec 5: sticky fought the phone viewport) */
+    .bar{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;
+      padding:16px 18px;display:flex;align-items:center;gap:12px}
+    .bar img{height:38px;width:auto;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+    .bar .t{line-height:1.15;min-width:0}
+    .bar .t .sub{font-size:.68rem;font-weight:800;opacity:.9;text-transform:uppercase;letter-spacing:.09em}
+    .bar h1{font-size:1.16rem}
+    .bar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.84rem;
+      border:2px solid rgba(255,255,255,.45);border-radius:50px;padding:7px 14px;white-space:nowrap}
+
+    .wrap{max-width:820px;margin:0 auto;padding:16px 14px 90px}
+    .muted{color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1;min-width:0}
+    .hide{display:none !important}
+
+    .btn{border:0;background:var(--red);color:#fff;font-weight:800;border-radius:11px;
+      padding:12px 16px;cursor:pointer;min-height:46px}
+    .btn:active{transform:translateY(1px)}
+    .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+    .btn.sm{min-height:38px;padding:8px 13px;font-size:.88rem;border-radius:9px}
+    .btn[disabled]{opacity:.5;cursor:default}
+
+    .panel{background:var(--card);border:1px solid var(--line2);border-radius:14px;
+      padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+    .panel h2{font-size:1.02rem;margin-bottom:10px}
+    textarea{width:100%;min-height:150px;font:.85rem/1.5 ui-monospace,Menlo,Consolas,monospace;
+      padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+    select,input[type=text]{font:inherit;padding:10px 12px;border:1px solid var(--line);
+      border-radius:10px;background:var(--card);color:var(--ink)}
+
+    /* ---- order chooser ---- */
+    .olist{display:flex;flex-direction:column;gap:9px}
+    .ocard{display:flex;gap:12px;align-items:center;text-align:left;width:100%;
+      background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:13px 14px;
+      cursor:pointer;box-shadow:var(--shadow)}
+    .ocard:hover{border-color:var(--red)}
+    .ocard .oid{font-weight:800}
+    .ocard .osub{font-size:.82rem;color:var(--muted);margin-top:2px}
+    .ocard .obadge{margin-left:auto;text-align:right;font-size:.76rem;font-weight:800;white-space:nowrap}
+    .tag{display:inline-block;font-size:.68rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:var(--swatch);color:var(--muted)}
+    .tag.warn{background:var(--amber-l);color:var(--amber)}
+    .tag.good{background:var(--green-l);color:var(--green)}
+
+    /* ---- progress ---- */
+    .ohead{background:var(--card);border:1px solid var(--line2);border-radius:14px;
+      padding:14px 16px;box-shadow:var(--shadow);margin-bottom:12px}
+    .ohead .l1{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+    .ohead .l1 .num{font-weight:800;font-size:1.06rem}
+    .ohead .l2{font-size:.84rem;color:var(--muted);margin-top:2px}
+    .pbar{display:flex;height:22px;border-radius:999px;overflow:hidden;background:var(--line2);
+      margin-top:11px;position:relative}
+    .pbar .g{background:linear-gradient(90deg,#3c9e4f,#2e7d3e);transition:width .3s}
+    .pbar .a{background:linear-gradient(90deg,#e0a04a,#b26a00);transition:width .3s}
+    .pbar .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-size:.79rem;font-weight:800;color:var(--ink);text-shadow:0 1px 2px rgba(255,255,255,.5)}
+    @media (prefers-color-scheme: dark){.pbar .lab{text-shadow:0 1px 2px rgba(0,0,0,.6)}}
+
+    /* ---- bin navigator ---- */
+    .nav{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line2);
+      border-radius:14px;padding:12px;box-shadow:var(--shadow);margin-bottom:12px}
+    .nav button{flex:none;width:52px;height:52px;border-radius:12px;border:1.5px solid var(--line);
+      background:transparent;font-size:1.5rem;font-weight:800;cursor:pointer;line-height:1}
+    .nav button[disabled]{opacity:.35}
+    .nav .binwrap{flex:1;text-align:center;min-width:0}
+    .nav .bin{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:2rem;font-weight:700;letter-spacing:.02em;line-height:1.1;word-break:break-all}
+    .nav .binsub{font-size:.8rem;color:var(--muted);margin-top:3px}
+
+    /* ---- view switcher ---- */
+    .views{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .views button{flex:1;min-width:88px;white-space:nowrap;padding:10px 8px;border-radius:10px;
+      border:1.5px solid var(--line);background:transparent;font-weight:800;font-size:.86rem;cursor:pointer}
+    .views button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+    /* ---- lot cards ---- */
+    .binhead{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:1.05rem;
+      margin:18px 0 9px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+    .lot{background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:13px;
+      box-shadow:var(--shadow);margin-bottom:11px}
+    .lot.picked{border-color:var(--green);background:var(--green-l)}
+    .lot.nf{border-color:var(--amber);background:var(--amber-l)}
+    .lot .top{display:flex;gap:13px}
+    .lot .pic{flex:none;width:116px;height:116px;border-radius:10px;background:var(--swatch);
+      border:1px solid var(--line2);object-fit:contain;padding:4px}
+    .lot .info{flex:1;min-width:0}
+    .lot .nm{font-weight:800;font-size:1rem;line-height:1.3}
+    .lot.picked .nm{text-decoration:line-through;opacity:.72}
+    .lot .meta{font-size:.83rem;color:var(--mid);margin-top:5px;line-height:1.55;word-break:break-word}
+    .lot .meta .no{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+    .lot .rem{margin-top:7px;font-size:.83rem;font-weight:700;color:var(--amber);
+      background:var(--amber-l);border-radius:8px;padding:6px 9px;line-height:1.4}
+    .pills{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px}
+    .qty{background:var(--red);color:#fff;font-weight:800;font-size:1.02rem;
+      padding:6px 14px;border-radius:999px;white-space:nowrap}
+    .binpill{border:1.5px solid var(--line);color:var(--mid);font-family:ui-monospace,Menlo,Consolas,monospace;
+      font-weight:700;font-size:.82rem;padding:5px 11px;border-radius:999px}
+    .splitpill{background:var(--amber-l);color:var(--amber);font-weight:800;font-size:.72rem;
+      text-transform:uppercase;letter-spacing:.05em;padding:5px 10px;border-radius:999px}
+    .acts{display:flex;gap:9px;margin-top:12px}
+    .acts button{flex:1;min-height:48px;border-radius:11px;border:1.5px solid var(--line);
+      background:transparent;font-weight:800;cursor:pointer}
+    .acts .yes.on{background:var(--green);border-color:var(--green);color:#fff}
+    .acts .no.on{background:var(--amber);border-color:var(--amber);color:#fff}
+    .cat{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:800;color:var(--red);text-decoration:none}
+    .nextbin{width:100%;margin:6px 0 20px;min-height:52px;border-radius:12px;border:0;
+      background:var(--ink);color:var(--bg);font-weight:800;font-size:1rem;cursor:pointer}
+
+    .empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:34px 20px;
+      text-align:center;color:var(--muted)}
+    .probs{background:var(--amber-l);border:1px solid var(--amber);border-radius:12px;padding:12px 14px;
+      margin-bottom:14px;font-size:.87rem;line-height:1.6;color:var(--ink)}
+    .probs b{display:block;margin-bottom:5px;color:var(--amber)}
+    .probs ul{margin:0;padding-left:19px}
+    .err{background:#ffe9e9;border:1px solid #f3b6b6;color:#8d1010;border-radius:12px;
+      padding:12px 14px;margin-bottom:14px;font-size:.9rem;line-height:1.5}
+    @media (prefers-color-scheme: dark){.err{background:#3a1414;border-color:#6d2020;color:#ffbdbd}}
+
+    /* sync indicator */
+    .sync{position:fixed;left:0;right:0;bottom:0;padding:8px 14px;font-size:.8rem;font-weight:800;
+      text-align:center;background:var(--ink);color:var(--bg);z-index:20}
+    .sync.ok{background:var(--green);color:#fff}
+    .sync.off{background:var(--amber);color:#fff}
+
+    /* completion */
+    .done .big{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 4px}
+    .done .kpi{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line2);
+      border-radius:13px;padding:13px 15px;box-shadow:var(--shadow)}
+    .done .kpi .k{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+    .done .kpi .v{font-size:1.5rem;font-weight:800;margin-top:3px}
+    pre.nf{white-space:pre-wrap;word-break:break-word;font:.82rem/1.55 ui-monospace,Menlo,Consolas,monospace;
+      background:var(--swatch);border:1px solid var(--line2);border-radius:10px;padding:12px;margin-top:10px}
+
+    @media print{
+      .bar,.views,.nav,.sync,.acts,.noprint,.nextbin{display:none !important}
+      body{background:#fff;color:#000}
+      .wrap{max-width:none;padding:0}
+      .lot{break-inside:avoid;page-break-inside:avoid;box-shadow:none;border:1px solid #bbb;background:#fff}
+      .lot .pic{width:92px;height:92px}
+      .panel,.ohead{box-shadow:none;border:1px solid #bbb}
+      .qty{background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div class="t"><div class="sub">Employees</div><h1>Pick Sheet</h1></div>
+    <a class="back" href="/employees/">&larr; Staff</a>
+  </div>
+
+  <div class="wrap">
+    <div id="err" class="err hide"></div>
+
+    <!-- ============ SCREEN 1: choose an order ============ -->
+    <section id="screen-orders">
+      <div class="panel">
+        <h2>Orders to pick</h2>
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn sm ghost" id="reload">Refresh</button>
+          <label class="row" style="gap:6px;font-size:.86rem;font-weight:700">
+            <input type="checkbox" id="showall" /> show all statuses
+          </label>
+          <span class="grow"></span>
+          <span class="muted" id="whoami" style="font-size:.8rem"></span>
+        </div>
+        <div id="olist" class="olist"><div class="empty">Loading orders&hellip;</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Or paste an order</h2>
+        <p class="muted" style="font-size:.87rem;line-height:1.6;margin-bottom:10px">
+          Fallback for when the API is unavailable. On the BrickLink order page, select the
+          <b>Items in Order</b> table, copy it, and paste here.
+        </p>
+        <textarea id="paste" placeholder="Lot ID: 550165425  Part No: 3039px2  Name: Slope 45 2 x 2 ..."></textarea>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="pasteid" placeholder="Order number (optional)" style="flex:1;min-width:150px" />
+          <button class="btn" id="parsebtn">Build sheet</button>
+        </div>
+      </div>
+
+      <div class="panel noprint">
+        <h2>Recent picks</h2>
+        <div id="donelist" class="muted" style="font-size:.87rem">&mdash;</div>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN 2: pick ============ -->
+    <section id="screen-pick" class="hide">
+      <div class="ohead">
+        <div class="l1">
+          <span class="num" id="p-order"></span>
+          <span class="tag" id="p-status"></span>
+          <span class="grow"></span>
+          <button class="btn sm ghost noprint" id="backbtn">Orders</button>
+        </div>
+        <div class="l2" id="p-sub"></div>
+        <div class="pbar">
+          <div class="g" id="p-green" style="width:0"></div>
+          <div class="a" id="p-amber" style="width:0"></div>
+          <div class="lab" id="p-lab"></div>
+        </div>
+      </div>
+
+      <div id="p-probs" class="probs hide"></div>
+
+      <div class="nav noprint" id="navbox">
+        <button id="prevbin" aria-label="Previous bin">&#8249;</button>
+        <div class="binwrap">
+          <div class="bin" id="binlabel">&mdash;</div>
+          <div class="binsub" id="binsub"></div>
+        </div>
+        <button id="nextbin" aria-label="Next bin">&#8250;</button>
+      </div>
+
+      <div class="views noprint">
+        <button data-view="one" class="on">One bin</button>
+        <button data-view="all">All bins</button>
+        <button data-view="nf">Not found</button>
+        <button data-view="picked">Picked</button>
+      </div>
+
+      <div id="lots"></div>
+
+      <div class="row noprint" style="margin-top:18px">
+        <button class="btn ghost sm" id="copynf">Copy not-found list</button>
+        <button class="btn ghost sm" id="printbtn">Print</button>
+        <span class="grow"></span>
+        <button class="btn" id="finishbtn">Finish pick</button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN 3: done ============ -->
+    <section id="screen-done" class="hide done">
+      <div class="panel">
+        <h2 id="d-title">Pick complete</h2>
+        <div class="l2 muted" id="d-sub"></div>
+        <div class="big">
+          <div class="kpi"><div class="k">Picked</div><div class="v" id="d-picked">0</div></div>
+          <div class="kpi"><div class="k">Not found</div><div class="v" id="d-nf">0</div></div>
+          <div class="kpi"><div class="k">Time</div><div class="v" id="d-time">&mdash;</div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="d-nfbox">
+        <h2>Could not find</h2>
+        <p class="muted" style="font-size:.87rem;line-height:1.6">
+          BrickLink needs these either corrected in inventory and re-invoiced, or cancelled off the order.
+          Copy the list below for the buyer message.
+        </p>
+        <pre class="nf" id="d-nftext"></pre>
+        <div class="row" style="margin-top:10px">
+          <button class="btn sm" id="d-copy">Copy list</button>
+          <a class="btn sm ghost" id="d-blorder" target="_blank" rel="noopener"
+             style="text-decoration:none;display:inline-flex;align-items:center">Open order on BrickLink &rarr;</a>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost" id="d-back">Back to orders</button>
+        <button class="btn ghost" id="d-reopen">Reopen this pick</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="sync hide" id="sync"></div>
+
+  <script src="/employees/pick/pick-core.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var API = "/employees/api/pick";
+    var C = window.PickCore;
+    var colors = null;
+    var me = "";
+
+    // ---- app state ----
+    var S = {
+      orderId: "", order: null, lots: [], rows: [], groups: [],
+      marks: {}, binIndex: 0, view: "one", startedAt: 0, source: "api",
+    };
+
+    var $ = function (id) { return document.getElementById(id); };
+    function show(id) {
+      ["screen-orders", "screen-pick", "screen-done"].forEach(function (s) {
+        $(s).classList.toggle("hide", s !== id);
+      });
+      window.scrollTo(0, 0);
+    }
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function err(msg) {
+      var e = $("err");
+      if (!msg) { e.classList.add("hide"); return; }
+      e.textContent = msg;
+      e.classList.remove("hide");
+      window.scrollTo(0, 0);
+    }
+
+    // ---------------- offline-tolerant persistence ----------------
+    // Marks are written to localStorage first so a dead spot cannot lose
+    // progress, then pushed to KV so the pick can move between devices.
+    var LKEY = function (id) { return "pp-pick:" + id; };
+    var QKEY = "pp-pick-queue";
+
+    function loadLocal(id) {
+      try { return JSON.parse(localStorage.getItem(LKEY(id))) || null; } catch (e) { return null; }
+    }
+    function saveLocal() {
+      try {
+        localStorage.setItem(LKEY(S.orderId), JSON.stringify({
+          marks: S.marks, startedAt: S.startedAt, order: S.order, lots: S.lots, source: S.source,
+        }));
+      } catch (e) { /* private mode / full quota — KV sync still carries it */ }
+    }
+    function queue(marks) {
+      var q;
+      try { q = JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { q = []; }
+      q.push({ order_id: S.orderId, marks: marks });
+      try { localStorage.setItem(QKEY, JSON.stringify(q.slice(-400))); } catch (e) {}
+    }
+    function setSync(kind, text) {
+      var el = $("sync");
+      el.className = "sync " + kind;
+      el.textContent = text;
+      el.classList.remove("hide");
+      if (kind === "ok") setTimeout(function () { el.classList.add("hide"); }, 1400);
+    }
+
+    var flushing = false;
+    async function flush() {
+      if (flushing) return;
+      var q;
+      try { q = JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { q = []; }
+      if (!q.length) return;
+      flushing = true;
+      // Collapse the queue to one payload per order — last write wins per key.
+      var byOrder = {};
+      q.forEach(function (e) {
+        byOrder[e.order_id] = Object.assign(byOrder[e.order_id] || {}, e.marks);
+      });
+      try {
+        for (var id in byOrder) {
+          var r = await fetch(API + "/mark", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ order_id: id, marks: byOrder[id] }),
+          });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+        }
+        localStorage.removeItem(QKEY);
+        setSync("ok", "Saved");
+      } catch (e) {
+        setSync("off", "Offline — " + q.length + " change" + (q.length === 1 ? "" : "s") + " saved on this device");
+      } finally { flushing = false; }
+    }
+    window.addEventListener("online", flush);
+    setInterval(flush, 20000);
+
+    // ---------------- order chooser ----------------
+    async function loadOrders() {
+      var box = $("olist");
+      box.innerHTML = '<div class="empty">Loading orders&hellip;</div>';
+      try {
+        var r = await fetch(API + "/orders" + ($("showall").checked ? "?all=1" : ""));
+        var j = await r.json();
+        if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+        me = j.me || "";
+        $("whoami").textContent = me ? "signed in as " + me : "";
+        if (!j.orders.length) {
+          box.innerHTML = '<div class="empty">No orders waiting to be picked.</div>';
+          return;
+        }
+        box.innerHTML = "";
+        j.orders.forEach(function (o) {
+          var b = document.createElement("button");
+          b.className = "ocard";
+          var badge = o.completed_at
+            ? '<span class="tag good">picked</span>'
+            : (o.claimed_by && o.claimed_by !== me
+              ? '<span class="tag warn">' + esc(o.claimed_by.split("@")[0]) + " picking</span>"
+              : (o.picked || o.not_found ? '<span class="tag">in progress</span>' : ""));
+          b.innerHTML =
+            '<div class="grow"><div class="oid">#' + esc(o.order_id) + " &middot; " + esc(o.buyer || "—") + "</div>" +
+            '<div class="osub">' + esc(String(o.date_ordered).slice(0, 10)) + " &middot; " +
+            o.lots + " lots &middot; " + o.pieces + " pcs &middot; " + esc(o.status) + "</div></div>" +
+            '<div class="obadge">' + badge +
+            (o.picked || o.not_found ? '<div class="muted" style="margin-top:4px">' + o.picked + " ok" +
+              (o.not_found ? " / " + o.not_found + " nf" : "") + "</div>" : "") + "</div>";
+          b.onclick = function () { openOrder(o.order_id); };
+          box.appendChild(b);
+        });
+      } catch (e) {
+        box.innerHTML = '<div class="empty">Could not load orders.<br><span class="muted">' +
+          esc(e.message) + "</span><br><br>Use the paste box below.</div>";
+      }
+      loadDone();
+    }
+
+    async function loadDone() {
+      try {
+        var r = await fetch(API + "/done");
+        var j = await r.json();
+        var recs = (j.records || []).slice(0, 6);
+        if (!recs.length) { $("donelist").textContent = "No completed picks yet."; return; }
+        $("donelist").innerHTML = recs.map(function (d) {
+          return "#" + esc(d.order_id) + " &middot; " + esc(String(d.at).slice(0, 10)) +
+            " &middot; " + d.picked + " picked" + (d.not_found ? ", " + d.not_found + " not found" : "") +
+            " &middot; " + esc((d.by || "").split("@")[0]) + (d.elapsed_ms ? " &middot; " + hms(d.elapsed_ms) : "");
+        }).join("<br>");
+      } catch (e) { $("donelist").textContent = "—"; }
+    }
+
+    // ---------------- open an order ----------------
+    async function openOrder(id) {
+      err("");
+      id = String(id);
+      try {
+        var r = await fetch(API + "/order?id=" + encodeURIComponent(id));
+        var j = await r.json();
+        if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+        S.source = "api";
+        begin(id, j.order, j.lots, (j.state && j.state.marks) || {}, j.state);
+        claim(id);
+      } catch (e) {
+        // Fall back to whatever this device already has for the order.
+        var local = loadLocal(id);
+        if (local && local.lots) {
+          S.source = local.source || "api";
+          begin(id, local.order, local.lots, local.marks || {}, null);
+          setSync("off", "Offline — showing the copy saved on this device");
+        } else {
+          err("Could not open order " + id + ": " + e.message);
+        }
+      }
+    }
+
+    async function claim(id) {
+      try {
+        var r = await fetch(API + "/claim", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ order_id: id }),
+        });
+        var j = await r.json();
+        if (r.status === 409) {
+          if (confirm(j.error + "\n\nTake over the pick anyway?")) {
+            await fetch(API + "/claim", {
+              method: "POST", headers: { "content-type": "application/json" },
+              body: JSON.stringify({ order_id: id, force: true }),
+            });
+          }
+        }
+      } catch (e) { /* claiming is advisory; picking still works offline */ }
+    }
+
+    function begin(id, order, lots, marks, state) {
+      S.orderId = id;
+      S.order = order || { order_id: id };
+      S.lots = lots || [];
+      S.rows = C.expandRows(S.lots);
+      S.groups = C.groupRows(S.rows);
+      S.binIndex = 0;
+      S.view = "one";
+
+      // Merge server marks with anything this device saved while offline;
+      // the newer timestamp wins.
+      var local = loadLocal(id);
+      var merged = Object.assign({}, marks || {});
+      if (local && local.marks) {
+        Object.keys(local.marks).forEach(function (k) {
+          var a = merged[k], b = local.marks[k];
+          if (!a || String(b.at || "") > String(a.at || "")) merged[k] = b;
+        });
+      }
+      S.marks = merged;
+      S.startedAt = (local && local.startedAt) || (state && state.claimed_at ? Date.parse(state.claimed_at) : 0) || Date.now();
+
+      // Start on the first bin that still has something to pull.
+      var firstOpen = S.groups.findIndex(function (g) {
+        return g.rows.some(function (r) { return !S.marks[r.row_key]; });
+      });
+      if (firstOpen > 0) S.binIndex = firstOpen;
+
+      var v = C.validateParse(S.lots, S.order && S.order.pieces ? {
+        lots: S.order.lots || null, pieces: S.order.pieces || null,
+        total: S.order.total ? parseFloat(S.order.total) : null,
+      } : null);
+      renderProblems(v);
+
+      saveLocal();
+      prefetchImages();
+      document.querySelectorAll(".views button").forEach(function (b) {
+        b.classList.toggle("on", b.dataset.view === "one");
+      });
+      show("screen-pick");
+      render();
+      flush();
+    }
+
+    function renderProblems(v) {
+      var box = $("p-probs");
+      if (!v.problems.length) { box.classList.add("hide"); return; }
+      box.innerHTML = "<b>Check before picking</b><ul>" +
+        v.problems.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul>";
+      box.classList.remove("hide");
+    }
+
+    /** Warm the browser cache while there is still signal. */
+    function prefetchImages() {
+      S.rows.slice(0, 300).forEach(function (r) {
+        var i = new Image();
+        i.src = C.imagePath(r.item_type, r.item_no, r.color_id);
+      });
+    }
+
+    // ---------------- rendering ----------------
+    function catalogUrl(r) {
+      return "https://www.bricklink.com/v2/catalog/catalogitem.page?" +
+        C.typeLetter(r.item_type) + "=" + encodeURIComponent(r.item_no) +
+        (C.typeLetter(r.item_type) === "P" && r.color_id ? "&C=" + r.color_id : "");
+    }
+
+    function statusOf(r) {
+      return (S.marks[r.row_key] && S.marks[r.row_key].status) || "to_pick";
+    }
+
+    function lotCard(r, showBin) {
+      var st = statusOf(r);
+      var d = document.createElement("div");
+      d.className = "lot" + (st === "picked" ? " picked" : st === "not_found" ? " nf" : "");
+      d.innerHTML =
+        '<div class="top">' +
+          '<img class="pic" loading="lazy" alt="" src="' + esc(C.imagePath(r.item_type, r.item_no, r.color_id)) + '" />' +
+          '<div class="info">' +
+            '<div class="nm">' + esc(r.name || r.item_no) + "</div>" +
+            '<div class="meta"><span class="no">' + esc(r.item_no) + "</span>" +
+              (r.color_name ? " &middot; " + esc(r.color_name) : "") +
+              " &middot; " + esc(r.condition) +
+              " &middot; " + esc(C.unitPrice(r.unit_price)) + " ea" +
+            "</div>" +
+            (r.remark ? '<div class="rem">' + esc(r.remark) + "</div>" : "") +
+            (r.bin_note ? '<div class="rem">bin note: ' + esc(r.bin_note) + "</div>" : "") +
+            '<div class="pills"><span class="qty">&times; ' + r.qty + "</span>" +
+              (showBin ? '<span class="binpill">' + esc(r.bin) + "</span>" : "") +
+              (r.split ? '<span class="splitpill">split lot &middot; ' + r.split_of + " bins</span>" : "") +
+              (r.extra_bins && r.extra_bins.length
+                ? '<span class="splitpill">also ' + esc(r.extra_bins.join(", ")) + "</span>" : "") +
+            "</div>" +
+          "</div>" +
+        "</div>" +
+        '<div class="acts noprint">' +
+          '<button class="yes' + (st === "picked" ? " on" : "") + '">' + (st === "picked" ? "&#10003; Picked" : "Picked") + "</button>" +
+          '<button class="no' + (st === "not_found" ? " on" : "") + '">' + (st === "not_found" ? "&#9888; Can&rsquo;t find" : "Can&rsquo;t find") + "</button>" +
+        "</div>" +
+        '<a class="cat noprint" target="_blank" rel="noopener" href="' + esc(catalogUrl(r)) + '">BrickLink catalog &rarr;</a>';
+
+      var btns = d.querySelectorAll(".acts button");
+      btns[0].onclick = function () { mark(r, st === "picked" ? "to_pick" : "picked"); };
+      btns[1].onclick = function () { mark(r, st === "not_found" ? "to_pick" : "not_found"); };
+      return d;
+    }
+
+    function mark(r, status) {
+      if (status === "to_pick") delete S.marks[r.row_key];
+      else S.marks[r.row_key] = { status: status, at: new Date().toISOString(), by: me };
+      saveLocal();
+      var payload = {};
+      payload[r.row_key] = S.marks[r.row_key] || { status: "to_pick" };
+      queue(payload);
+      flush();
+      render();
+    }
+
+    function visibleRows() {
+      if (S.view === "nf") return S.rows.filter(function (r) { return statusOf(r) === "not_found"; });
+      if (S.view === "picked") return S.rows.filter(function (r) { return statusOf(r) === "picked"; });
+      if (S.view === "all") return S.rows;
+      var g = S.groups[S.binIndex];
+      return g ? g.rows : [];
+    }
+
+    function render() {
+      var p = C.progress(S.rows, S.marks);
+      $("p-order").textContent = "#" + S.orderId + (S.order.buyer ? " · " + S.order.buyer : "");
+      $("p-status").textContent = S.source === "paste" ? "pasted" : (S.order.status || "");
+      $("p-sub").textContent = (S.order.date_ordered ? "Submitted " + String(S.order.date_ordered).slice(0, 10) + " · " : "") +
+        S.groups.length + " bin" + (S.groups.length === 1 ? "" : "s");
+      var lotPct = p.lots ? (p.lotsPicked / p.lots) * 100 : 0;
+      var nfPct = p.lots ? (p.lotsNotFound / p.lots) * 100 : 0;
+      $("p-green").style.width = lotPct + "%";
+      $("p-amber").style.width = nfPct + "%";
+      // "lots" only while rows and lots agree; a split lot makes the unit a pick.
+      var unit = p.lots === p.distinctLots ? "lots" : "picks";
+      $("p-lab").textContent = p.lotsPicked + "/" + p.lots + " " + unit + " · " +
+        p.piecesPicked + "/" + p.pieces + " pcs" +
+        (p.lotsNotFound ? " · " + p.lotsNotFound + " not found" : "");
+
+      var oneBin = S.view === "one";
+      $("navbox").classList.toggle("hide", !oneBin);
+      var g = S.groups[S.binIndex];
+      if (oneBin && g) {
+        var left = g.rows.filter(function (r) { return statusOf(r) === "to_pick"; }).length;
+        $("binlabel").textContent = g.bin;
+        $("binsub").textContent = "bin " + (S.binIndex + 1) + " of " + S.groups.length +
+          " · " + (left ? left + " of " + g.rows.length + " left" : "all " + g.rows.length + " done");
+        $("prevbin").disabled = S.binIndex === 0;
+        $("nextbin").disabled = S.binIndex >= S.groups.length - 1;
+      }
+
+      var box = $("lots");
+      box.innerHTML = "";
+      var rows = visibleRows();
+
+      if (!rows.length) {
+        box.innerHTML = '<div class="empty">' +
+          (S.view === "nf" ? "Nothing flagged as missing." :
+           S.view === "picked" ? "Nothing picked yet." : "This bin is empty.") + "</div>";
+      } else if (S.view === "all" || S.view === "nf" || S.view === "picked") {
+        C.groupRows(rows).forEach(function (grp) {
+          var h = document.createElement("div");
+          h.className = "binhead";
+          h.textContent = grp.bin + "  (" + grp.rows.length + ")";
+          box.appendChild(h);
+          grp.rows.forEach(function (r) { box.appendChild(lotCard(r, true)); });
+        });
+      } else {
+        rows.forEach(function (r) { box.appendChild(lotCard(r, false)); });
+        if (S.binIndex < S.groups.length - 1) {
+          var nb = document.createElement("button");
+          nb.className = "nextbin noprint";
+          nb.textContent = "Next bin: " + S.groups[S.binIndex + 1].bin + "  ›";
+          nb.onclick = function () { stepBin(1); };
+          box.appendChild(nb);
+        }
+      }
+    }
+
+    function stepBin(d) {
+      var n = S.binIndex + d;
+      if (n < 0 || n >= S.groups.length) return;
+      S.binIndex = n;
+      render();
+      window.scrollTo(0, 0);   // spec 5: stepping bins scrolls to top
+    }
+
+    function hms(ms) {
+      var s = Math.max(0, Math.round(ms / 1000));
+      var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+      return h ? h + "h " + m + "m" : m ? m + "m " + (s % 60) + "s" : s + "s";
+    }
+
+    // ---------------- completion ----------------
+    async function finish() {
+      var p = C.progress(S.rows, S.marks);
+      var open = p.lots - p.lotsPicked - p.lotsNotFound;
+      if (open && !confirm(open + " lot" + (open === 1 ? "" : "s") +
+        " still unmarked. Finish anyway?")) return;
+
+      var nfText = C.notFoundText(S.rows, S.marks, S.orderId);
+      var elapsed = Date.now() - (S.startedAt || Date.now());
+
+      var unit = p.lots === p.distinctLots ? ["lot", "lots"] : ["pick", "picks"];
+      $("d-picked").textContent = C.plural(p.lotsPicked, unit[0], unit[1]) + " / " + C.plural(p.piecesPicked, "pc");
+      $("d-nf").textContent = C.plural(p.lotsNotFound, unit[0], unit[1]) + " / " + C.plural(p.piecesNotFound, "pc");
+      $("d-time").textContent = hms(elapsed);
+      $("d-title").textContent = "Order #" + S.orderId + " picked";
+      $("d-sub").textContent = (me ? "by " + me + " · " : "") + new Date().toLocaleString();
+      $("d-nfbox").classList.toggle("hide", !p.lotsNotFound);
+      $("d-nftext").textContent = nfText || "";
+      $("d-blorder").href = "https://www.bricklink.com/orderDetail.asp?ID=" + encodeURIComponent(S.orderId);
+
+      show("screen-done");
+
+      if (S.source === "paste") return;  // nothing server-side to stamp
+      try {
+        var r = await fetch(API + "/complete", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            order_id: S.orderId, buyer: S.order.buyer || "", elapsed_ms: elapsed,
+            lots: p.lots, pieces: p.pieces,
+            not_found_list: S.rows.filter(function (x) { return statusOf(x) === "not_found"; })
+              .map(function (x) {
+                return { bin: x.bin, qty: x.qty, item_no: x.item_no, color: x.color_name,
+                         name: x.name, lot_id: x.lot_id };
+              }),
+          }),
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        setSync("ok", "Pick recorded");
+      } catch (e) {
+        setSync("off", "Marked locally — will record when back online");
+      }
+    }
+
+    function copyText(text, btn) {
+      if (!text) return;
+      var done = function () {
+        var old = btn.textContent; btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = old; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+      } else fallback();
+      function fallback() {
+        var t = document.createElement("textarea");
+        t.value = text; document.body.appendChild(t); t.select();
+        try { document.execCommand("copy"); done(); } catch (e) { alert(text); }
+        document.body.removeChild(t);
+      }
+    }
+
+    // ---------------- wiring ----------------
+    $("reload").onclick = loadOrders;
+    $("showall").onchange = loadOrders;
+    $("backbtn").onclick = function () { show("screen-orders"); loadOrders(); };
+    $("prevbin").onclick = function () { stepBin(-1); };
+    $("nextbin").onclick = function () { stepBin(1); };
+    $("printbtn").onclick = function () {
+      var prev = S.view;
+      S.view = "all"; render();
+      window.print();
+      S.view = prev; render();
+    };
+    $("finishbtn").onclick = finish;
+    $("copynf").onclick = function () {
+      var t = C.notFoundText(S.rows, S.marks, S.orderId);
+      if (!t) { alert("Nothing is flagged as missing."); return; }
+      copyText(t, this);
+    };
+    $("d-copy").onclick = function () { copyText($("d-nftext").textContent, this); };
+    $("d-back").onclick = function () { show("screen-orders"); loadOrders(); };
+    $("d-reopen").onclick = function () { show("screen-pick"); render(); };
+
+    document.querySelectorAll(".views button").forEach(function (b) {
+      b.onclick = function () {
+        S.view = b.dataset.view;
+        document.querySelectorAll(".views button").forEach(function (x) {
+          x.classList.toggle("on", x === b);
+        });
+        render();
+        window.scrollTo(0, 0);
+      };
+    });
+
+    $("parsebtn").onclick = function () {
+      err("");
+      var text = $("paste").value;
+      if (!text.trim()) { err("Paste the Items in Order table first."); return; }
+      var res = C.parseOrderPaste(text, colors);
+      if (!res.lots.length) { err(res.problems.join(" ")); return; }
+      var id = ($("pasteid").value || "").trim() || ("paste-" + new Date().toISOString().slice(0, 10));
+      S.source = "paste";
+      begin(id, {
+        order_id: id, buyer: "", date_ordered: res.header.submitted || "",
+        status: "PASTED", lots: res.header.lots, pieces: res.header.pieces, total: res.header.total,
+      }, res.lots, {}, null);
+      // Surface parse problems alongside the totals check.
+      var v = C.validateParse(res.lots, res.header);
+      renderProblems({ problems: res.problems.concat(v.problems) });
+    };
+
+    // Left/right arrows step bins on a laptop.
+    document.addEventListener("keydown", function (e) {
+      if ($("screen-pick").classList.contains("hide") || S.view !== "one") return;
+      if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+      if (e.key === "ArrowLeft") stepBin(-1);
+      if (e.key === "ArrowRight") stepBin(1);
+    });
+
+    // ---------------- boot ----------------
+    (async function boot() {
+      try {
+        var r = await fetch("/employees/pick/bl-colors.json");
+        colors = await r.json();
+      } catch (e) { colors = { colors: {} }; }
+      loadOrders();
+      flush();
+      var qs = new URLSearchParams(location.search).get("order");
+      if (qs) openOrder(qs);
+    })();
+  })();
+  </script>
+</body>
+</html>
