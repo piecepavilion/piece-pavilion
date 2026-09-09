@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Piece Pavilion — Inventory Lookup</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#e3000b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#f7f8fa; --card:#fff; --ink:#14161d; --mid:#3a4150; --muted:#8a92a0;
+      --line:#e5e7eb; --line2:#eef0f3; --red:#e3000b; --red-d:#9b0008;
+      --green:#2e7d3e; --green-l:#e8f6ea; --amber:#b26a00; --amber-l:#fff5e3;
+      --swatch:#f2f3f5; --shadow:0 4px 16px rgba(20,22,29,.06);
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#12141a; --card:#1b1e26; --ink:#f2f4f8; --mid:#c2c8d4; --muted:#8b93a3;
+        --line:#2b3040; --line2:#232833; --green:#5bc46f; --green-l:#16301c;
+        --amber:#e0a04a; --amber-l:#332412; --swatch:#232833;
+        --shadow:0 4px 16px rgba(0,0,0,.35);
+      }
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-text-size-adjust:100%}
+    body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+    h1,h2{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    button,input,select{font:inherit;color:inherit}
+
+    .bar{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;
+      padding:16px 18px;display:flex;align-items:center;gap:12px}
+    .bar img{height:38px;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+    .bar .sub{font-size:.68rem;font-weight:800;opacity:.9;text-transform:uppercase;letter-spacing:.09em}
+    .bar h1{font-size:1.16rem}
+    .bar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.84rem;
+      border:2px solid rgba(255,255,255,.45);border-radius:50px;padding:7px 14px;white-space:nowrap}
+
+    .wrap{max-width:1400px;margin:0 auto;padding:16px 14px 70px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .muted{color:var(--muted)}
+    .hide{display:none !important}
+
+    .panel{background:var(--card);border:1px solid var(--line2);border-radius:14px;
+      padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+
+    .statusline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+      font-size:.85rem;font-weight:700;color:var(--muted);margin-bottom:10px}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+    .dot.stale{background:var(--amber)}
+
+    .search{display:flex;gap:8px}
+    .search input{flex:1;min-width:0;padding:14px 15px;border:1.5px solid var(--line);
+      border-radius:12px;background:var(--card);font-size:1.02rem}
+    .search input:focus{outline:0;border-color:var(--red)}
+
+    .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+    .chip{border:1.5px solid var(--line);background:transparent;border-radius:999px;
+      padding:8px 14px;font-weight:800;font-size:.85rem;cursor:pointer;white-space:nowrap}
+    .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+    .chip .n{opacity:.6;font-weight:700;margin-left:5px}
+
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+    .filters label{display:flex;flex-direction:column;gap:3px;font-size:.7rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .filters select{padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;
+      background:var(--card);min-width:118px;max-width:210px}
+
+    .totals{display:flex;gap:16px;flex-wrap:wrap;align-items:center;
+      padding:11px 14px;background:var(--card);border:1px solid var(--line2);
+      border-radius:12px;box-shadow:var(--shadow);margin-bottom:12px;font-weight:800}
+    .totals .v{font-size:1.12rem}
+    .totals .k{font-size:.68rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);display:block}
+    .totals .acts{margin-left:auto;display:flex;gap:7px}
+
+    .btn{border:0;background:var(--red);color:#fff;font-weight:800;border-radius:10px;
+      padding:10px 15px;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+    .btn.sm{padding:8px 12px;font-size:.85rem}
+    .btn[disabled]{opacity:.5;cursor:default}
+
+    /* Results table — collapses to stacked cards on narrow screens. */
+    table{width:100%;border-collapse:collapse;background:var(--card);
+      border:1px solid var(--line2);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+    thead th{background:var(--ink);color:var(--bg);text-align:left;padding:10px 11px;
+      font-family:'Fredoka','Nunito',sans-serif;font-weight:600;font-size:.8rem;
+      white-space:nowrap;cursor:pointer;user-select:none}
+    thead th .ar{opacity:.55;font-size:.72rem}
+    tbody td{padding:9px 11px;border-top:1px solid var(--line2);font-size:.88rem;vertical-align:middle}
+    tbody tr:nth-child(even){background:var(--swatch)}
+    tbody tr.noloc{background:var(--amber-l)}
+    td.pic{width:56px}
+    td.pic img{width:44px;height:44px;object-fit:contain;background:var(--swatch);
+      border-radius:7px;border:1px solid var(--line2);display:block}
+    .nm{font-weight:700;line-height:1.3}
+    .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    td.sz{white-space:nowrap}
+    .tagx{display:inline-block;font-size:.66rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.05em;padding:2px 7px;border-radius:999px;background:var(--swatch);
+      color:var(--muted);margin-left:5px}
+    .tagx.sr{background:var(--amber-l);color:var(--amber)}
+    .tagx.sale{background:var(--green-l);color:var(--green)}
+    .lnk{color:var(--red);font-weight:800;text-decoration:none;cursor:pointer;background:none;border:0;padding:0}
+    .lnk:hover{text-decoration:underline}
+    .binc{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+    .binc.none{color:var(--amber)}
+
+    .more{width:100%;margin-top:12px;min-height:48px;border-radius:12px;border:1.5px solid var(--line);
+      background:var(--card);font-weight:800;cursor:pointer}
+    .empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;
+      padding:38px 20px;text-align:center;color:var(--muted)}
+    .err{background:#ffe9e9;border:1px solid #f3b6b6;color:#8d1010;border-radius:12px;
+      padding:12px 14px;margin-bottom:12px;font-size:.9rem}
+    @media (prefers-color-scheme: dark){.err{background:#3a1414;border-color:#6d2020;color:#ffbdbd}}
+
+    /* Narrow screens: each row becomes a card. The image is taken out of flow
+       and pinned left; the item name gets its own line; every other field is
+       inline-block so they flow and wrap as a compact meta line. A two-column
+       grid was tried first and collided (Price landing on top of Value). */
+    @media (max-width: 860px){
+      thead{display:none}
+      table,tbody{display:block;width:100%}
+      table{border:0;background:transparent;box-shadow:none;overflow:visible}
+      tbody tr{display:block;position:relative;min-height:72px;
+        padding:10px 10px 10px 70px;margin-bottom:10px;
+        background:var(--card) !important;border:1px solid var(--line2);
+        border-radius:12px;box-shadow:var(--shadow)}
+      tbody tr.noloc{background:var(--amber-l) !important;border-color:var(--amber)}
+      tbody td{display:inline-block;border:0;padding:0;margin:0 13px 3px 0;font-size:.82rem}
+      td.pic{position:absolute;left:10px;top:10px;width:52px;margin:0}
+      td.pic img{width:52px;height:52px}
+      td.it{display:block;width:100%;margin:0 0 5px;font-size:.9rem}
+      td[data-l]:not(.pic)::before{content:attr(data-l);font-size:.62rem;font-weight:800;
+        text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-right:4px}
+      td.it::before{display:none}
+      td.num{text-align:left}
+    }
+    @media print{
+      .bar,.chips,.filters,.search,.totals .acts,.more,.noprint{display:none !important}
+      body{background:#fff;color:#000}
+      tbody tr{break-inside:avoid}
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div><div class="sub">Employees</div><h1>Inventory Lookup</h1></div>
+    <a class="back" href="/employees/">&larr; Staff</a>
+  </div>
+
+  <div class="wrap">
+    <div id="err" class="err hide"></div>
+
+    <div class="panel noprint">
+      <div class="statusline">
+        <span class="dot" id="dot"></span>
+        <span id="asof">Loading inventory&hellip;</span>
+        <span class="grow" style="flex:1"></span>
+        <button class="btn ghost sm" id="refresh">Refresh</button>
+      </div>
+
+      <div class="search">
+        <input type="search" id="q" placeholder="Search — try “red 2x4 brick”, “hagrid”, a part number, a bin code…"
+               autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button class="btn ghost sm" id="clear">Clear</button>
+      </div>
+
+      <div class="chips" id="presets"></div>
+
+      <div class="filters">
+        <label>Type<select id="f-type"></select></label>
+        <label>Colour<select id="f-color_name"></select></label>
+        <label>Category<select id="f-category"></select></label>
+        <label>Size<select id="f-size"></select></label>
+        <label>Condition<select id="f-condition"></select></label>
+        <label>Bin<select id="f-bin"></select></label>
+        <label>Sort<select id="f-sort"></select></label>
+      </div>
+    </div>
+
+    <div class="totals">
+      <div><span class="k">Lots</span><span class="v" id="t-lots">—</span></div>
+      <div><span class="k">Pieces</span><span class="v" id="t-pieces">—</span></div>
+      <div><span class="k">Value</span><span class="v" id="t-value">—</span></div>
+      <div><span class="k">No location</span><span class="v" id="t-noloc">—</span>
+        <span class="muted" id="t-noloc-sub" style="font-size:.72rem;font-weight:700;display:block"></span></div>
+      <div class="acts noprint">
+        <button class="btn ghost sm" id="csv">Export CSV</button>
+        <button class="btn ghost sm" id="print">Print</button>
+      </div>
+    </div>
+
+    <div id="results"><div class="empty">Loading&hellip;</div></div>
+    <button class="more hide noprint" id="more"></button>
+  </div>
+
+  <!-- pick-core supplies bin parsing/sorting, so "no location" means exactly
+       the same thing here as on the pick sheet. Must load before inv-core. -->
+  <script src="/employees/pick/pick-core.js"></script>
+  <script src="/employees/inventory/inv-core.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var API = "/employees/api/inventory";
+    var C = window.PickCore, V = window.InvCore;
+    var PAGE = 150;                       // rows rendered per batch
+
+    var S = { all: [], view: [], shown: PAGE, q: {}, sort: "bin", dir: "asc", preset: "" };
+    var $ = function (id) { return document.getElementById(id); };
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+    function err(m) {
+      var e = $("err");
+      if (!m) { e.classList.add("hide"); return; }
+      e.textContent = m; e.classList.remove("hide");
+    }
+    function imgPath(it) {
+      var t = C.typeLetter(it.type);
+      return API + "/img/" + t + "/" + (t === "P" ? (it.color_id || 0) : 0) + "/" +
+        encodeURIComponent(it.item_no) + ".png";
+    }
+    function catalogUrl(it) {
+      var t = C.typeLetter(it.type);
+      return "https://www.bricklink.com/v2/catalog/catalogitem.page?" + t + "=" +
+        encodeURIComponent(it.item_no) + (t === "P" && it.color_id ? "&C=" + it.color_id : "");
+    }
+    function storeUrl(it) {
+      return "https://store.bricklink.com/PiecePavilion?itemID=" + encodeURIComponent(it.lot_id);
+    }
+
+    // ---------------- load ----------------
+    async function load(force) {
+      err("");
+      $("dot").className = "dot stale";
+      $("asof").textContent = force ? "Refreshing from BrickLink…" : "Loading inventory…";
+      $("refresh").disabled = true;
+      try {
+        var r = await fetch(API + "/data" + (force ? "?refresh=1" : ""));
+        var j = await r.json();
+        if (!r.ok) throw new Error(j.error || "HTTP " + r.status);
+        S.all = V.decorate(j.items);
+        stamp(j);
+        buildFilters();
+        apply();
+      } catch (e) {
+        err("Could not load inventory: " + e.message);
+        $("asof").textContent = "Load failed";
+        $("results").innerHTML = '<div class="empty">No data.</div>';
+      } finally {
+        $("refresh").disabled = false;
+      }
+    }
+
+    function stamp(j) {
+      var d = new Date(j.as_of);
+      var mins = Math.round(j.age_s / 60);
+      $("dot").className = "dot" + (j.age_s > 600 ? " stale" : "");
+      $("asof").textContent = j.count.toLocaleString() + " lots · as of " +
+        d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+        (mins >= 1 ? " (" + mins + " min ago)" : " (just now)") +
+        (j.cached ? "" : " · live");
+    }
+
+    // ---------------- filters ----------------
+    function buildFilters() {
+      var f = V.facets(S.all);
+      fill("f-type", f.type, "All types", function (v) { return v; });
+      fill("f-color_name", f.color_name, "All colours", function (v) { return v || "(none)"; });
+      fill("f-category", f.category, "All categories", function (v) { return v; });
+      fill("f-size", f.size, "All sizes", function (v) { return v || "(no size)"; });
+      fill("f-condition", f.condition, "New & used", function (v) { return v; });
+      fill("f-bin", f.bin, "All bins", function (v) { return v; });
+
+      var sortSel = $("f-sort");
+      if (!sortSel.options.length) {
+        [["bin", "Bin"], ["name", "Name"], ["item_no", "Item no"], ["color", "Colour"],
+         ["category", "Category"], ["size", "Size"], ["price", "Price"], ["qty", "Quantity"],
+         ["value", "Lot value"], ["days", "Age"]].forEach(function (o) {
+          sortSel.add(new Option(o[1], o[0]));
+        });
+        sortSel.value = "bin";
+      }
+
+      var box = $("presets");
+      if (!box.children.length) {
+        V.PRESETS.forEach(function (p) {
+          var b = document.createElement("button");
+          b.className = "chip";
+          b.dataset.id = p.id;
+          b.innerHTML = esc(p.label) + '<span class="n">' + V.filter(S.all, p.q).length + "</span>";
+          b.onclick = function () { togglePreset(p.id); };
+          box.appendChild(b);
+        });
+      } else {
+        // counts move as inventory changes
+        V.PRESETS.forEach(function (p) {
+          var b = box.querySelector('[data-id="' + p.id + '"] .n');
+          if (b) b.textContent = V.filter(S.all, p.q).length;
+        });
+      }
+    }
+
+    function fill(id, entries, allLabel, label) {
+      var sel = $(id), prev = sel.value;
+      sel.innerHTML = "";
+      sel.add(new Option(allLabel, ""));
+      entries.forEach(function (e) {
+        sel.add(new Option(label(e.value) + "  (" + e.count + ")", e.value));
+      });
+      if (prev) sel.value = prev;
+    }
+
+    function togglePreset(id) {
+      S.preset = S.preset === id ? "" : id;
+      document.querySelectorAll("#presets .chip").forEach(function (c) {
+        c.classList.toggle("on", c.dataset.id === S.preset);
+      });
+      apply();
+    }
+
+    function currentQuery() {
+      var q = {};
+      var preset = V.PRESETS.find(function (p) { return p.id === S.preset; });
+      if (preset) Object.assign(q, preset.q);
+      q.text = $("q").value.trim();
+      ["type", "color_name", "category", "condition", "bin"].forEach(function (k) {
+        var v = $("f-" + k).value;
+        if (v) q[k] = v;
+      });
+      var sz = $("f-size");
+      if (sz.selectedIndex > 0) {
+        if (sz.value === "") q.sizeIsBlank = true; else q.size = sz.value;
+      }
+      return q;
+    }
+
+    function apply() {
+      S.q = currentQuery();
+      S.sort = $("f-sort").value;
+      S.view = V.sort(V.filter(S.all, S.q), S.sort, S.dir);
+      S.shown = PAGE;
+      renderTotals();
+      renderRows();
+    }
+
+    function renderTotals() {
+      var t = V.totals(S.view);
+      $("t-lots").textContent = t.lots.toLocaleString();
+      $("t-pieces").textContent = t.pieces.toLocaleString();
+      $("t-value").textContent = C.money(t.value);
+      $("t-noloc").textContent = t.unlocated.toLocaleString() +
+        (t.unrecognised ? " " : "");
+      $("t-noloc-sub").textContent = t.unlocated
+        ? t.blank + " not set" + (t.unrecognised ? ", " + t.unrecognised + " unrecognised" : "")
+        : "";
+    }
+
+    var COLS = [
+      ["", "pic"], ["Item", "item"], ["Colour", "color"], ["Category", "cat"],
+      ["Size", "size"], ["Cond", "cond"], ["Bin", "bin"],
+      ["Qty", "qty"], ["Price", "price"], ["Value", "value"], ["Age", "days"],
+    ];
+    var COL_SORT = { item: "name", color: "color", cat: "category", size: "size",
+                     bin: "bin", qty: "qty", price: "price", value: "value", days: "days" };
+
+    function renderRows() {
+      var box = $("results");
+      if (!S.view.length) {
+        box.innerHTML = '<div class="empty">No lots match. Try clearing a filter.</div>';
+        $("more").classList.add("hide");
+        return;
+      }
+      var rows = S.view.slice(0, S.shown);
+      var html = "<table><thead><tr>" + COLS.map(function (c) {
+        var key = COL_SORT[c[1]];
+        var arrow = key && key === S.sort ? ' <span class="ar">' + (S.dir === "asc" ? "▲" : "▼") + "</span>" : "";
+        return "<th" + (key ? ' data-sort="' + key + '"' : "") + ">" + esc(c[0]) + arrow + "</th>";
+      }).join("") + "</tr></thead><tbody>";
+
+      rows.forEach(function (it) {
+        html += '<tr class="' + (it.located ? "" : "noloc") + '">' +
+          '<td class="pic"><a href="' + esc(storeUrl(it)) + '" target="_blank" rel="noopener">' +
+            '<img loading="lazy" alt="" src="' + esc(imgPath(it)) + '" /></a></td>' +
+          '<td data-l="Item" class="it"><div class="nm">' + esc(it.name || it.item_no) +
+            (it.stockroom ? '<span class="tagx sr">stockroom</span>' : "") +
+            (it.sale_rate ? '<span class="tagx sale">' + it.sale_rate + "% off</span>" : "") +
+            "</div>" +
+            // Custom builds have no catalogue name, so the item number is
+            // already the heading — don't print it twice.
+            (it.name ? '<span class="mono muted">' + esc(it.item_no) + "</span>" : "") +
+            (it.note ? (it.name ? ' <span class="muted">· ' : '<span class="muted">') +
+              esc(it.note) + "</span>" : "") + "</td>" +
+          '<td data-l="Colour">' + (it.color_name
+            ? '<button class="lnk" data-f="color_name" data-v="' + esc(it.color_name) + '">' + esc(it.color_name) + "</button>"
+            : '<span class="muted">—</span>') + "</td>" +
+          '<td data-l="Category"><button class="lnk" data-f="category" data-v="' + esc(it.category) + '">' + esc(it.category) + "</button></td>" +
+          '<td data-l="Size" class="mono sz">' + (it.size ? esc(it.size) : '<span class="muted">—</span>') + "</td>" +
+          '<td data-l="Cond">' + esc(it.condition) + "</td>" +
+          '<td data-l="Bin">' + (it.located
+            ? '<button class="lnk binc" data-f="bin" data-v="' + esc(it.bin) + '">' + esc(it.bin) + "</button>" +
+              (it.bins.length > 1 ? ' <span class="muted">+' + (it.bins.length - 1) + "</span>" : "") +
+              (it.bin_note ? ' <span class="muted">(' + esc(it.bin_note) + ")</span>" : "")
+            // Blank and unrecognised are different problems — say which.
+            : it.bin_state === "blank"
+              ? '<span class="binc none">not set</span>'
+              : '<span class="binc none" title="Not a recognised bin code">? ' +
+                esc(it.location_raw) + "</span>") + "</td>" +
+          '<td data-l="Qty" class="num">' + it.qty + "</td>" +
+          '<td data-l="Price" class="num">' + esc(C.unitPrice(it.price)) + "</td>" +
+          '<td data-l="Value" class="num">' + esc(C.money(it.value)) + "</td>" +
+          '<td data-l="Age" class="num">' + (it.days == null ? "—" : it.days + "d") + "</td>" +
+          "</tr>";
+      });
+      html += "</tbody></table>";
+      box.innerHTML = html;
+
+      // header sorting
+      box.querySelectorAll("th[data-sort]").forEach(function (th) {
+        th.onclick = function () {
+          var k = th.dataset.sort;
+          if (S.sort === k) S.dir = S.dir === "asc" ? "desc" : "asc";
+          else { S.sort = k; S.dir = "asc"; }
+          $("f-sort").value = S.sort;
+          S.view = V.sort(S.view, S.sort, S.dir);
+          renderRows();
+        };
+      });
+      // click a colour/category/bin to filter by it
+      box.querySelectorAll("button[data-f]").forEach(function (b) {
+        b.onclick = function () {
+          $("f-" + b.dataset.f).value = b.dataset.v;
+          apply();
+          window.scrollTo(0, 0);
+        };
+      });
+
+      var more = $("more");
+      if (S.view.length > S.shown) {
+        more.classList.remove("hide");
+        more.textContent = "Show " + Math.min(PAGE, S.view.length - S.shown) +
+          " more  (" + (S.view.length - S.shown).toLocaleString() + " remaining)";
+      } else {
+        more.classList.add("hide");
+      }
+    }
+
+    // ---------------- actions ----------------
+    function download(name, text, mime) {
+      var blob = new Blob([text], { type: mime });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    }
+
+    var t;
+    $("q").addEventListener("input", function () {
+      clearTimeout(t);
+      t = setTimeout(apply, 160);            // debounce so typing stays smooth
+    });
+    $("clear").onclick = function () {
+      $("q").value = "";
+      ["type", "color_name", "category", "size", "condition", "bin"].forEach(function (k) {
+        $("f-" + k).value = "";
+      });
+      S.preset = "";
+      document.querySelectorAll("#presets .chip").forEach(function (c) { c.classList.remove("on"); });
+      apply();
+    };
+    ["type", "color_name", "category", "size", "condition", "bin", "sort"].forEach(function (k) {
+      $("f-" + k).onchange = apply;
+    });
+    $("more").onclick = function () { S.shown += PAGE; renderRows(); };
+    $("refresh").onclick = function () { load(true); };
+    $("print").onclick = function () { window.print(); };
+    $("csv").onclick = function () {
+      if (!S.view.length) return;
+      var stampStr = new Date().toISOString().slice(0, 10);
+      download("inventory-" + (S.preset || "filtered") + "-" + stampStr + ".csv",
+        V.toCsv(S.view), "text/csv;charset=utf-8");
+    };
+
+    // Deep links: /employees/inventory/?preset=noloc  or  ?q=red+2x4
+    (function boot() {
+      var p = new URLSearchParams(location.search);
+      if (p.get("q")) $("q").value = p.get("q");
+      var pre = p.get("preset");
+      load(false).then(function () {
+        if (pre && V.PRESETS.some(function (x) { return x.id === pre; })) togglePreset(pre);
+      });
+    })();
+  })();
+  </script>
+</body>
+</html>
