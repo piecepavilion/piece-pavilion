@@ -69,6 +69,17 @@
     .filters select{padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;
       background:var(--card);min-width:118px;max-width:210px}
 
+    .daterow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:11px;
+      padding-top:11px;border-top:1px dashed var(--line)}
+    .daterow label{display:flex;flex-direction:column;gap:3px;font-size:.7rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+    .daterow input[type=date]{padding:9px 11px;border:1.5px solid var(--line);
+      border-radius:10px;background:var(--card);min-width:150px}
+    .quick{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:1px}
+    .quick button{border:1.5px solid var(--line);background:transparent;border-radius:999px;
+      padding:8px 13px;font-weight:800;font-size:.8rem;cursor:pointer;white-space:nowrap}
+    .quick button:hover{border-color:var(--red);color:var(--red)}
+
     .totals{display:flex;gap:16px;flex-wrap:wrap;align-items:center;
       padding:11px 14px;background:var(--card);border:1px solid var(--line2);
       border-radius:12px;box-shadow:var(--shadow);margin-bottom:12px;font-weight:800}
@@ -106,7 +117,7 @@
     .tagx.sale{background:var(--green-l);color:var(--green)}
     .lnk{color:var(--red);font-weight:800;text-decoration:none;cursor:pointer;background:none;border:0;padding:0}
     .lnk:hover{text-decoration:underline}
-    .binc{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+    .binc{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;white-space:nowrap}
     .binc.none{color:var(--amber)}
 
     .more{width:100%;margin-top:12px;min-height:48px;border-radius:12px;border:1.5px solid var(--line);
@@ -180,6 +191,18 @@
         <label>Condition<select id="f-condition"></select></label>
         <label>Bin<select id="f-bin"></select></label>
         <label>Sort<select id="f-sort"></select></label>
+      </div>
+
+      <div class="daterow">
+        <label>Added from<input type="date" id="f-from" /></label>
+        <label>Added to<input type="date" id="f-to" /></label>
+        <div class="quick" id="quickdates">
+          <button data-d="0">Today</button>
+          <button data-d="7">7 days</button>
+          <button data-d="30">30 days</button>
+          <button data-d="month">This month</button>
+          <button data-d="clear">Clear dates</button>
+        </div>
       </div>
     </div>
 
@@ -340,6 +363,8 @@
       if (sz.selectedIndex > 0) {
         if (sz.value === "") q.sizeIsBlank = true; else q.size = sz.value;
       }
+      if ($("f-from").value) q.addedFrom = $("f-from").value;
+      if ($("f-to").value) q.addedTo = $("f-to").value;
       return q;
     }
 
@@ -367,7 +392,7 @@
     var COLS = [
       ["", "pic"], ["Item", "item"], ["Colour", "color"], ["Category", "cat"],
       ["Size", "size"], ["Cond", "cond"], ["Bin", "bin"],
-      ["Qty", "qty"], ["Price", "price"], ["Value", "value"], ["Age", "days"],
+      ["Qty", "qty"], ["Price", "price"], ["Value", "value"], ["Added", "days"],
     ];
     var COL_SORT = { item: "name", color: "color", cat: "category", size: "size",
                      bin: "bin", qty: "qty", price: "price", value: "value", days: "days" };
@@ -417,7 +442,10 @@
           '<td data-l="Qty" class="num">' + it.qty + "</td>" +
           '<td data-l="Price" class="num">' + esc(C.unitPrice(it.price)) + "</td>" +
           '<td data-l="Value" class="num">' + esc(C.money(it.value)) + "</td>" +
-          '<td data-l="Age" class="num">' + (it.days == null ? "—" : it.days + "d") + "</td>" +
+          '<td data-l="Added" class="num">' + (it.added_date
+            ? esc(it.added_date) + '<div class="muted" style="font-size:.7rem;font-weight:700">' +
+              (it.days == null ? "" : it.days + "d ago") + "</div>"
+            : "—") + "</td>" +
           "</tr>";
       });
       html += "</tbody></table>";
@@ -474,6 +502,8 @@
       ["type", "color_name", "category", "size", "condition", "bin"].forEach(function (k) {
         $("f-" + k).value = "";
       });
+      $("f-from").value = "";
+      $("f-to").value = "";
       S.preset = "";
       document.querySelectorAll("#presets .chip").forEach(function (c) { c.classList.remove("on"); });
       apply();
@@ -481,6 +511,30 @@
     ["type", "color_name", "category", "size", "condition", "bin", "sort"].forEach(function (k) {
       $("f-" + k).onchange = apply;
     });
+    $("f-from").onchange = apply;
+    $("f-to").onchange = apply;
+
+    /** Today in the same calendar terms the data uses (UTC date parts). */
+    function todayISO(offsetDays) {
+      var d = new Date(Date.now() - (offsetDays || 0) * 86400000);
+      return d.getUTCFullYear() + "-" +
+        String(d.getUTCMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getUTCDate()).padStart(2, "0");
+    }
+    $("quickdates").onclick = function (e) {
+      var b = e.target.closest("button");
+      if (!b) return;
+      var d = b.dataset.d;
+      if (d === "clear") { $("f-from").value = ""; $("f-to").value = ""; }
+      else if (d === "month") {
+        $("f-from").value = todayISO(0).slice(0, 8) + "01";
+        $("f-to").value = todayISO(0);
+      } else {
+        $("f-from").value = todayISO(parseInt(d, 10));
+        $("f-to").value = todayISO(0);
+      }
+      apply();
+    };
     $("more").onclick = function () { S.shown += PAGE; renderRows(); };
     $("refresh").onclick = function () { load(true); };
     $("print").onclick = function () { window.print(); };
@@ -495,6 +549,8 @@
     (function boot() {
       var p = new URLSearchParams(location.search);
       if (p.get("q")) $("q").value = p.get("q");
+      if (p.get("from")) $("f-from").value = p.get("from");
+      if (p.get("to")) $("f-to").value = p.get("to");
       var pre = p.get("preset");
       load(false).then(function () {
         if (pre && V.PRESETS.some(function (x) { return x.id === pre; })) togglePreset(pre);

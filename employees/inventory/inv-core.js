@@ -60,6 +60,19 @@
     return 0;
   }
 
+  /**
+   * Whole calendar days between a YYYY-MM-DD string and now, in UTC, so the
+   * count never drifts by one across a timezone or a daylight-saving change.
+   */
+  function daysBetween(isoDate, nowMs) {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(isoDate || "")) return null;
+    var p = isoDate.split("-");
+    var then = Date.UTC(+p[0], +p[1] - 1, +p[2]);
+    var n = new Date(nowMs);
+    var today = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate());
+    return Math.floor((today - then) / 86400000);
+  }
+
   // -------------------------------------------------------------- decorate
   /**
    * Add the derived fields the UI filters and sorts on. Done once on load so
@@ -100,7 +113,11 @@
         bin_state: loc.ok ? "ok" : ((it.location || "").trim() ? "unrecognised" : "blank"),
         note: PickCore.decodeEntities(it.note || ""),
         added: it.added || "",
-        days: isNaN(added) ? null : Math.floor((now - added) / 86400000),
+        // BrickLink stores date_created as midnight Eastern serialised to UTC
+        // (only ever 04:00Z or 05:00Z). Slice the string rather than going
+        // through Date, which would shift the day for anyone west of Eastern.
+        added_date: String(it.added || "").slice(0, 10),
+        days: daysBetween(String(it.added || "").slice(0, 10), now),
         stockroom: !!it.stockroom,
         retain: !!it.retain,
         my_cost: Number(it.my_cost) || 0,
@@ -208,6 +225,8 @@
       if (q.minPrice != null && it.price < q.minPrice) return false;
       if (q.maxPrice != null && it.price > q.maxPrice) return false;
       if (q.minDays != null && !(it.days != null && it.days >= q.minDays)) return false;
+      if (q.addedFrom && !(it.added_date && it.added_date >= q.addedFrom)) return false;
+      if (q.addedTo && !(it.added_date && it.added_date <= q.addedTo)) return false;
       return true;
     });
   }
@@ -262,7 +281,8 @@
     ["bin", "Location"], ["item_no", "Item No"], ["name", "Description"],
     ["color_name", "Color"], ["category", "Category"], ["size", "Size"],
     ["condition", "Condition"], ["qty", "Quantity"], ["price", "Price"],
-    ["value", "Lot Value"], ["days", "Days In Stock"], ["lot_id", "Lot ID"],
+    ["value", "Lot Value"], ["added_date", "Date Added"], ["days", "Days In Stock"],
+    ["lot_id", "Lot ID"],
     ["type", "Item Type"], ["note", "Note"],
   ];
 
@@ -304,6 +324,7 @@
     parseSize: parseSize,
     fracToNum: fracToNum,
     compareSizes: compareSizes,
+    daysBetween: daysBetween,
     decorate: decorate,
     facets: facets,
     matchesText: matchesText,
