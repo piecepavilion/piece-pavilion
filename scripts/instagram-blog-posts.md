@@ -155,3 +155,14 @@ Link in bio!
 **Reel idea (comment bait):** screen-record the quiz on your phone, answer 3 questions (get one wrong on purpose), cut at the score screen. Text overlay: "I sell LEGO for a living and got 9/10 😬 — your turn". Caption: "Link in bio. Post your score." Repost the best follower scores to Stories.
 
 **Story:** poll sticker over slide-1 ("Know all 6?" Yes / No way), then link sticker to the post.
+
+**Quiz Reel (5 questions, 4 choices, countdown + reveal, score key):** run `python scripts/make_name_that_piece_quiz_reel.py` → scripts/reels/name-that-lego-piece-quiz/quiz-reel.mp4 (~43s, 1080x1920, no audio — add a sound in the app). Reels can't take taps, so viewers keep their own tally; the last screen shows 5/5 = 100% Certified BrickLink Seller … 0–1/5 = 20% Duplo Curious and asks them to comment their score.
+Caption: "🧱 5 pieces. 4 seconds each. Keep score. Comment your % below 👇 (I'll repost the 100%s.) Full 10-question quiz → link in bio. #lego #legoquiz #bricklink #afol #legostagram #piecepavilion"
+
+**Stories version (truly interactive):** same folder, story-1.png … story-5.png. Post each as a Story and add Instagram's **Quiz sticker** under the question with these 4 options (correct one marked in the sticker):
+1) Wedge plate / **Cheese slope** / Roof tile / Curved slope
+2) Skipper plate / Half plate / Offset tile / **Jumper plate**
+3) **Headlight brick** / SNOT brick / Lamp holder / Window brick
+4) Radar dish / Wheel hub / **Boat stud** / Dome plate
+5) Erling brick / **Travis brick** / Cube brick / Dice brick
+Instagram tallies taps per Story; finish with a link sticker to the blog quiz.
