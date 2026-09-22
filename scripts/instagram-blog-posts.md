@@ -137,6 +137,8 @@ Full how-to on the blog — link in bio!
 
 **Carousel:** run `python scripts/make_name_that_piece_carousel.py` → scripts/carousels/name-that-lego-piece/ (10 slides: cover with 6 mystery pieces, 8 reveal slides, CTA)
 
+**Reel (vertical 1080x1920):** run `python scripts/make_name_that_piece_carousel.py --reel --mp4` → scripts/reels/name-that-lego-piece/ (same 10 slides as 9:16 PNGs, plus `name-that-lego-piece.mp4`, ~22s, no audio — add trending audio in the IG app). Text stays clear of the Reels top/bottom UI.
+
 **Caption:**
 🧱 Quick: what's this piece ACTUALLY called?
 
