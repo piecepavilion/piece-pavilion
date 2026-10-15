@@ -1,0 +1,11 @@
+Metric,Formula (reference these to your actual sheet tabs),Description
+Total Invested,"=SUM(Purchases!F:F)",Total money spent on inventory
+Total Revenue,"=SUM(Sales!N:N)",Net revenue after fees and shipping
+Total Profit,"=SUM(Sales!P:P)",Revenue minus cost of goods
+Profit Margin (%),"=Total Profit / Total Revenue * 100",Overall margin
+Items In Stock,"=SUM(Inventory!M:M)",Current inventory count
+Items Sold (All Time),"=SUM(Inventory!N:N)",Total units sold
+Unsold Inventory Value (Cost),"=SUMPRODUCT(Inventory!G:G * Inventory!M:M)",What you paid for unsold stock
+Unsold Inventory Value (List),"=SUMPRODUCT(Inventory!L:L * Inventory!M:M)",What unsold stock is listed at
+Avg Days to Sell,"=AVERAGE of (Sale Date - Date Listed) for sold items",How fast things move
+Unlisted Items,"=COUNTIF(Inventory!J:J, ""No"")",Items purchased but not yet on BrickLink

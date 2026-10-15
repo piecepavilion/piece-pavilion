@@ -1,0 +1,2 @@
+Sale Date,BrickLink Order #,Buyer,Item Name,BrickLink Item #,Qty Sold,Sale Price (Each),Sale Total,PayPal Txn ID,Shipping Charged,Shipping Cost,BrickLink Fees,PayPal Fees,Net Revenue,Cost Per Unit,Profit,"Margin %"
+2026-03-15,12345678,buyer123,"Example Sold Item",3001,3,$0.75,$2.25,ABC123XYZ,$3.50,$2.80,$0.23,$0.35,"=H2+J2-K2-L2-M2","=O2*F2","=N2-O2","=P2/N2*100"

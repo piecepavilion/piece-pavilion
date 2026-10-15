@@ -1,0 +1,4 @@
+Purchase Date,Source,Source Type,Total Paid,Shipping Paid,Total Cost,# of Items,# of Unique Items,Cost Per Item (Avg),All Items Listed?,All Items Sold?,Est. Revenue,Est. Profit,Notes
+2026-03-10,Garage Sale,In Person,$12.50,$0.00,"=D2+E2",5,1,"=F2/G2",Yes,No,,,"5x green baseplates"
+2026-03-12,eBay Lot,Online,$3.00,$0.00,"=D3+E3",1,1,"=F3/G3",Yes,No,,,"Hot Dog Man keychain"
+2026-03-01,Bulk Buy,Online,$2.00,$0.00,"=D4+E4",10,1,"=F4/G4",Yes,Partial,,,"Red 2x4 bricks"

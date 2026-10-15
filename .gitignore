@@ -3,3 +3,14 @@
 # cost/profit data must never be committed here. It is served from Cloudflare
 # KV via the pp-partout Worker instead, the same as Part-Out and Spotlight.
 employees/bulk-data.json
+
+# Python bytecode
+__pycache__/
+scripts/__pycache__/
+
+# Reel video output (large, regenerable)
+scripts/reels/
+
+# Scratch files
+_full2.png
+cool lego.jpg
