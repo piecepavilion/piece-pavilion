@@ -29,10 +29,15 @@ INDEX = os.path.join(REPO, "blog", "index.html")
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 LOGO = "file:///" + os.path.join(REPO, "logo-white.png").replace("\\", "/")
 
-VER = "3"  # bump to cache-bust the thumbnail URLs in blog/index.html
+VER = "4"  # bump to cache-bust the thumbnail URLs in blog/index.html
 
 # Brand-derived accent palette (from the logo's quadrant colors + brand red/gold)
 RED, GOLD, GREEN, BLUE = "#e3000b", "#ffce00", "#3c9e4f", "#1c8ad6"
+
+# Per-accent text treatment — GOLD needs dark ink for contrast, others take white.
+INK_ON = {RED: "#ffffff", GOLD: "#15151f", GREEN: "#ffffff", BLUE: "#ffffff"}
+SUB_ON = {RED: "rgba(255,255,255,.82)", GOLD: "rgba(21,21,31,.72)",
+          GREEN: "rgba(255,255,255,.82)", BLUE: "rgba(255,255,255,.82)"}
 
 # slug -> (category label, accent color)
 THUMBS = {
@@ -65,33 +70,36 @@ THUMBS = {
     "where-to-buy-retired-lego-sets":  ("Retired Sets",   RED),
 }
 
-# CSS uses {accent} placeholder, filled per card.
+# CSS uses {accent}, {ink}, {sub} placeholders, filled per card.
+# Design: full-bleed accent color drives the card identity, big label is the
+# hero so each category reads differently at a glance, small logo coin anchors
+# the brand in the corner, red->gold stripe at the bottom ties back to the site.
 CSS = """
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:600px;height:300px;overflow:hidden}
 body{font-family:'Nunito',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .t{width:600px;height:300px;position:relative;overflow:hidden;
    display:flex;flex-direction:column;align-items:center;justify-content:center;
+   padding:28px 48px 36px;
    background:
-     radial-gradient(circle at 1.6px 1.6px, rgba(255,255,255,.06) 1.6px, transparent 1.7px) 0 0/26px 26px,
-     linear-gradient(135deg,#15151f 0%,#241016 55%,#2c0c0c 100%)}
-.t::before{content:'';position:absolute;left:50%;top:-120px;transform:translateX(-50%);
-   width:420px;height:420px;border-radius:50%;
-   background:radial-gradient(circle,{accent}26 0%,transparent 65%)}
-.t::after{content:'';position:absolute;left:0;right:0;bottom:0;height:7px;
+     radial-gradient(circle at 1.6px 1.6px, rgba(255,255,255,.10) 1.6px, transparent 1.7px) 0 0/26px 26px,
+     radial-gradient(ellipse at bottom right, rgba(0,0,0,.28) 0%, transparent 65%),
+     linear-gradient(135deg,{accent} 0%,{accent} 60%,rgba(0,0,0,.18) 100%)}
+.t::after{content:'';position:absolute;left:0;right:0;bottom:0;height:8px;
    background:linear-gradient(90deg,#e3000b 0%,#ffce00 100%)}
-.coin{position:relative;width:150px;height:150px;border-radius:50%;background:#fff;
-   display:flex;align-items:center;justify-content:center;
-   box-shadow:0 14px 30px rgba(0,0,0,.50)}
-.coin img{height:140px;width:140px;border-radius:50%;object-fit:contain}
-.label{position:relative;margin-top:26px;color:#fff;font-weight:800;font-size:26px;
-   letter-spacing:.16em;text-transform:uppercase}
-.rule{position:relative;margin-top:16px;width:64px;height:4px;border-radius:999px;
-   background:{accent}}
+.coin{position:absolute;top:22px;right:26px;width:70px;height:70px;border-radius:50%;background:#fff;
+   display:flex;align-items:center;justify-content:center;padding:4px;
+   box-shadow:0 6px 18px rgba(0,0,0,.30)}
+.coin img{width:100%;height:100%;border-radius:50%;object-fit:contain}
+.kicker{position:relative;color:{sub};font-weight:800;font-size:14px;
+   letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}
+.label{position:relative;color:{ink};font-weight:900;font-size:54px;
+   letter-spacing:.02em;line-height:1.02;text-align:center;max-width:460px;
+   text-shadow:0 2px 14px rgba(0,0,0,.18)}
 """
 
 PAGE = ('<!DOCTYPE html><html><head><meta charset="utf-8">'
-        '<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900'
+        '<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@400;600;700;800;900'
         '&display=swap" rel="stylesheet">'
         '<style>{css}</style></head><body>{body}</body></html>')
 
@@ -99,15 +107,18 @@ PAGE = ('<!DOCTYPE html><html><head><meta charset="utf-8">'
 def card(label):
     return ('<div class="t">'
             '<div class="coin"><img src="' + LOGO + '" alt="" /></div>'
-            '<div class="label">' + label + '</div>'
-            '<div class="rule"></div>'
+            '<div class="kicker">Piece Pavilion</div>'
+            '<div class="label" style="font-family:\'Fredoka\',\'Nunito\',sans-serif">' + label + '</div>'
             '</div>')
 
 
 def render(label, accent, out_png):
     os.makedirs(os.path.dirname(out_png), exist_ok=True)
     tmp = out_png.replace(".png", ".html")
-    html = PAGE.replace("{css}", CSS.replace("{accent}", accent)).replace("{body}", card(label))
+    css = (CSS.replace("{accent}", accent)
+              .replace("{ink}", INK_ON[accent])
+              .replace("{sub}", SUB_ON[accent]))
+    html = PAGE.replace("{css}", css).replace("{body}", card(label))
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(html)
     url = "file:///" + tmp.replace("\\", "/")
