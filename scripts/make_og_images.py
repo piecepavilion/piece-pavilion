@@ -47,6 +47,7 @@ EXTRA = {
     "lego-shrek-minifigures-2026": ("New for September 1", "LEGO Shrek Minifigures Are Coming"),
     "lego-super-mario-minifigures-2027": ("New for January 1", "LEGO Super Mario Goes Minifig Scale"),
     "lego-sets-retiring-2026": ("Retiring Soon", "120+ LEGO Sets Retiring in 2026"),
+    "lego-halloween-minifigures": ("Spooky Season", "The LEGO Halloween Minifigure Guide"),
     "now-on-instagram": ("We're on Instagram", "Follow @piecepavilion"),
     "_home": ("Family-Owned BrickLink Store", "Your Brick Destination"),
     "lego-minifigures": ("Authentic Minifigures", "LEGO Minifigures for Sale"),
