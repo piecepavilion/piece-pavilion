@@ -645,8 +645,13 @@ INDEX_TMPL = """<!DOCTYPE html>
       // Any query: hide the browse grid so results dominate.
       browseEl.style.display = "none";
 
-      // Spotlight on a landing page if one matches.
-      renderSpotlight(findLanding(q));
+      // Spotlight on a landing page if one matches. We also use the landing's
+      // part number as a fallback search target — nicknames like "cheese slope"
+      // don't appear in BrickLink's official item names, so without this the
+      // user searching "cheese" sees the spotlight but gets "no in-stock matches"
+      // even though we have 23 colors in stock.
+      const landing = findLanding(q);
+      renderSpotlight(landing);
 
       // Inventory search (same algorithm as /finder/).
       let hits = [];
@@ -655,8 +660,13 @@ INDEX_TMPL = """<!DOCTYPE html>
         const name = (it.name||"").toLowerCase();
         const no = (it.no||"").toLowerCase();
         const hay = name + " " + no + " " + (it.cat||"").toLowerCase() + " " + (it.color||"").toLowerCase();
-        if (terms.length && !terms.every(t => hay.includes(t))) continue;
+        // Match if ALL terms are in the haystack, OR if the landing's part
+        // number matches this item's part number.
+        const landMatch = landing && no === landing.no.toLowerCase();
+        const termMatch = terms.length && terms.every(t => hay.includes(t));
+        if (terms.length && !termMatch && !landMatch) continue;
         let score = 0;
+        if (landMatch) score += 500;
         if (terms.length){
           if (no === qLow) score += 1000;
           if (name.startsWith(qLow)) score += 200;
