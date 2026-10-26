@@ -137,11 +137,14 @@ function buildTicker() {
   }
 }
 
-// Build at DOM ready — the Just Added cards are static HTML so they're
-// already in the DOM. loadBannerConfig below also calls buildTicker again
-// once the sheet-driven message arrives, so an edit to the sheet refreshes
-// item #1 without a page reload.
-document.addEventListener('DOMContentLoaded', buildTicker);
+// script.js runs at the end of <body> so the DOM is already parsed. Call
+// buildTicker directly — DOMContentLoaded may have already fired, in which
+// case addEventListener would never trigger. loadBannerConfig below also
+// calls buildTicker again once the sheet-driven message arrives, so an edit
+// to the sheet refreshes item #1 without a page reload. The data-ticker
+// guard prevents duplicate builds; loadBannerConfig clears it before its
+// rebuild.
+buildTicker();
 
 (function loadBannerConfig() {
   const banner = document.querySelector('.announcement-banner');
