@@ -133,10 +133,22 @@ function renderTicker() {
     return;
   }
 
-  // Move the banner below the sticky header (idempotent).
+  // Move the banner below the sticky header AND wrap both in a sticky
+  // container so the header + ticker stack stays locked to the top of the
+  // viewport as a single unit on scroll. Idempotent — we check for the
+  // wrapper before creating it again.
   const header = document.getElementById('site-header');
-  if (header && header.nextElementSibling !== banner) {
-    header.insertAdjacentElement('afterend', banner);
+  if (header) {
+    let wrapper = header.closest('.sticky-head');
+    if (!wrapper) {
+      wrapper = document.createElement('div');
+      wrapper.className = 'sticky-head';
+      header.parentNode.insertBefore(wrapper, header);
+      wrapper.appendChild(header);
+    }
+    if (banner.parentNode !== wrapper) {
+      wrapper.appendChild(banner);
+    }
   }
 
   // Build items.
@@ -162,7 +174,7 @@ function renderTicker() {
     const b = tickerState.latestBlog;
     items.push(
       '<a class="ticker-item" href="' + esc(b.href) + '">' +
-        '<span class="ticker-pill" style="background:#ffce00;color:#15151f;">Latest Blog</span>' +
+        '<span class="ticker-pill blog">Latest Blog</span>' +
         '<span class="ticker-text">' + esc(b.title) + '</span>' +
       '</a>'
     );
