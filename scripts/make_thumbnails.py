@@ -55,6 +55,7 @@ THUMBS = {
     "lego-super-mario-minifigures-2027":("Minifig Values", RED),
     "lego-sets-retiring-2026":         ("Retiring Soon",  RED),
     "lego-halloween-minifigures":      ("Halloween Guide",GOLD),
+    "lego-advent-calendars-2026":      ("Advent 2026",    RED),
     "best-lego-gifts-for-dad":         ("Gift Guide",     RED),
     "how-much-is-your-lego-worth":     ("LEGO Values",    GOLD),
     "how-to-buy-lego-on-bricklink":    ("Buying Guide",   BLUE),
