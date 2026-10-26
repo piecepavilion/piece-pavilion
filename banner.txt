@@ -1,17 +1,37 @@
 # ============================================================
-#  PIECE PAVILION — SITE ANNOUNCEMENT BANNER (FALLBACK ONLY)
-#  The banner is normally edited in the "PiecePavilion Site Banner"
-#  Google Sheet (tile on /employees). This file is only used if the
-#  sheet can't be reached. Edits here go live ~1 min after commit.
+#  PIECE PAVILION — SITE TICKER (FALLBACK ONLY)
 #
-#  enabled    YES shows the banner on every page, NO hides it
-#  message    the bold headline (emoji welcome — paste them in)
-#  link_text  the smaller call-to-action after the headline
-#  link       where clicking goes: a site page (/blog/...), a full https:// URL,
-#             or the word LATEST to auto-point at the newest blog post.
+#  The ticker that scrolls below the top menu is normally controlled by
+#  the "PiecePavilion Site Banner" Google Sheet (tile on /employees).
+#  This file is only used if the sheet can't be reached. Edits here go
+#  live ~1 min after commit.
+#
+#  SECTIONS (all optional — leave a line out to use the default)
+#  -----------------------------------------------------------
+#  enabled              YES shows the ticker on every page, NO hides it
+#
+#  message              Custom announcement #1 (bold headline, emoji welcome)
+#  link                 Where clicking item #1 goes: a site path (/blog/…),
+#                       a full https://… URL, or the word LATEST to auto-point
+#                       at the newest blog post.
+#  link_text            Smaller call-to-action after the message #1
+#
+#  message_2 / link_2 / link_text_2    Optional second announcement row
+#  message_3 / link_3 / link_text_3    Optional third announcement row
+#
+#  show_latest_blog     YES shows the latest blog post as a ticker item,
+#                       NO hides it. Default YES.
+#  show_just_added      YES shows the newest listings as ticker items,
+#                       NO hides them. Default YES. (Only appears on the
+#                       homepage; other pages auto-skip.)
+#  just_added_count     How many "Just Added" items to show. 1–8. Default 3.
+#
 #  Lines starting with # are ignored.
 # ============================================================
 enabled=YES
-message=🎵 New on the Blog: Olivia Rodrigo Gets Her Own LEGO
-link_text=Read the latest blog post here →
+message=🧱 New on the Blog: LEGO Advent Calendars 2026, Ranked
+link_text=Read the latest →
 link=LATEST
+show_latest_blog=YES
+show_just_added=YES
+just_added_count=3

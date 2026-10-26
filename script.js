@@ -41,82 +41,152 @@ if (siteHeader) {
   window.addEventListener('scroll', onScroll, { passive: true });
 }
 
-// ===== ANNOUNCEMENT BANNER + TICKER =====
-// Staff edit the banner message via the "PiecePavilion Site Banner" Google
-// Sheet (link on /employees). The sheet row becomes item #1 of the ticker.
-// On the homepage, the first 5 "Just Added" listings are appended as the
-// next items so the ticker reads like a running stream — pattern lifted
-// from the MSW Hub intranet.
-document.querySelectorAll('.announcement-close').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const banner = btn.closest('.announcement-banner');
-    banner.classList.add('hidden');
-    const strong = banner.querySelector('strong');
-    sessionStorage.setItem('banner-dismissed', strong ? strong.textContent : '1');
-  });
-});
-if (sessionStorage.getItem('banner-dismissed')) {
-  document.querySelectorAll('.announcement-banner').forEach(b => b.classList.add('hidden'));
+// ===== TICKER (staff-controllable) =====
+// Pattern lifted from the MSW Hub intranet (hub.mswalker.com). A single
+// marquee band below the sticky header shows, in order:
+//   1. Up to N custom announcement rows (from staff Google Sheet)
+//   2. The most recent blog post (fetched from /blog/)
+//   3. The first 3 "Just Added" listings (homepage only, read from the
+//      #newest grid that pp-ops regenerates hourly)
+//
+// Every piece is staff-controllable via the "PiecePavilion Site Banner"
+// Google Sheet (edited from /employees). Supported fields:
+//
+//   enabled           YES/NO — master on/off for the whole ticker
+//   message           Custom announcement text (shows as a "News" pill)
+//   link              URL or LATEST (= auto-link to newest blog post)
+//   link_text         CTA label on the custom item ("Read more →")
+//   message_2 / link_2 / link_text_2       Second custom row (optional)
+//   message_3 / link_3 / link_text_3       Third custom row (optional)
+//   show_latest_blog  YES/NO (default YES)
+//   show_just_added   YES/NO (default YES)
+//   just_added_count  Integer, 1–8 (default 3)
+//
+// On non-homepage pages, "Just Added" items are automatically skipped
+// (there's no #newest grid to read from) — the ticker still shows
+// announcements + latest blog, falls back to the single hardcoded item
+// if everything else is empty.
+
+const tickerState = {
+  // Hardcoded fallback — read from the original HTML during initial render.
+  hardcodedAnnouncement: null,
+  latestBlog: null,                // {title, href} once fetched
+  justAdded: [],                   // {name, price, img, href}[]
+  cfg: {
+    enabled: true,
+    announcements: [],             // [{message, href, cta}]
+    showLatestBlog: true,
+    showJustAdded: true,
+    justAddedCount: 3,
+  },
+};
+
+const esc = (s) => (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function tickerBanner() { return document.querySelector('.announcement-banner'); }
+
+function readHardcodedAnnouncement() {
+  // The HTML ships with a baseline announcement — grab it before the
+  // ticker overwrites that markup.
+  const banner = tickerBanner();
+  if (!banner) return null;
+  const a = banner.querySelector('.announcement-text');
+  if (!a) return null;
+  const strong = a.querySelector('strong');
+  const span = a.querySelector('span');
+  return {
+    message: strong ? strong.innerHTML : 'New on the blog',
+    href: a.getAttribute('href') || '/blog/',
+    cta: span ? span.innerHTML : 'Read the latest &rarr;',
+  };
 }
 
-// --- Build the ticker: reposition the banner element below the sticky
-//     header, then replace its single-line markup with a scrolling track.
-function buildTicker() {
-  const banner = document.querySelector('.announcement-banner');
-  if (!banner || banner.dataset.ticker === 'built') return;
+function readJustAdded() {
+  // Read the pp-ops-generated #newest grid. Non-homepage pages won't have
+  // this section and will return [].
+  return Array.from(document.querySelectorAll('#newest .featured-item'))
+    .slice(0, 8)
+    .map(a => {
+      const h4 = a.querySelector('h4');
+      const priceEl = a.querySelector('.featured-price');
+      const imgEl = a.querySelector('img');
+      const href = a.getAttribute('href');
+      if (!h4 || !priceEl || !imgEl || !href) return null;
+      let name = h4.textContent.replace(/…\s*$/, '').trim();
+      if (name.length > 48) name = name.slice(0, 48).replace(/\s+\S*$/, '') + '…';
+      return {
+        name,
+        price: priceEl.textContent.trim(),
+        img: imgEl.getAttribute('src'),
+        href,
+      };
+    })
+    .filter(Boolean);
+}
 
-  // 1. Move the banner below the sticky header (per the MSW Hub pattern).
+function renderTicker() {
+  const banner = tickerBanner();
+  if (!banner) return;
+
+  // Master off switch (sheet-driven)
+  if (!tickerState.cfg.enabled) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  // Move the banner below the sticky header (idempotent).
   const header = document.getElementById('site-header');
-  if (header && header.parentElement && banner.parentElement) {
+  if (header && header.nextElementSibling !== banner) {
     header.insertAdjacentElement('afterend', banner);
   }
 
-  // 2. Gather items. First item: the current announcement (strong + optional link).
-  const esc = (s) => (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const announcementAnchor = banner.querySelector('.announcement-text');
+  // Build items.
   const items = [];
-  if (announcementAnchor) {
-    const strong = announcementAnchor.querySelector('strong');
-    const span = announcementAnchor.querySelector('span');
-    const href = announcementAnchor.getAttribute('href') || '/blog/';
-    const title = strong ? strong.innerHTML : 'New on the blog';
-    const cta = span ? span.innerHTML : '';
-    items.push(
-      '<a class="ticker-item" href="' + esc(href) + '">' +
-        '<span class="ticker-pill hot">New</span>' +
-        '<span class="ticker-text">' + title + (cta ? ' <span style="color:rgba(255,255,255,0.7);font-weight:600;">' + cta + '</span>' : '') + '</span>' +
-      '</a>'
-    );
-  }
 
-  // 3. Homepage only: pull the first 5 Just Added listings into the ticker.
-  const newest = Array.from(document.querySelectorAll('#newest .featured-item')).slice(0, 5);
-  newest.forEach(a => {
-    const h4 = a.querySelector('h4');
-    const priceEl = a.querySelector('.featured-price');
-    const imgEl = a.querySelector('img');
-    const href = a.getAttribute('href');
-    if (!h4 || !priceEl || !imgEl || !href) return;
-    // Trim trailing ellipsis and shorten long names for the ticker.
-    let name = h4.textContent.replace(/…\s*$/, '').trim();
-    if (name.length > 48) name = name.slice(0, 48).replace(/\s+\S*$/, '') + '…';
-    const price = priceEl.textContent.trim();
-    const img = imgEl.getAttribute('src');
+  // 1. Custom announcements. Prefer staff sheet rows; if none, fall back
+  //    to the hardcoded one so there's always something to show.
+  const announcements = tickerState.cfg.announcements.length
+    ? tickerState.cfg.announcements
+    : (tickerState.hardcodedAnnouncement ? [tickerState.hardcodedAnnouncement] : []);
+  announcements.forEach(a => {
+    const cta = a.cta ? ' <span style="color:rgba(255,255,255,0.7);font-weight:600;">' + a.cta + '</span>' : '';
     items.push(
-      '<a class="ticker-item" href="' + esc(href) + '" target="_blank" rel="noopener">' +
-        '<img src="' + esc(img) + '" alt="" loading="lazy">' +
-        '<span class="ticker-pill">Just added</span>' +
-        '<span class="ticker-text">' + esc(name) + '<span class="price">' + esc(price) + '</span></span>' +
+      '<a class="ticker-item" href="' + esc(a.href) + '">' +
+        '<span class="ticker-pill hot">News</span>' +
+        '<span class="ticker-text">' + a.message + cta + '</span>' +
       '</a>'
     );
   });
 
-  // Nothing to show (no announcement, no Just Added) — leave the plain banner alone.
-  if (!items.length) return;
+  // 2. Latest blog post
+  if (tickerState.cfg.showLatestBlog && tickerState.latestBlog) {
+    const b = tickerState.latestBlog;
+    items.push(
+      '<a class="ticker-item" href="' + esc(b.href) + '">' +
+        '<span class="ticker-pill" style="background:#ffce00;color:#15151f;">Latest Blog</span>' +
+        '<span class="ticker-text">' + esc(b.title) + '</span>' +
+      '</a>'
+    );
+  }
 
-  // Duplicate the item list so the CSS translateX(-50%) animation loops seamlessly.
+  // 3. Just Added products
+  if (tickerState.cfg.showJustAdded) {
+    tickerState.justAdded.slice(0, tickerState.cfg.justAddedCount).forEach(p => {
+      items.push(
+        '<a class="ticker-item" href="' + esc(p.href) + '" target="_blank" rel="noopener">' +
+          '<img src="' + esc(p.img) + '" alt="" loading="lazy">' +
+          '<span class="ticker-pill">Just added</span>' +
+          '<span class="ticker-text">' + esc(p.name) + '<span class="price">' + esc(p.price) + '</span></span>' +
+        '</a>'
+      );
+    });
+  }
+
+  if (!items.length) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  // Duplicate list so the translateX(-50%) marquee loops seamlessly.
   const sep = '<span class="ticker-sep" aria-hidden="true">•</span>';
   const trackInner = items.join(sep) + sep + items.join(sep);
 
@@ -124,9 +194,9 @@ function buildTicker() {
     '<div class="ticker-viewport"><div class="ticker-track">' + trackInner + '</div></div>' +
     '<button class="announcement-close" aria-label="Dismiss">&times;</button>';
   banner.classList.add('ticker');
-  banner.dataset.ticker = 'built';
+  banner.classList.remove('hidden');
 
-  // Re-wire the dismiss button on the new markup.
+  // Dismiss (sessionStorage so it comes back on next visit).
   const closeBtn = banner.querySelector('.announcement-close');
   if (closeBtn) {
     closeBtn.addEventListener('click', (e) => {
@@ -137,17 +207,37 @@ function buildTicker() {
   }
 }
 
-// script.js runs at the end of <body> so the DOM is already parsed. Call
-// buildTicker directly — DOMContentLoaded may have already fired, in which
-// case addEventListener would never trigger. loadBannerConfig below also
-// calls buildTicker again once the sheet-driven message arrives, so an edit
-// to the sheet refreshes item #1 without a page reload. The data-ticker
-// guard prevents duplicate builds; loadBannerConfig clears it before its
-// rebuild.
-buildTicker();
+// --- Boot sequence ---
+
+// Early session-dismiss guard
+if (sessionStorage.getItem('banner-dismissed')) {
+  document.querySelectorAll('.announcement-banner').forEach(b => b.classList.add('hidden'));
+}
+
+// Capture hardcoded announcement BEFORE first render (otherwise it'd be
+// gone after the ticker markup replaces it).
+tickerState.hardcodedAnnouncement = readHardcodedAnnouncement();
+tickerState.justAdded = readJustAdded();
+renderTicker();
+
+// Fetch latest blog (ticker enriches once this resolves).
+(function loadLatestBlog() {
+  fetch('/blog/?_=' + Date.now())
+    .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
+    .then((html) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const card = doc.querySelector('a.blog-card');
+      if (!card) return;
+      const title = (card.querySelector('h2') || {}).textContent || 'Read our latest post';
+      const href = card.getAttribute('href') || '/blog/';
+      tickerState.latestBlog = { title: title.trim(), href };
+      renderTicker();
+    })
+    .catch(() => {});
+})();
 
 (function loadBannerConfig() {
-  const banner = document.querySelector('.announcement-banner');
+  const banner = tickerBanner();
   if (!banner) return;
 
   // Primary source: the staff "PiecePavilion Site Banner" Google Sheet
@@ -176,58 +266,46 @@ buildTicker();
     return cfg;
   };
 
+  const yesish = (v) => v === undefined || v === '' || (v || '').trim().toUpperCase() === 'YES';
+  const trueOnly = (v) => (v || '').trim().toUpperCase() === 'YES';
+
+  const resolveLink = (link) => {
+    if (!link) return '/blog/';
+    const t = link.trim().toUpperCase();
+    if (t === 'LATEST') return tickerState.latestBlog ? tickerState.latestBlog.href : '/blog/';
+    return link.trim();
+  };
+
   const apply = (cfg) => {
-    if ((cfg.enabled || '').toUpperCase() !== 'YES') {
-      banner.classList.add('hidden');
-      return;
-    }
-    const textLink = banner.querySelector('.announcement-text');
-    const strong = banner.querySelector('strong');
-    const span = banner.querySelector('.announcement-text span');
-    if (cfg.message && strong) strong.textContent = cfg.message;
-    if (cfg.link_text && span) span.textContent = cfg.link_text;
-    if (cfg.link && textLink) {
-      // link=LATEST auto-points at the newest blog post (top card in /blog/),
-      // so the banner never needs its URL hand-edited when a new post ships.
-      if (cfg.link.trim().toUpperCase() === 'LATEST') {
-        fetch('/blog/?_=' + Date.now())
-          .then((r) => { if (!r.ok) throw new Error('no blog index'); return r.text(); })
-          .then((html) => {
-            const card = new DOMParser()
-              .parseFromString(html, 'text/html')
-              .querySelector('a.blog-card');
-            textLink.setAttribute('href', card ? card.getAttribute('href') : '/blog/');
-          })
-          .catch(() => textLink.setAttribute('href', '/blog/'));
-      } else {
-        textLink.setAttribute('href', cfg.link);
-      }
-    }
+    // Master off switch — treat missing `enabled` as YES (so a brand-new
+    // sheet with just announcement rows still works), but an explicit NO
+    // suppresses the whole ticker.
+    tickerState.cfg.enabled = (cfg.enabled || '').trim().toUpperCase() !== 'NO';
 
-    // show unless THIS exact message was already dismissed this session
-    if (sessionStorage.getItem('banner-dismissed') === (cfg.message || '')) {
-      banner.classList.add('hidden');
-    } else {
-      banner.classList.remove('hidden');
-    }
+    // Up to 3 announcement rows: message / message_2 / message_3
+    const announcements = [];
+    const rows = [
+      { msg: cfg.message, link: cfg.link, cta: cfg.link_text },
+      { msg: cfg.message_2, link: cfg.link_2, cta: cfg.link_text_2 },
+      { msg: cfg.message_3, link: cfg.link_3, cta: cfg.link_text_3 },
+    ];
+    rows.forEach(r => {
+      if (!r.msg) return;
+      announcements.push({
+        message: esc(r.msg),
+        href: resolveLink(r.link),
+        cta: r.cta ? esc(r.cta) : '',
+      });
+    });
+    tickerState.cfg.announcements = announcements;
 
-    // If buildTicker already ran, update item #1 in place so a sheet edit
-    // propagates without destroying the Just Added items. We DON'T rebuild
-    // the ticker from scratch — that would re-read the DOM (which no longer
-    // has .announcement-text) and drop the announcement entirely.
-    const firstTickerItem = banner.querySelector('.ticker-item');
-    if (banner.dataset.ticker === 'built' && firstTickerItem && cfg.message) {
-      const textSpan = firstTickerItem.querySelector('.ticker-text');
-      if (textSpan) {
-        // Preserve the "Read the latest" CTA on the right
-        const existingCta = textSpan.querySelector('span[style]');
-        textSpan.innerHTML = (cfg.message || '') +
-          (existingCta ? ' ' + existingCta.outerHTML : '');
-      }
-      if (cfg.link && cfg.link.trim().toUpperCase() !== 'LATEST') {
-        firstTickerItem.setAttribute('href', cfg.link);
-      }
-    }
+    // Section toggles — default YES unless explicit NO.
+    tickerState.cfg.showLatestBlog = (cfg.show_latest_blog || '').trim().toUpperCase() !== 'NO';
+    tickerState.cfg.showJustAdded = (cfg.show_just_added || '').trim().toUpperCase() !== 'NO';
+    const n = parseInt(cfg.just_added_count, 10);
+    tickerState.cfg.justAddedCount = (isFinite(n) && n > 0 && n <= 8) ? n : 3;
+
+    renderTicker();
   };
 
   // cache-busting query so edits appear in ~1 min
