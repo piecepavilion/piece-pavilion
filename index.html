@@ -56,7 +56,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20261026a" />
+  <link rel="stylesheet" href="style.css?v=20261026b" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -482,13 +482,19 @@
 
         <div class="card">
           <div class="card-icon" style="background:#fff0f0; color:#e3000b;">
-            <!-- Individual Pieces: single LEGO plate silhouette with 4 studs -->
-            <svg width="44" height="44" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
-              <rect x="4" y="18" width="40" height="22" rx="2.5"/>
-              <circle cx="12" cy="18" r="5"/>
-              <circle cx="22" cy="18" r="5"/>
-              <circle cx="32" cy="18" r="5"/>
-              <circle cx="42" cy="18" r="5"/>
+            <!-- Individual Pieces: classic 2x4 LEGO brick, top-down view with 8 studs -->
+            <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true">
+              <!-- brick body -->
+              <rect x="6" y="14" width="36" height="22" rx="2" fill="currentColor"/>
+              <!-- 2x4 grid of studs rendered as recessed rings for depth -->
+              <circle cx="12" cy="20" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="20" cy="20" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="28" cy="20" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="36" cy="20" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="12" cy="30" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="20" cy="30" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="28" cy="30" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
+              <circle cx="36" cy="30" r="2.6" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1.3"/>
             </svg>
           </div>
           <h3>Individual Pieces</h3>
@@ -499,9 +505,24 @@
 
         <div class="card featured-card">
           <div class="card-icon" style="background:#fff8e0; color:#d4a000;">
-            <!-- Sets & Builds: classic LEGO minifigure head silhouette -->
-            <svg width="44" height="44" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
-              <path d="M18 6 L30 6 Q33 6 33 9 L33 12 L36 12 Q38 12 38 14 L38 36 Q38 40 34 40 L14 40 Q10 40 10 36 L10 14 Q10 12 12 12 L15 12 L15 9 Q15 6 18 6 Z"/>
+            <!-- Sets & Builds: full LEGO minifigure silhouette -->
+            <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true" fill="currentColor">
+              <!-- head stud (connector on top) -->
+              <rect x="22" y="4" width="4" height="2" rx="0.5"/>
+              <!-- head (rounded square) -->
+              <rect x="17" y="6" width="14" height="10" rx="2"/>
+              <!-- neck -->
+              <rect x="22" y="16" width="4" height="1.5"/>
+              <!-- torso trapezoid -->
+              <path d="M13 17.5 L35 17.5 L37 30 L11 30 Z"/>
+              <!-- arms -->
+              <path d="M11 19 Q8 23 10 30 L13 30 L13 19 Z"/>
+              <path d="M37 19 Q40 23 38 30 L35 30 L35 19 Z"/>
+              <!-- legs (two separate rectangles) -->
+              <rect x="14" y="30" width="8" height="13" rx="0.5"/>
+              <rect x="26" y="30" width="8" height="13" rx="0.5"/>
+              <!-- hip joint line -->
+              <rect x="12" y="30" width="24" height="1.5" fill="rgba(0,0,0,0.2)"/>
             </svg>
           </div>
           <h3>Sets &amp; Builds</h3>
@@ -511,16 +532,28 @@
 
         <div class="card card-coming-soon">
           <div class="card-icon" style="background:#f0fff4; color:#1a8a3c;">
-            <!-- Bulk Lots: stack of 3 LEGO bricks in different sizes -->
-            <svg width="44" height="44" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
-              <rect x="4" y="30" width="40" height="12" rx="1.5"/>
-              <circle cx="10" cy="30" r="3"/><circle cx="18" cy="30" r="3"/>
-              <circle cx="26" cy="30" r="3"/><circle cx="34" cy="30" r="3"/><circle cx="42" cy="30" r="3"/>
-              <rect x="8" y="18" width="32" height="10" rx="1.5"/>
-              <circle cx="14" cy="18" r="2.5"/><circle cx="22" cy="18" r="2.5"/>
-              <circle cx="30" cy="18" r="2.5"/><circle cx="38" cy="18" r="2.5"/>
-              <rect x="14" y="8" width="20" height="8" rx="1.5"/>
-              <circle cx="20" cy="8" r="2"/><circle cx="28" cy="8" r="2"/>
+            <!-- Bulk Lots: three bricks at random angles ("pile" vibe) -->
+            <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true" fill="currentColor">
+              <!-- back brick (rotated left) -->
+              <g transform="rotate(-14 20 18)">
+                <rect x="6" y="14" width="28" height="10" rx="1.5" opacity="0.65"/>
+                <circle cx="12" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
+                <circle cx="19" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
+                <circle cx="26" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
+              </g>
+              <!-- front brick (bigger, horizontal) -->
+              <rect x="4" y="26" width="40" height="14" rx="2"/>
+              <circle cx="11" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
+              <circle cx="20" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
+              <circle cx="29" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
+              <circle cx="38" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
+              <!-- top brick (rotated right, small) -->
+              <g transform="rotate(12 32 8)">
+                <rect x="22" y="4" width="20" height="9" rx="1.5" opacity="0.85"/>
+                <circle cx="27" cy="7.5" r="1.4" fill="rgba(255,255,255,0.55)"/>
+                <circle cx="33" cy="7.5" r="1.4" fill="rgba(255,255,255,0.55)"/>
+                <circle cx="39" cy="7.5" r="1.4" fill="rgba(255,255,255,0.55)"/>
+              </g>
             </svg>
           </div>
           <h3>Bulk Lots</h3>
