@@ -56,7 +56,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20261026b" />
+  <link rel="stylesheet" href="style.css?v=20261026c" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -530,36 +530,10 @@
           <a href="/retired-lego-sets/" class="btn-card">Browse Sets &rarr;</a>
         </div>
 
-        <div class="card card-coming-soon">
-          <div class="card-icon" style="background:#f0fff4; color:#1a8a3c;">
-            <!-- Bulk Lots: three bricks at random angles ("pile" vibe) -->
-            <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true" fill="currentColor">
-              <!-- back brick (rotated left) -->
-              <g transform="rotate(-14 20 18)">
-                <rect x="6" y="14" width="28" height="10" rx="1.5" opacity="0.65"/>
-                <circle cx="12" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
-                <circle cx="19" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
-                <circle cx="26" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
-              </g>
-              <!-- front brick (bigger, horizontal) -->
-              <rect x="4" y="26" width="40" height="14" rx="2"/>
-              <circle cx="11" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
-              <circle cx="20" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
-              <circle cx="29" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
-              <circle cx="38" cy="31" r="2" fill="rgba(255,255,255,0.55)"/>
-              <!-- top brick (rotated right, small) -->
-              <g transform="rotate(12 32 8)">
-                <rect x="22" y="4" width="20" height="9" rx="1.5" opacity="0.85"/>
-                <circle cx="27" cy="7.5" r="1.4" fill="rgba(255,255,255,0.55)"/>
-                <circle cx="33" cy="7.5" r="1.4" fill="rgba(255,255,255,0.55)"/>
-                <circle cx="39" cy="7.5" r="1.4" fill="rgba(255,255,255,0.55)"/>
-              </g>
-            </svg>
-          </div>
-          <h3>Bulk Lots</h3>
-          <p>Mixed bags and bulk lots perfect for MOCs, classroom builds, or stocking up your parts bin.</p>
-          <span class="coming-soon-badge">Coming Soon</span>
-        </div>
+        <!-- Bulk Lots tile hidden until bulk inventory is live. The dead-end
+             "Coming Soon" state on a prime homepage slot was weaker than
+             just showing a tight 2-tile row. Restore when ready to sell. -->
+
 
       </div>
     </div>
