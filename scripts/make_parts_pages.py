@@ -245,7 +245,7 @@ PAGE_TMPL = """<!DOCTYPE html>
         <p class="part-tip">{tip}</p>
         <div class="btn-row">
           <a href="{bricklink_cta_href}" target="_blank" rel="noopener" class="btn-primary">{bricklink_cta_label} &rarr;</a>
-          <a href="/finder/?q={no}" class="btn-ghost">Search Inventory</a>
+          <a href="/parts/?q={no}" class="btn-ghost">Search Live Inventory</a>
         </div>
       </div>
     </div>
@@ -399,20 +399,20 @@ def render_page(part, stock):
     )
 
 
-# ---- /parts/ index page ------------------------------------------------------
+# ---- /parts/ index page — unified search engine + landing-page browse --------
 
 INDEX_TMPL = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LEGO Parts Database | Piece Pavilion</title>
-  <meta name="description" content="A searchable database of common LEGO parts: cheese slopes, jumper plates, headlight bricks, and more — with nicknames, official names, part numbers, and live BrickLink inventory from Piece Pavilion." />
+  <title>LEGO Parts Database — Search Our Live Inventory | Piece Pavilion</title>
+  <meta name="description" content="Search Piece Pavilion's live LEGO inventory and browse our parts encyclopedia. Nicknames, official catalog names, part numbers, and in-stock pricing for cheese slopes, jumper plates, headlight bricks and 70+ more." />
   <link rel="canonical" href="https://piecepavilion.com/parts/" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://piecepavilion.com/parts/" />
   <meta property="og:title" content="LEGO Parts Database | Piece Pavilion" />
-  <meta property="og:description" content="Common LEGO parts with nicknames, numbers, and live inventory." />
+  <meta property="og:description" content="Search our live LEGO inventory and browse the parts encyclopedia." />
   <meta property="og:image" content="https://piecepavilion.com/og/_home.png" />
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-X3DK777DPM"></script>
@@ -426,17 +426,51 @@ INDEX_TMPL = """<!DOCTYPE html>
   <link rel="preconnect" href="https://img.bricklink.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
-    .parts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 24px 0; }
+    .parts-hero { background: linear-gradient(135deg, #15151f 0%, #24101e 55%, #3a1217 100%); color: #fff; padding: 44px 24px 28px; border-radius: 18px; margin: 24px 0 24px; text-align: center; position: relative; overflow: hidden; }
+    .parts-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(circle at 1.6px 1.6px, rgba(255,255,255,.07) 1.6px, transparent 1.7px) 0 0/26px 26px; pointer-events: none; }
+    .parts-hero h1 { font-family: 'Fredoka','Nunito',sans-serif; font-size: clamp(2rem, 5vw, 3rem); margin: 0 0 8px; color: #fff; position: relative; }
+    .parts-hero p { max-width: 640px; margin: 0 auto 18px; color: rgba(255,255,255,.86); font-size: 1.05rem; position: relative; }
+    .parts-search { position: relative; max-width: 720px; margin: 0 auto; }
+    .parts-search-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+    .parts-search input[type=search] { flex: 1 1 260px; min-width: 240px; font: inherit; font-size: 1.05rem; padding: 14px 16px; border: 0; border-radius: 12px; background: #fff; color: var(--ink); }
+    .parts-search input[type=search]:focus { outline: 3px solid var(--yellow); outline-offset: -1px; }
+    .parts-search select { font: inherit; font-size: 0.95rem; padding: 12px 14px; border: 0; border-radius: 12px; background: #fff; color: var(--ink); font-weight: 700; }
+    .parts-search .find-btn { background: var(--red); color: #fff; border: 0; font-weight: 800; font-size: 1rem; padding: 0 24px; border-radius: 12px; cursor: pointer; }
+    .parts-search .find-btn:hover { background: var(--red-dark); }
+    #status { color: var(--muted); font-size: 0.9rem; margin: 14px 0 6px; }
+    .landing-spotlight { background: linear-gradient(135deg,#fff8ec 0%,#ffe9c4 100%); border: 1px solid rgba(217,152,0,0.35); border-radius: 16px; padding: 18px 22px; margin: 14px 0 20px; display: flex; gap: 18px; align-items: center; }
+    .landing-spotlight img { width: 90px; height: 90px; object-fit: contain; background: #fff; border-radius: 10px; padding: 6px; flex-shrink: 0; }
+    .landing-spotlight .ls-kicker { font-size: 0.72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8a5a00; margin-bottom: 2px; }
+    .landing-spotlight .ls-title { font-family: 'Fredoka','Nunito',sans-serif; font-size: 1.4rem; color: var(--ink); margin: 0 0 2px; }
+    .landing-spotlight .ls-name { font-size: 0.92rem; color: var(--slate); margin: 0 0 8px; }
+    .landing-spotlight a { font-weight: 800; color: var(--red); }
+    .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 10px 0 32px; }
+    .inv-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; display: flex; gap: 12px; transition: box-shadow .12s, border-color .12s; }
+    .inv-card:hover { box-shadow: 0 6px 22px rgba(20,22,29,.08); border-color: rgba(227,0,11,0.3); }
+    .inv-card img { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; background: #fff; }
+    .inv-nm { font-weight: 800; font-size: 0.9rem; line-height: 1.25; color: var(--ink); }
+    .inv-meta { font-size: 0.78rem; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+    .inv-price { font-weight: 900; color: var(--red); font-size: 1rem; margin-top: 4px; }
+    .inv-cta { display: inline-block; margin-top: 6px; font-weight: 800; font-size: 0.8rem; background: var(--red); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-family: inherit; text-decoration: none; }
+    .inv-cta:hover { background: var(--red-dark); color: #fff; text-decoration: none; }
+    .inv-cta.added { background: #1a9e4b; }
+    .inv-learn { display: inline-block; margin-top: 4px; margin-left: 8px; font-size: 0.78rem; font-weight: 700; color: var(--red); }
+    .inv-empty { background: #fff; border: 1px dashed #e5e7eb; border-radius: 14px; padding: 28px; text-align: center; color: var(--muted); }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 32px 0 10px; }
+    .section-head h2 { font-family: 'Fredoka','Nunito',sans-serif; margin: 0; color: var(--ink); }
+    .section-head .section-sub { color: var(--muted); font-size: 0.9rem; }
+    .parts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 10px 0 24px; }
     .part-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 16px 14px; display: flex; flex-direction: column; text-decoration: none; color: inherit; transition: transform .12s, box-shadow .12s; box-shadow: 0 1px 4px rgba(20,22,29,.04); }
     .part-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(20,22,29,.08); }
     .part-card img { width: 100%; height: 120px; object-fit: contain; background: #fff; margin-bottom: 10px; }
     .part-card .pc-nick { font-family: 'Fredoka','Nunito',sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--ink); line-height: 1.15; }
     .part-card .pc-no { font-size: 0.78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
     .part-card .pc-name { font-size: 0.85rem; color: var(--slate); margin: 6px 0 0; line-height: 1.35; }
-    .parts-hero { background: linear-gradient(135deg, #15151f 0%, #24101e 55%, #3a1217 100%); color: #fff; padding: 48px 24px; border-radius: 18px; margin: 24px 0 32px; text-align: center; position: relative; overflow: hidden; }
-    .parts-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(circle at 1.6px 1.6px, rgba(255,255,255,.07) 1.6px, transparent 1.7px) 0 0/26px 26px; pointer-events: none; }
-    .parts-hero h1 { font-family: 'Fredoka','Nunito',sans-serif; font-size: clamp(2rem, 5vw, 3rem); margin: 0 0 10px; color: #fff; position: relative; }
-    .parts-hero p { max-width: 640px; margin: 0 auto; color: rgba(255,255,255,.86); font-size: 1.05rem; position: relative; }
+    .browse-explain { background: var(--cream); border-radius: 14px; padding: 18px 20px; margin: 10px 0 18px; font-size: 0.95rem; color: var(--slate); }
+    @media (max-width: 560px) {
+      .landing-spotlight { flex-direction: column; text-align: center; }
+      .parts-search .find-btn { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -483,23 +517,49 @@ INDEX_TMPL = """<!DOCTYPE html>
   <div class="breadcrumbs"><nav><a href="/">Home</a><span class="sep">&rsaquo;</span>Parts Database</nav></div>
 
   <article class="blog-article">
+
     <div class="parts-hero">
       <h1>LEGO Parts Database</h1>
-      <p>Common LEGO parts you can actually search by name. Nicknames, official catalog names, part numbers, and what we have in stock &mdash; all in one place.</p>
+      <p>Search our live inventory of {inv_count}+ listings &mdash; by name, color, nickname or part number &mdash; and browse the parts encyclopedia for context on every piece.</p>
+      <form class="parts-search" id="pp-search" role="search" onsubmit="return false;">
+        <div class="parts-search-row">
+          <input id="q" type="search" placeholder="Try &ldquo;red 2x4 brick&rdquo;, &ldquo;cheese slope&rdquo;, &ldquo;Hagrid&rdquo; or a part number..." autocomplete="off" autofocus />
+          <select id="type" aria-label="Filter by type">
+            <option value="">All types</option>
+            <option value="PART">Parts</option>
+            <option value="MINIFIG">Minifigures</option>
+            <option value="SET">Sets</option>
+            <option value="GEAR">Keychains</option>
+          </select>
+          <select id="sort" aria-label="Sort by">
+            <option value="rel">Best match</option>
+            <option value="asc">Price: low to high</option>
+            <option value="desc">Price: high to low</option>
+          </select>
+          <button class="find-btn" id="go" type="submit">Search</button>
+        </div>
+      </form>
     </div>
 
-    <p>Every LEGO builder has done it: you hold up a piece, you know exactly what it does, and you have no idea what it&rsquo;s called. This database solves that. Each page shows the <strong>nickname</strong> builders use (cheese slope, jumper plate, headlight brick), the <strong>official BrickLink name</strong> (what the catalog actually files it under), the <strong>part number</strong> molded on the piece, and &mdash; the thing you really want &mdash; <strong>whether we have one in stock</strong>, in which color, at what price.</p>
+    <div id="status">Loading our live inventory&hellip;</div>
+    <div id="landing-spotlight"></div>
+    <div id="results" class="inv-grid"></div>
 
-    <p>Starting with {count} of the most-searched parts in our catalog. For the full visual guide including quiz, read our post on <a href="/blog/name-that-lego-piece/">naming every LEGO piece</a>.</p>
-
-    <div class="parts-grid">
+    <section id="browse-section">
+      <div class="section-head">
+        <h2>Browse the Parts Encyclopedia</h2>
+        <span class="section-sub">{count} parts, every nickname covered</span>
+      </div>
+      <div class="browse-explain">Each page below has the nickname builders use, the official BrickLink name, the part number molded on the piece, and &mdash; the thing you really want &mdash; whether we have one in stock, in which color, at what price. Click any card to open its full page.</div>
+      <div class="parts-grid">
 {cards}
-    </div>
+      </div>
+    </section>
 
     <div class="blog-cta">
-      <h3>Need a part not listed here?</h3>
-      <p>Search our live inventory of {inv_count}+ listings &mdash; filter by color, type, and condition.</p>
-      <a href="/finder/" class="btn-primary btn-large">Open the Product Finder &rarr;</a>
+      <h3>Can&rsquo;t find what you&rsquo;re looking for?</h3>
+      <p>Our full LEGO catalog on BrickLink has every color, condition and lot we currently stock &mdash; plus auto-complete search by name or part number.</p>
+      <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener" class="btn-primary btn-large">Browse Full BrickLink Store &rarr;</a>
     </div>
   </article>
 
@@ -514,6 +574,174 @@ INDEX_TMPL = """<!DOCTYPE html>
   </div>
 
   <script src="/script.js"></script>
+  <script>
+  // --- Unified search engine. Ported from /finder/ then extended to also
+  //     surface landing-page spotlights when a query matches a part we own
+  //     an encyclopedia page for.
+  (function(){
+    const STORE = "https://store.bricklink.com/PiecePavilion";
+    const TLET = {PART:"P",SET:"S",MINIFIG:"M",GEAR:"G",BOOK:"B",INSTRUCTION:"I"};
+    const CART_KEY = "pp-cart";
+    const LANDING = __LANDING_JSON__;  // {partNo: {nick,name,img}} for parts with their own encyclopedia page
+
+    let ITEMS = [], SHOWN = [];
+
+    function img(it){return "https://img.bricklink.com/ItemImage/" + (TLET[it.type]||"P") + "N/" + (it.color_id||0) + "/" + it.no + ".png";}
+    function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+    const qEl = document.getElementById('q');
+    const typeEl = document.getElementById('type');
+    const sortEl = document.getElementById('sort');
+    const statusEl = document.getElementById('status');
+    const resEl = document.getElementById('results');
+    const spotEl = document.getElementById('landing-spotlight');
+    const browseEl = document.getElementById('browse-section');
+
+    function findLanding(q){
+      if (!q) return null;
+      // Exact part-number match wins
+      if (LANDING[q]) return Object.assign({no:q}, LANDING[q]);
+      const qLow = q.toLowerCase();
+      // Nickname / name match (loose: substring)
+      for (const no in LANDING) {
+        const row = LANDING[no];
+        if (row.nick.toLowerCase() === qLow) return Object.assign({no:no}, row);
+      }
+      for (const no in LANDING) {
+        const row = LANDING[no];
+        if (row.nick.toLowerCase().includes(qLow) && qLow.length >= 4) return Object.assign({no:no}, row);
+      }
+      return null;
+    }
+
+    function renderSpotlight(land){
+      if (!land) { spotEl.innerHTML = ""; return; }
+      spotEl.innerHTML = '<div class="landing-spotlight">' +
+        '<img src="' + land.img + '" alt="' + esc(land.nick) + ' LEGO piece" loading="lazy">' +
+        '<div>' +
+          '<div class="ls-kicker">Encyclopedia page</div>' +
+          '<h3 class="ls-title">' + esc(land.nick) + ' <span style="color:var(--muted);font-weight:600;font-size:0.9rem;">(Part ' + land.no + ')</span></h3>' +
+          '<p class="ls-name">Official name: ' + esc(land.name) + '</p>' +
+          '<a href="/parts/' + land.no + '/">Open the full encyclopedia page for part ' + land.no + ' &rarr;</a>' +
+        '</div>' +
+        '</div>';
+    }
+
+    function run(){
+      const q = qEl.value.trim();
+      const qLow = q.toLowerCase();
+      const type = typeEl.value, sort = sortEl.value;
+      const terms = qLow.split(/\\s+/).filter(Boolean);
+
+      // No query: hide inventory, show browse grid, hide spotlight.
+      if (!q && !type){
+        statusEl.textContent = "Showing the full parts encyclopedia below. Search above to filter our live inventory.";
+        resEl.innerHTML = "";
+        spotEl.innerHTML = "";
+        browseEl.style.display = "";
+        return;
+      }
+
+      // Any query: hide the browse grid so results dominate.
+      browseEl.style.display = "none";
+
+      // Spotlight on a landing page if one matches.
+      renderSpotlight(findLanding(q));
+
+      // Inventory search (same algorithm as /finder/).
+      let hits = [];
+      for (const it of ITEMS){
+        if (type && it.type !== type) continue;
+        const name = (it.name||"").toLowerCase();
+        const no = (it.no||"").toLowerCase();
+        const hay = name + " " + no + " " + (it.cat||"").toLowerCase() + " " + (it.color||"").toLowerCase();
+        if (terms.length && !terms.every(t => hay.includes(t))) continue;
+        let score = 0;
+        if (terms.length){
+          if (no === qLow) score += 1000;
+          if (name.startsWith(qLow)) score += 200;
+          if (terms.some(t => name.startsWith(t) || name.includes(" " + t))) score += 50;
+        }
+        hits.push({it, score});
+      }
+      if (sort === "asc") hits.sort((a,b)=>a.it.price-b.it.price);
+      else if (sort === "desc") hits.sort((a,b)=>b.it.price-a.it.price);
+      else hits.sort((a,b)=>b.score-a.score || (a.it.name||"").localeCompare(b.it.name||""));
+
+      if (!hits.length){
+        statusEl.textContent = "";
+        resEl.innerHTML = '<div class="inv-empty">No in-stock matches. Try fewer or different words &mdash; or <a href="' + STORE + '?p=PiecePavilion#/shop" target="_blank" rel="noopener">browse the full store &#8599;</a></div>';
+        return;
+      }
+      SHOWN = hits.slice(0, 120).map(h => h.it);
+      statusEl.innerHTML = '<b>' + hits.length + '</b> item' + (hits.length===1 ? '' : 's') + ' in stock' + (hits.length>120 ? ' (showing first 120)' : '');
+
+      resEl.innerHTML = SHOWN.map((it, i) => {
+        const landed = LANDING[it.no];
+        const learn = landed ? ('<a class="inv-learn" href="/parts/' + it.no + '/">Learn about this part &rarr;</a>') : '';
+        return '<div class="inv-card">' +
+          '<img src="' + img(it) + '" alt="" loading="lazy" onerror="this.style.visibility=\\'hidden\\'">' +
+          '<div>' +
+            '<div class="inv-nm">' + (esc(it.name) || esc(it.no)) + '</div>' +
+            '<div class="inv-meta">' + (it.color ? esc(it.color) + ' &middot; ' : '') + esc(it.cond) + (it.qty>1 ? ' &middot; ' + it.qty + ' avail' : '') + '</div>' +
+            '<div class="inv-price">$' + Number(it.price).toFixed(2) + '</div>' +
+            '<button class="inv-cta add" data-idx="' + i + '">+ Add to Cart &rarr;</button>' +
+            learn +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Cart integration (shared with the rest of the site).
+    function cartItems(){ try{ return JSON.parse(localStorage.getItem(CART_KEY)) || []; }catch(e){ return []; } }
+    function updateBadge(){
+      const n = cartItems().reduce((s,i) => s + (i.qty||0), 0);
+      const el = document.getElementById('cartn');
+      if (el){ el.textContent = n; el.style.display = n>0 ? 'inline-block' : 'none'; }
+    }
+    function addToCart(it, btn){
+      const items = cartItems();
+      const ex = items.find(i => i.lot === it.lot);
+      if (ex) ex.qty += 1;
+      else items.push({lot:it.lot, no:it.no, name:it.name, price:Number(it.price)||0, img:img(it), qty:1});
+      localStorage.setItem(CART_KEY, JSON.stringify(items));
+      if (typeof gtag === 'function') gtag('event','cart_add',{item_id:it.no,lot_id:it.lot,price:it.price});
+      updateBadge();
+      if (btn){
+        btn.innerHTML = 'Added &#10003;'; btn.classList.add('added');
+        clearTimeout(btn._t);
+        btn._t = setTimeout(() => { btn.innerHTML = '+ Add to Cart &rarr;'; btn.classList.remove('added'); }, 1300);
+      }
+    }
+    resEl.addEventListener('click', e => {
+      const b = e.target.closest('.add'); if (!b) return;
+      const it = SHOWN[+b.dataset.idx]; if (it) addToCart(it, b);
+    });
+    updateBadge();
+
+    // debounce typing
+    let t;
+    qEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(run, 180); });
+    typeEl.addEventListener('change', run);
+    sortEl.addEventListener('change', run);
+    document.getElementById('go').addEventListener('click', run);
+    qEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+
+    // Load inventory, then honor ?q= / ?type= deep links from the homepage.
+    fetch('/finder-data.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(d => {
+        ITEMS = d.items || [];
+        const p = new URLSearchParams(location.search);
+        if (p.get('q')) qEl.value = p.get('q');
+        if (p.get('type')) typeEl.value = p.get('type');
+        run();
+      })
+      .catch(() => {
+        statusEl.innerHTML = '<span style="color:var(--red)">Could not load inventory right now. Please refresh.</span>';
+      });
+  })();
+  </script>
 </body>
 </html>
 """
@@ -521,6 +749,7 @@ INDEX_TMPL = """<!DOCTYPE html>
 
 def render_index(parts, inv_count):
     cards = []
+    landing = {}
     for p in parts:
         cards.append(
             '      <a class="part-card" href="/parts/{no}/">\n'
@@ -533,9 +762,15 @@ def render_index(parts, inv_count):
                 name=htmllib.escape(p["name"]), img=p["image_url"],
             )
         )
+        landing[p["no"]] = {
+            "nick": p["nick"],
+            "name": p["name"],
+            "img": p["image_url"],
+        }
     return INDEX_TMPL.replace("{count}", str(len(parts))) \
                      .replace("{inv_count}", "{:,}".format(inv_count)) \
-                     .replace("{cards}", "\n".join(cards))
+                     .replace("{cards}", "\n".join(cards)) \
+                     .replace("__LANDING_JSON__", json.dumps(landing))
 
 
 # ---- sitemap update ----------------------------------------------------------

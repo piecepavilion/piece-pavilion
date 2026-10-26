@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LEGO Parts Database | Piece Pavilion</title>
-  <meta name="description" content="A searchable database of common LEGO parts: cheese slopes, jumper plates, headlight bricks, and more — with nicknames, official names, part numbers, and live BrickLink inventory from Piece Pavilion." />
+  <title>LEGO Parts Database — Search Our Live Inventory | Piece Pavilion</title>
+  <meta name="description" content="Search Piece Pavilion's live LEGO inventory and browse our parts encyclopedia. Nicknames, official catalog names, part numbers, and in-stock pricing for cheese slopes, jumper plates, headlight bricks and 70+ more." />
   <link rel="canonical" href="https://piecepavilion.com/parts/" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://piecepavilion.com/parts/" />
   <meta property="og:title" content="LEGO Parts Database | Piece Pavilion" />
-  <meta property="og:description" content="Common LEGO parts with nicknames, numbers, and live inventory." />
+  <meta property="og:description" content="Search our live LEGO inventory and browse the parts encyclopedia." />
   <meta property="og:image" content="https://piecepavilion.com/og/_home.png" />
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-X3DK777DPM"></script>
@@ -23,17 +23,51 @@
   <link rel="preconnect" href="https://img.bricklink.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
-    .parts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 24px 0; }
+    .parts-hero { background: linear-gradient(135deg, #15151f 0%, #24101e 55%, #3a1217 100%); color: #fff; padding: 44px 24px 28px; border-radius: 18px; margin: 24px 0 24px; text-align: center; position: relative; overflow: hidden; }
+    .parts-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(circle at 1.6px 1.6px, rgba(255,255,255,.07) 1.6px, transparent 1.7px) 0 0/26px 26px; pointer-events: none; }
+    .parts-hero h1 { font-family: 'Fredoka','Nunito',sans-serif; font-size: clamp(2rem, 5vw, 3rem); margin: 0 0 8px; color: #fff; position: relative; }
+    .parts-hero p { max-width: 640px; margin: 0 auto 18px; color: rgba(255,255,255,.86); font-size: 1.05rem; position: relative; }
+    .parts-search { position: relative; max-width: 720px; margin: 0 auto; }
+    .parts-search-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+    .parts-search input[type=search] { flex: 1 1 260px; min-width: 240px; font: inherit; font-size: 1.05rem; padding: 14px 16px; border: 0; border-radius: 12px; background: #fff; color: var(--ink); }
+    .parts-search input[type=search]:focus { outline: 3px solid var(--yellow); outline-offset: -1px; }
+    .parts-search select { font: inherit; font-size: 0.95rem; padding: 12px 14px; border: 0; border-radius: 12px; background: #fff; color: var(--ink); font-weight: 700; }
+    .parts-search .find-btn { background: var(--red); color: #fff; border: 0; font-weight: 800; font-size: 1rem; padding: 0 24px; border-radius: 12px; cursor: pointer; }
+    .parts-search .find-btn:hover { background: var(--red-dark); }
+    #status { color: var(--muted); font-size: 0.9rem; margin: 14px 0 6px; }
+    .landing-spotlight { background: linear-gradient(135deg,#fff8ec 0%,#ffe9c4 100%); border: 1px solid rgba(217,152,0,0.35); border-radius: 16px; padding: 18px 22px; margin: 14px 0 20px; display: flex; gap: 18px; align-items: center; }
+    .landing-spotlight img { width: 90px; height: 90px; object-fit: contain; background: #fff; border-radius: 10px; padding: 6px; flex-shrink: 0; }
+    .landing-spotlight .ls-kicker { font-size: 0.72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #8a5a00; margin-bottom: 2px; }
+    .landing-spotlight .ls-title { font-family: 'Fredoka','Nunito',sans-serif; font-size: 1.4rem; color: var(--ink); margin: 0 0 2px; }
+    .landing-spotlight .ls-name { font-size: 0.92rem; color: var(--slate); margin: 0 0 8px; }
+    .landing-spotlight a { font-weight: 800; color: var(--red); }
+    .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 10px 0 32px; }
+    .inv-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; display: flex; gap: 12px; transition: box-shadow .12s, border-color .12s; }
+    .inv-card:hover { box-shadow: 0 6px 22px rgba(20,22,29,.08); border-color: rgba(227,0,11,0.3); }
+    .inv-card img { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; background: #fff; }
+    .inv-nm { font-weight: 800; font-size: 0.9rem; line-height: 1.25; color: var(--ink); }
+    .inv-meta { font-size: 0.78rem; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+    .inv-price { font-weight: 900; color: var(--red); font-size: 1rem; margin-top: 4px; }
+    .inv-cta { display: inline-block; margin-top: 6px; font-weight: 800; font-size: 0.8rem; background: var(--red); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-family: inherit; text-decoration: none; }
+    .inv-cta:hover { background: var(--red-dark); color: #fff; text-decoration: none; }
+    .inv-cta.added { background: #1a9e4b; }
+    .inv-learn { display: inline-block; margin-top: 4px; margin-left: 8px; font-size: 0.78rem; font-weight: 700; color: var(--red); }
+    .inv-empty { background: #fff; border: 1px dashed #e5e7eb; border-radius: 14px; padding: 28px; text-align: center; color: var(--muted); }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 32px 0 10px; }
+    .section-head h2 { font-family: 'Fredoka','Nunito',sans-serif; margin: 0; color: var(--ink); }
+    .section-head .section-sub { color: var(--muted); font-size: 0.9rem; }
+    .parts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 10px 0 24px; }
     .part-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 16px 14px; display: flex; flex-direction: column; text-decoration: none; color: inherit; transition: transform .12s, box-shadow .12s; box-shadow: 0 1px 4px rgba(20,22,29,.04); }
     .part-card:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(20,22,29,.08); }
     .part-card img { width: 100%; height: 120px; object-fit: contain; background: #fff; margin-bottom: 10px; }
     .part-card .pc-nick { font-family: 'Fredoka','Nunito',sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--ink); line-height: 1.15; }
     .part-card .pc-no { font-size: 0.78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
     .part-card .pc-name { font-size: 0.85rem; color: var(--slate); margin: 6px 0 0; line-height: 1.35; }
-    .parts-hero { background: linear-gradient(135deg, #15151f 0%, #24101e 55%, #3a1217 100%); color: #fff; padding: 48px 24px; border-radius: 18px; margin: 24px 0 32px; text-align: center; position: relative; overflow: hidden; }
-    .parts-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(circle at 1.6px 1.6px, rgba(255,255,255,.07) 1.6px, transparent 1.7px) 0 0/26px 26px; pointer-events: none; }
-    .parts-hero h1 { font-family: 'Fredoka','Nunito',sans-serif; font-size: clamp(2rem, 5vw, 3rem); margin: 0 0 10px; color: #fff; position: relative; }
-    .parts-hero p { max-width: 640px; margin: 0 auto; color: rgba(255,255,255,.86); font-size: 1.05rem; position: relative; }
+    .browse-explain { background: var(--cream); border-radius: 14px; padding: 18px 20px; margin: 10px 0 18px; font-size: 0.95rem; color: var(--slate); }
+    @media (max-width: 560px) {
+      .landing-spotlight { flex-direction: column; text-align: center; }
+      .parts-search .find-btn { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -80,87 +114,52 @@
   <div class="breadcrumbs"><nav><a href="/">Home</a><span class="sep">&rsaquo;</span>Parts Database</nav></div>
 
   <article class="blog-article">
+
     <div class="parts-hero">
       <h1>LEGO Parts Database</h1>
-      <p>Common LEGO parts you can actually search by name. Nicknames, official catalog names, part numbers, and what we have in stock &mdash; all in one place.</p>
+      <p>Search our live inventory of 2,583+ listings &mdash; by name, color, nickname or part number &mdash; and browse the parts encyclopedia for context on every piece.</p>
+      <form class="parts-search" id="pp-search" role="search" onsubmit="return false;">
+        <div class="parts-search-row">
+          <input id="q" type="search" placeholder="Try &ldquo;red 2x4 brick&rdquo;, &ldquo;cheese slope&rdquo;, &ldquo;Hagrid&rdquo; or a part number..." autocomplete="off" autofocus />
+          <select id="type" aria-label="Filter by type">
+            <option value="">All types</option>
+            <option value="PART">Parts</option>
+            <option value="MINIFIG">Minifigures</option>
+            <option value="SET">Sets</option>
+            <option value="GEAR">Keychains</option>
+          </select>
+          <select id="sort" aria-label="Sort by">
+            <option value="rel">Best match</option>
+            <option value="asc">Price: low to high</option>
+            <option value="desc">Price: high to low</option>
+          </select>
+          <button class="find-btn" id="go" type="submit">Search</button>
+        </div>
+      </form>
     </div>
 
-    <p>Every LEGO builder has done it: you hold up a piece, you know exactly what it does, and you have no idea what it&rsquo;s called. This database solves that. Each page shows the <strong>nickname</strong> builders use (cheese slope, jumper plate, headlight brick), the <strong>official BrickLink name</strong> (what the catalog actually files it under), the <strong>part number</strong> molded on the piece, and &mdash; the thing you really want &mdash; <strong>whether we have one in stock</strong>, in which color, at what price.</p>
+    <div id="status">Loading our live inventory&hellip;</div>
+    <div id="landing-spotlight"></div>
+    <div id="results" class="inv-grid"></div>
 
-    <p>Starting with 20 of the most-searched parts in our catalog. For the full visual guide including quiz, read our post on <a href="/blog/name-that-lego-piece/">naming every LEGO piece</a>.</p>
-
-    <div class="parts-grid">
-      <a class="part-card" href="/parts/3001/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3001.png" alt="2x4 brick LEGO piece, part 3001" loading="lazy" />
-        <div class="pc-nick">2x4 brick</div>
-        <div class="pc-no">Part 3001</div>
-        <div class="pc-name">Brick 2 x 4</div>
-      </a>
-      <a class="part-card" href="/parts/3005/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3005.png" alt="1x1 brick LEGO piece, part 3005" loading="lazy" />
-        <div class="pc-nick">1x1 brick</div>
-        <div class="pc-no">Part 3005</div>
-        <div class="pc-name">Brick 1 x 1</div>
-      </a>
-      <a class="part-card" href="/parts/3004/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3004.png" alt="1x2 brick LEGO piece, part 3004" loading="lazy" />
-        <div class="pc-nick">1x2 brick</div>
-        <div class="pc-no">Part 3004</div>
-        <div class="pc-name">Brick 1 x 2</div>
-      </a>
-      <a class="part-card" href="/parts/3024/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3024.png" alt="1x1 plate LEGO piece, part 3024" loading="lazy" />
-        <div class="pc-nick">1x1 plate</div>
-        <div class="pc-no">Part 3024</div>
-        <div class="pc-name">Plate 1 x 1</div>
-      </a>
-      <a class="part-card" href="/parts/3023/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3023.png" alt="1x2 plate LEGO piece, part 3023" loading="lazy" />
-        <div class="pc-nick">1x2 plate</div>
-        <div class="pc-no">Part 3023</div>
-        <div class="pc-name">Plate 1 x 2</div>
-      </a>
-      <a class="part-card" href="/parts/3070/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3070.png" alt="1x1 tile LEGO piece, part 3070" loading="lazy" />
-        <div class="pc-nick">1x1 tile</div>
-        <div class="pc-no">Part 3070</div>
-        <div class="pc-name">Tile 1 x 1</div>
-      </a>
-      <a class="part-card" href="/parts/3069/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3069.png" alt="1x2 tile LEGO piece, part 3069" loading="lazy" />
-        <div class="pc-nick">1x2 tile</div>
-        <div class="pc-no">Part 3069</div>
-        <div class="pc-name">Tile 1 x 2</div>
-      </a>
+    <section id="browse-section">
+      <div class="section-head">
+        <h2>Browse the Parts Encyclopedia</h2>
+        <span class="section-sub">71 parts, every nickname covered</span>
+      </div>
+      <div class="browse-explain">Each page below has the nickname builders use, the official BrickLink name, the part number molded on the piece, and &mdash; the thing you really want &mdash; whether we have one in stock, in which color, at what price. Click any card to open its full page.</div>
+      <div class="parts-grid">
       <a class="part-card" href="/parts/54200/">
         <img src="https://img.bricklink.com/ItemImage/PN/5/54200.png" alt="Cheese slope LEGO piece, part 54200" loading="lazy" />
         <div class="pc-nick">Cheese slope</div>
         <div class="pc-no">Part 54200</div>
         <div class="pc-name">Slope 30 1 x 1 x 2/3</div>
       </a>
-      <a class="part-card" href="/parts/85984/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/85984.png" alt="Double cheese LEGO piece, part 85984" loading="lazy" />
-        <div class="pc-nick">Double cheese</div>
-        <div class="pc-no">Part 85984</div>
-        <div class="pc-name">Slope 30 1 x 2 x 2/3</div>
-      </a>
-      <a class="part-card" href="/parts/11477/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/11477.png" alt="Curved slope LEGO piece, part 11477" loading="lazy" />
-        <div class="pc-nick">Curved slope</div>
-        <div class="pc-no">Part 11477</div>
-        <div class="pc-name">Slope, Curved 2 x 1 x 2/3</div>
-      </a>
-      <a class="part-card" href="/parts/3040/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3040.png" alt="45&amp;deg; roof slope LEGO piece, part 3040" loading="lazy" />
-        <div class="pc-nick">45&amp;deg; roof slope</div>
-        <div class="pc-no">Part 3040</div>
-        <div class="pc-name">Slope 45 2 x 1</div>
-      </a>
-      <a class="part-card" href="/parts/3039/">
-        <img src="https://img.bricklink.com/ItemImage/PN/5/3039.png" alt="45&amp;deg; slope 2x2 LEGO piece, part 3039" loading="lazy" />
-        <div class="pc-nick">45&amp;deg; slope 2x2</div>
-        <div class="pc-no">Part 3039</div>
-        <div class="pc-name">Slope 45 2 x 2</div>
+      <a class="part-card" href="/parts/15573/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/15573.png" alt="Jumper plate LEGO piece, part 15573" loading="lazy" />
+        <div class="pc-nick">Jumper plate</div>
+        <div class="pc-no">Part 15573</div>
+        <div class="pc-name">Plate, Modified 1 x 2 with 1 Stud with Groove and Bottom Stud Holder</div>
       </a>
       <a class="part-card" href="/parts/4070/">
         <img src="https://img.bricklink.com/ItemImage/PN/86/4070.png" alt="Headlight brick (Erling brick) LEGO piece, part 4070" loading="lazy" />
@@ -180,12 +179,6 @@
         <div class="pc-no">Part 4733</div>
         <div class="pc-name">Brick, Modified 1 x 1 with Studs on 4 Sides</div>
       </a>
-      <a class="part-card" href="/parts/15573/">
-        <img src="https://img.bricklink.com/ItemImage/PN/86/15573.png" alt="Jumper plate LEGO piece, part 15573" loading="lazy" />
-        <div class="pc-nick">Jumper plate</div>
-        <div class="pc-no">Part 15573</div>
-        <div class="pc-name">Plate, Modified 1 x 2 with 1 Stud with Groove and Bottom Stud Holder</div>
-      </a>
       <a class="part-card" href="/parts/2654/">
         <img src="https://img.bricklink.com/ItemImage/PN/11/2654.png" alt="Boat stud LEGO piece, part 2654" loading="lazy" />
         <div class="pc-nick">Boat stud</div>
@@ -198,24 +191,397 @@
         <div class="pc-no">Part 98138</div>
         <div class="pc-name">Tile, Round 1 x 1</div>
       </a>
-      <a class="part-card" href="/parts/4081b/">
-        <img src="https://img.bricklink.com/ItemImage/PN/86/4081b.png" alt="Lamp holder LEGO piece, part 4081b" loading="lazy" />
-        <div class="pc-nick">Lamp holder</div>
-        <div class="pc-no">Part 4081b</div>
-        <div class="pc-name">Plate, Modified 1 x 1 with Light Attachment - Thick Ring</div>
-      </a>
       <a class="part-card" href="/parts/2412b/">
         <img src="https://img.bricklink.com/ItemImage/PN/86/2412b.png" alt="Grille tile LEGO piece, part 2412b" loading="lazy" />
         <div class="pc-nick">Grille tile</div>
         <div class="pc-no">Part 2412b</div>
         <div class="pc-name">Tile, Modified 1 x 2 Grille with Bottom Groove</div>
       </a>
-    </div>
+      <a class="part-card" href="/parts/4081b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/4081b.png" alt="Lamp holder LEGO piece, part 4081b" loading="lazy" />
+        <div class="pc-nick">Lamp holder</div>
+        <div class="pc-no">Part 4081b</div>
+        <div class="pc-name">Plate, Modified 1 x 1 with Light Attachment - Thick Ring</div>
+      </a>
+      <a class="part-card" href="/parts/4599/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/4599b.png" alt="Tap / faucet LEGO piece, part 4599" loading="lazy" />
+        <div class="pc-nick">Tap / faucet</div>
+        <div class="pc-no">Part 4599</div>
+        <div class="pc-name">Tap 1 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/2877/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/2877.png" alt="Profile brick LEGO piece, part 2877" loading="lazy" />
+        <div class="pc-nick">Profile brick</div>
+        <div class="pc-no">Part 2877</div>
+        <div class="pc-name">Brick, Modified 1 x 2 with Grille / Fluted Profile</div>
+      </a>
+      <a class="part-card" href="/parts/3005/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3005.png" alt="1x1 brick LEGO piece, part 3005" loading="lazy" />
+        <div class="pc-nick">1x1 brick</div>
+        <div class="pc-no">Part 3005</div>
+        <div class="pc-name">Brick 1 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/3024/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3024.png" alt="1x1 plate LEGO piece, part 3024" loading="lazy" />
+        <div class="pc-nick">1x1 plate</div>
+        <div class="pc-no">Part 3024</div>
+        <div class="pc-name">Plate 1 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/3070/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3070.png" alt="1x1 tile LEGO piece, part 3070" loading="lazy" />
+        <div class="pc-nick">1x1 tile</div>
+        <div class="pc-no">Part 3070</div>
+        <div class="pc-name">Tile 1 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/3004/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3004.png" alt="1x2 brick LEGO piece, part 3004" loading="lazy" />
+        <div class="pc-nick">1x2 brick</div>
+        <div class="pc-no">Part 3004</div>
+        <div class="pc-name">Brick 1 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/3023/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3023.png" alt="1x2 plate LEGO piece, part 3023" loading="lazy" />
+        <div class="pc-nick">1x2 plate</div>
+        <div class="pc-no">Part 3023</div>
+        <div class="pc-name">Plate 1 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/3069/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3069.png" alt="1x2 tile LEGO piece, part 3069" loading="lazy" />
+        <div class="pc-nick">1x2 tile</div>
+        <div class="pc-no">Part 3069</div>
+        <div class="pc-name">Tile 1 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/3001/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3001.png" alt="2x4 brick LEGO piece, part 3001" loading="lazy" />
+        <div class="pc-nick">2x4 brick</div>
+        <div class="pc-no">Part 3001</div>
+        <div class="pc-name">Brick 2 x 4</div>
+      </a>
+      <a class="part-card" href="/parts/3040/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3040.png" alt="45&amp;deg; roof slope LEGO piece, part 3040" loading="lazy" />
+        <div class="pc-nick">45&amp;deg; roof slope</div>
+        <div class="pc-no">Part 3040</div>
+        <div class="pc-name">Slope 45 2 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/3039/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3039.png" alt="45&amp;deg; slope 2x2 LEGO piece, part 3039" loading="lazy" />
+        <div class="pc-nick">45&amp;deg; slope 2x2</div>
+        <div class="pc-no">Part 3039</div>
+        <div class="pc-name">Slope 45 2 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/3298/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3298.png" alt="33&amp;deg; slope 3x2 LEGO piece, part 3298" loading="lazy" />
+        <div class="pc-nick">33&amp;deg; slope 3x2</div>
+        <div class="pc-no">Part 3298</div>
+        <div class="pc-name">Slope 33 3 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/4286/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/4286.png" alt="33&amp;deg; slope 3x1 LEGO piece, part 4286" loading="lazy" />
+        <div class="pc-nick">33&amp;deg; slope 3x1</div>
+        <div class="pc-no">Part 4286</div>
+        <div class="pc-name">Slope 33 3 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/3665/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3665.png" alt="Inverted slope LEGO piece, part 3665" loading="lazy" />
+        <div class="pc-nick">Inverted slope</div>
+        <div class="pc-no">Part 3665</div>
+        <div class="pc-name">Slope, Inverted 45 2 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/3747b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3747b.png" alt="Inverted 33 slope LEGO piece, part 3747b" loading="lazy" />
+        <div class="pc-nick">Inverted 33 slope</div>
+        <div class="pc-no">Part 3747b</div>
+        <div class="pc-name">Slope, Inverted 33 3 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/85984/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/85984.png" alt="Double cheese LEGO piece, part 85984" loading="lazy" />
+        <div class="pc-nick">Double cheese</div>
+        <div class="pc-no">Part 85984</div>
+        <div class="pc-name">Slope 30 1 x 2 x 2/3</div>
+      </a>
+      <a class="part-card" href="/parts/11477/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/11477.png" alt="Curved slope LEGO piece, part 11477" loading="lazy" />
+        <div class="pc-nick">Curved slope</div>
+        <div class="pc-no">Part 11477</div>
+        <div class="pc-name">Slope, Curved 2 x 1 x 2/3</div>
+      </a>
+      <a class="part-card" href="/parts/15068/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/15068.png" alt="Curved slope 2x2 LEGO piece, part 15068" loading="lazy" />
+        <div class="pc-nick">Curved slope 2x2</div>
+        <div class="pc-no">Part 15068</div>
+        <div class="pc-name">Slope, Curved 2 x 2 x 2/3</div>
+      </a>
+      <a class="part-card" href="/parts/3045/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3045.png" alt="Roof corner LEGO piece, part 3045" loading="lazy" />
+        <div class="pc-nick">Roof corner</div>
+        <div class="pc-no">Part 3045</div>
+        <div class="pc-name">Slope 45 2 x 2 Double Convex</div>
+      </a>
+      <a class="part-card" href="/parts/99780/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/99780.png" alt="Inverted bracket LEGO piece, part 99780" loading="lazy" />
+        <div class="pc-nick">Inverted bracket</div>
+        <div class="pc-no">Part 99780</div>
+        <div class="pc-name">Bracket 1 x 2 - 1 x 2 Inverted</div>
+      </a>
+      <a class="part-card" href="/parts/99781/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/99781.png" alt="Bracket LEGO piece, part 99781" loading="lazy" />
+        <div class="pc-nick">Bracket</div>
+        <div class="pc-no">Part 99781</div>
+        <div class="pc-name">Bracket 1 x 2 - 1 x 2</div>
+      </a>
+      <a class="part-card" href="/parts/32028/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/32028.png" alt="Door rail plate LEGO piece, part 32028" loading="lazy" />
+        <div class="pc-nick">Door rail plate</div>
+        <div class="pc-no">Part 32028</div>
+        <div class="pc-name">Plate, Modified 1 x 2 with Door Rail</div>
+      </a>
+      <a class="part-card" href="/parts/3839b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/3839b.png" alt="Handle plate LEGO piece, part 3839b" loading="lazy" />
+        <div class="pc-nick">Handle plate</div>
+        <div class="pc-no">Part 3839b</div>
+        <div class="pc-name">Plate, Modified 1 x 2 with Bar Handles - Flat Ends</div>
+      </a>
+      <a class="part-card" href="/parts/60470b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/60470b.png" alt="Double clip plate LEGO piece, part 60470b" loading="lazy" />
+        <div class="pc-nick">Double clip plate</div>
+        <div class="pc-no">Part 60470b</div>
+        <div class="pc-name">Plate, Modified 1 x 2 with Clips Horizontal (thick open O clips)</div>
+      </a>
+      <a class="part-card" href="/parts/4085d/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/4085d.png" alt="Vertical clip LEGO piece, part 4085d" loading="lazy" />
+        <div class="pc-nick">Vertical clip</div>
+        <div class="pc-no">Part 4085d</div>
+        <div class="pc-name">Plate, Modified 1 x 1 with Clip Vertical</div>
+      </a>
+      <a class="part-card" href="/parts/61252/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/61252.png" alt="O-clip LEGO piece, part 61252" loading="lazy" />
+        <div class="pc-nick">O-clip</div>
+        <div class="pc-no">Part 61252</div>
+        <div class="pc-name">Plate, Modified 1 x 1 with Open O Clip Horizontal</div>
+      </a>
+      <a class="part-card" href="/parts/30414/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/30414.png" alt="1x4 SNOT brick LEGO piece, part 30414" loading="lazy" />
+        <div class="pc-nick">1x4 SNOT brick</div>
+        <div class="pc-no">Part 30414</div>
+        <div class="pc-name">Brick, Modified 1 x 4 with 4 Studs on Side</div>
+      </a>
+      <a class="part-card" href="/parts/3937/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3937.png" alt="Hinge base LEGO piece, part 3937" loading="lazy" />
+        <div class="pc-nick">Hinge base</div>
+        <div class="pc-no">Part 3937</div>
+        <div class="pc-name">Hinge Brick 1 x 2 Base</div>
+      </a>
+      <a class="part-card" href="/parts/3938/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3938.png" alt="Hinge top LEGO piece, part 3938" loading="lazy" />
+        <div class="pc-nick">Hinge top</div>
+        <div class="pc-no">Part 3938</div>
+        <div class="pc-name">Hinge Brick 1 x 2 Top Plate</div>
+      </a>
+      <a class="part-card" href="/parts/3176/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/3176.png" alt="Coupling plate LEGO piece, part 3176" loading="lazy" />
+        <div class="pc-nick">Coupling plate</div>
+        <div class="pc-no">Part 3176</div>
+        <div class="pc-name">Plate, Modified 3 x 2 with Hole</div>
+      </a>
+      <a class="part-card" href="/parts/2540/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/2540.png" alt="Side handle plate LEGO piece, part 2540" loading="lazy" />
+        <div class="pc-nick">Side handle plate</div>
+        <div class="pc-no">Part 2540</div>
+        <div class="pc-name">Plate, Modified 1 x 2 with Bar Handle on Side - Free Ends</div>
+      </a>
+      <a class="part-card" href="/parts/2780/">
+        <img src="https://img.bricklink.com/ItemImage/PN/11/2780.png" alt="Black pin LEGO piece, part 2780" loading="lazy" />
+        <div class="pc-nick">Black pin</div>
+        <div class="pc-no">Part 2780</div>
+        <div class="pc-name">Technic, Pin with Friction Ridges Lengthwise and Center Slots</div>
+      </a>
+      <a class="part-card" href="/parts/3673/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/3673.png" alt="Gray pin LEGO piece, part 3673" loading="lazy" />
+        <div class="pc-nick">Gray pin</div>
+        <div class="pc-no">Part 3673</div>
+        <div class="pc-name">Technic, Pin without Friction Ridges Lengthwise</div>
+      </a>
+      <a class="part-card" href="/parts/6558/">
+        <img src="https://img.bricklink.com/ItemImage/PN/7/6558.png" alt="Long blue pin LEGO piece, part 6558" loading="lazy" />
+        <div class="pc-nick">Long blue pin</div>
+        <div class="pc-no">Part 6558</div>
+        <div class="pc-name">Technic, Pin 3L with Friction Ridges Lengthwise</div>
+      </a>
+      <a class="part-card" href="/parts/43093/">
+        <img src="https://img.bricklink.com/ItemImage/PN/7/43093.png" alt="Axle pin LEGO piece, part 43093" loading="lazy" />
+        <div class="pc-nick">Axle pin</div>
+        <div class="pc-no">Part 43093</div>
+        <div class="pc-name">Technic, Axle 1L with Pin with Friction Ridges Lengthwise</div>
+      </a>
+      <a class="part-card" href="/parts/4274/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/4274.png" alt="Half pin LEGO piece, part 4274" loading="lazy" />
+        <div class="pc-nick">Half pin</div>
+        <div class="pc-no">Part 4274</div>
+        <div class="pc-name">Technic, Pin 1/2</div>
+      </a>
+      <a class="part-card" href="/parts/32062/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/32062.png" alt="Red 2L axle LEGO piece, part 32062" loading="lazy" />
+        <div class="pc-nick">Red 2L axle</div>
+        <div class="pc-no">Part 32062</div>
+        <div class="pc-name">Technic, Axle 2L Notched</div>
+      </a>
+      <a class="part-card" href="/parts/3713/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/3713.png" alt="Bushing LEGO piece, part 3713" loading="lazy" />
+        <div class="pc-nick">Bushing</div>
+        <div class="pc-no">Part 3713</div>
+        <div class="pc-name">Technic, Bush</div>
+      </a>
+      <a class="part-card" href="/parts/4265c/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/4265c.png" alt="Half bush LEGO piece, part 4265c" loading="lazy" />
+        <div class="pc-nick">Half bush</div>
+        <div class="pc-no">Part 4265c</div>
+        <div class="pc-name">Technic, Bush 1/2 Smooth</div>
+      </a>
+      <a class="part-card" href="/parts/3648/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/3648.png" alt="24-tooth gear LEGO piece, part 3648" loading="lazy" />
+        <div class="pc-nick">24-tooth gear</div>
+        <div class="pc-no">Part 3648</div>
+        <div class="pc-name">Technic, Gear 24 Tooth</div>
+      </a>
+      <a class="part-card" href="/parts/32073/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/32073.png" alt="5L axle LEGO piece, part 32073" loading="lazy" />
+        <div class="pc-nick">5L axle</div>
+        <div class="pc-no">Part 32073</div>
+        <div class="pc-name">Technic, Axle 5L</div>
+      </a>
+      <a class="part-card" href="/parts/3700/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3700.png" alt="Technic brick 1x2 LEGO piece, part 3700" loading="lazy" />
+        <div class="pc-nick">Technic brick 1x2</div>
+        <div class="pc-no">Part 3700</div>
+        <div class="pc-name">Technic, Brick 1 x 2 with Hole</div>
+      </a>
+      <a class="part-card" href="/parts/6541/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/6541.png" alt="Technic brick 1x1 LEGO piece, part 6541" loading="lazy" />
+        <div class="pc-nick">Technic brick 1x1</div>
+        <div class="pc-no">Part 6541</div>
+        <div class="pc-name">Technic, Brick 1 x 1 with Hole</div>
+      </a>
+      <a class="part-card" href="/parts/32064/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/32064.png" alt="Axle-hole brick LEGO piece, part 32064" loading="lazy" />
+        <div class="pc-nick">Axle-hole brick</div>
+        <div class="pc-no">Part 32064</div>
+        <div class="pc-name">Technic, Brick 1 x 2 with Axle Hole</div>
+      </a>
+      <a class="part-card" href="/parts/3062b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3062.png" alt="1x1 round brick LEGO piece, part 3062b" loading="lazy" />
+        <div class="pc-nick">1x1 round brick</div>
+        <div class="pc-no">Part 3062b</div>
+        <div class="pc-name">Brick, Round 1 x 1 Open Stud</div>
+      </a>
+      <a class="part-card" href="/parts/4073/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/4073.png" alt="1x1 round plate LEGO piece, part 4073" loading="lazy" />
+        <div class="pc-nick">1x1 round plate</div>
+        <div class="pc-no">Part 4073</div>
+        <div class="pc-name">Plate, Round 1 x 1</div>
+      </a>
+      <a class="part-card" href="/parts/4589b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/4589b.png" alt="1x1 cone LEGO piece, part 4589b" loading="lazy" />
+        <div class="pc-nick">1x1 cone</div>
+        <div class="pc-no">Part 4589b</div>
+        <div class="pc-name">Cone 1 x 1 with Top Groove</div>
+      </a>
+      <a class="part-card" href="/parts/3941/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/3941.png" alt="2x2 round brick LEGO piece, part 3941" loading="lazy" />
+        <div class="pc-nick">2x2 round brick</div>
+        <div class="pc-no">Part 3941</div>
+        <div class="pc-name">Brick, Round 2 x 2 with Axle Hole</div>
+      </a>
+      <a class="part-card" href="/parts/14769/">
+        <img src="https://img.bricklink.com/ItemImage/PN/5/14769.png" alt="2x2 round tile LEGO piece, part 14769" loading="lazy" />
+        <div class="pc-nick">2x2 round tile</div>
+        <div class="pc-no">Part 14769</div>
+        <div class="pc-name">Tile, Round 2 x 2 with Bottom Stud Holder</div>
+      </a>
+      <a class="part-card" href="/parts/3960/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/3960.png" alt="Radar dish 4x4 LEGO piece, part 3960" loading="lazy" />
+        <div class="pc-nick">Radar dish 4x4</div>
+        <div class="pc-no">Part 3960</div>
+        <div class="pc-name">Dish 4 x 4 Inverted (Radar)</div>
+      </a>
+      <a class="part-card" href="/parts/4740/">
+        <img src="https://img.bricklink.com/ItemImage/PN/86/4740.png" alt="Radar dish 2x2 LEGO piece, part 4740" loading="lazy" />
+        <div class="pc-nick">Radar dish 2x2</div>
+        <div class="pc-no">Part 4740</div>
+        <div class="pc-name">Dish 2 x 2 Inverted (Radar)</div>
+      </a>
+      <a class="part-card" href="/parts/3957b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/11/3957b.png" alt="Antenna LEGO piece, part 3957b" loading="lazy" />
+        <div class="pc-nick">Antenna</div>
+        <div class="pc-no">Part 3957b</div>
+        <div class="pc-name">Antenna 1 x 4 - Flat Top</div>
+      </a>
+      <a class="part-card" href="/parts/30374/">
+        <img src="https://img.bricklink.com/ItemImage/PN/12/30374.png" alt="Lightsaber blade LEGO piece, part 30374" loading="lazy" />
+        <div class="pc-nick">Lightsaber blade</div>
+        <div class="pc-no">Part 30374</div>
+        <div class="pc-name">Bar 4L (Lightsaber Blade / Wand)</div>
+      </a>
+      <a class="part-card" href="/parts/3626/">
+        <img src="https://img.bricklink.com/ItemImage/PN/3/3626pb1965.png" alt="Minifigure head LEGO piece, part 3626" loading="lazy" />
+        <div class="pc-nick">Minifigure head</div>
+        <div class="pc-no">Part 3626</div>
+        <div class="pc-name">Minifigure, Head</div>
+      </a>
+      <a class="part-card" href="/parts/970c00/">
+        <img src="https://img.bricklink.com/ItemImage/PN/7/970c00.png" alt="Legs LEGO piece, part 970c00" loading="lazy" />
+        <div class="pc-nick">Legs</div>
+        <div class="pc-no">Part 970c00</div>
+        <div class="pc-name">Hips and Legs</div>
+      </a>
+      <a class="part-card" href="/parts/3901/">
+        <img src="https://img.bricklink.com/ItemImage/PN/11/3901.png" alt="Classic hair LEGO piece, part 3901" loading="lazy" />
+        <div class="pc-nick">Classic hair</div>
+        <div class="pc-no">Part 3901</div>
+        <div class="pc-name">Minifigure, Hair Male</div>
+      </a>
+      <a class="part-card" href="/parts/3899/">
+        <img src="https://img.bricklink.com/ItemImage/PN/1/3899.png" alt="Mug LEGO piece, part 3899" loading="lazy" />
+        <div class="pc-nick">Mug</div>
+        <div class="pc-no">Part 3899</div>
+        <div class="pc-name">Minifigure, Utensil Cup</div>
+      </a>
+      <a class="part-card" href="/parts/2343/">
+        <img src="https://img.bricklink.com/ItemImage/PN/12/2343.png" alt="Goblet LEGO piece, part 2343" loading="lazy" />
+        <div class="pc-nick">Goblet</div>
+        <div class="pc-no">Part 2343</div>
+        <div class="pc-name">Minifigure, Utensil Goblet</div>
+      </a>
+      <a class="part-card" href="/parts/3959/">
+        <img src="https://img.bricklink.com/ItemImage/PN/11/3959.png" alt="Space gun / torch LEGO piece, part 3959" loading="lazy" />
+        <div class="pc-nick">Space gun / torch</div>
+        <div class="pc-no">Part 3959</div>
+        <div class="pc-name">Minifigure, Utensil Space Gun / Torch</div>
+      </a>
+      <a class="part-card" href="/parts/30162/">
+        <img src="https://img.bricklink.com/ItemImage/PN/11/30162.png" alt="Binoculars LEGO piece, part 30162" loading="lazy" />
+        <div class="pc-nick">Binoculars</div>
+        <div class="pc-no">Part 30162</div>
+        <div class="pc-name">Minifigure, Utensil Binoculars</div>
+      </a>
+      <a class="part-card" href="/parts/3962b/">
+        <img src="https://img.bricklink.com/ItemImage/PN/11/3962b.png" alt="Walkie-talkie LEGO piece, part 3962b" loading="lazy" />
+        <div class="pc-nick">Walkie-talkie</div>
+        <div class="pc-no">Part 3962b</div>
+        <div class="pc-name">Minifigure, Utensil Radio</div>
+      </a>
+      <a class="part-card" href="/parts/3847/">
+        <img src="https://img.bricklink.com/ItemImage/PN/95/3847.png" alt="Shortsword LEGO piece, part 3847" loading="lazy" />
+        <div class="pc-nick">Shortsword</div>
+        <div class="pc-no">Part 3847</div>
+        <div class="pc-name">Minifigure, Weapon Sword, Shortsword</div>
+      </a>
+      </div>
+    </section>
 
     <div class="blog-cta">
-      <h3>Need a part not listed here?</h3>
-      <p>Search our live inventory of 2,583+ listings &mdash; filter by color, type, and condition.</p>
-      <a href="/finder/" class="btn-primary btn-large">Open the Product Finder &rarr;</a>
+      <h3>Can&rsquo;t find what you&rsquo;re looking for?</h3>
+      <p>Our full LEGO catalog on BrickLink has every color, condition and lot we currently stock &mdash; plus auto-complete search by name or part number.</p>
+      <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener" class="btn-primary btn-large">Browse Full BrickLink Store &rarr;</a>
     </div>
   </article>
 
@@ -230,5 +596,173 @@
   </div>
 
   <script src="/script.js"></script>
+  <script>
+  // --- Unified search engine. Ported from /finder/ then extended to also
+  //     surface landing-page spotlights when a query matches a part we own
+  //     an encyclopedia page for.
+  (function(){
+    const STORE = "https://store.bricklink.com/PiecePavilion";
+    const TLET = {PART:"P",SET:"S",MINIFIG:"M",GEAR:"G",BOOK:"B",INSTRUCTION:"I"};
+    const CART_KEY = "pp-cart";
+    const LANDING = {"54200": {"nick": "Cheese slope", "name": "Slope 30 1 x 1 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/54200.png"}, "15573": {"nick": "Jumper plate", "name": "Plate, Modified 1 x 2 with 1 Stud with Groove and Bottom Stud Holder", "img": "https://img.bricklink.com/ItemImage/PN/86/15573.png"}, "4070": {"nick": "Headlight brick (Erling brick)", "name": "Brick, Modified 1 x 1 with Headlight", "img": "https://img.bricklink.com/ItemImage/PN/86/4070.png"}, "87087": {"nick": "SNOT brick", "name": "Brick, Modified 1 x 1 with Stud on Side", "img": "https://img.bricklink.com/ItemImage/PN/5/87087.png"}, "4733": {"nick": "Travis brick", "name": "Brick, Modified 1 x 1 with Studs on 4 Sides", "img": "https://img.bricklink.com/ItemImage/PN/86/4733.png"}, "2654": {"nick": "Boat stud", "name": "Plate, Round 2 x 2 with Rounded Bottom (Boat Stud)", "img": "https://img.bricklink.com/ItemImage/PN/11/2654.png"}, "98138": {"nick": "Dot (round 1x1 tile)", "name": "Tile, Round 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/3/98138.png"}, "2412b": {"nick": "Grille tile", "name": "Tile, Modified 1 x 2 Grille with Bottom Groove", "img": "https://img.bricklink.com/ItemImage/PN/86/2412b.png"}, "4081b": {"nick": "Lamp holder", "name": "Plate, Modified 1 x 1 with Light Attachment - Thick Ring", "img": "https://img.bricklink.com/ItemImage/PN/86/4081b.png"}, "4599": {"nick": "Tap / faucet", "name": "Tap 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/86/4599b.png"}, "2877": {"nick": "Profile brick", "name": "Brick, Modified 1 x 2 with Grille / Fluted Profile", "img": "https://img.bricklink.com/ItemImage/PN/86/2877.png"}, "3005": {"nick": "1x1 brick", "name": "Brick 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3005.png"}, "3024": {"nick": "1x1 plate", "name": "Plate 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3024.png"}, "3070": {"nick": "1x1 tile", "name": "Tile 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3070.png"}, "3004": {"nick": "1x2 brick", "name": "Brick 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3004.png"}, "3023": {"nick": "1x2 plate", "name": "Plate 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3023.png"}, "3069": {"nick": "1x2 tile", "name": "Tile 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3069.png"}, "3001": {"nick": "2x4 brick", "name": "Brick 2 x 4", "img": "https://img.bricklink.com/ItemImage/PN/5/3001.png"}, "3040": {"nick": "45&deg; roof slope", "name": "Slope 45 2 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3040.png"}, "3039": {"nick": "45&deg; slope 2x2", "name": "Slope 45 2 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3039.png"}, "3298": {"nick": "33&deg; slope 3x2", "name": "Slope 33 3 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3298.png"}, "4286": {"nick": "33&deg; slope 3x1", "name": "Slope 33 3 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/4286.png"}, "3665": {"nick": "Inverted slope", "name": "Slope, Inverted 45 2 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3665.png"}, "3747b": {"nick": "Inverted 33 slope", "name": "Slope, Inverted 33 3 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3747b.png"}, "85984": {"nick": "Double cheese", "name": "Slope 30 1 x 2 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/85984.png"}, "11477": {"nick": "Curved slope", "name": "Slope, Curved 2 x 1 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/11477.png"}, "15068": {"nick": "Curved slope 2x2", "name": "Slope, Curved 2 x 2 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/15068.png"}, "3045": {"nick": "Roof corner", "name": "Slope 45 2 x 2 Double Convex", "img": "https://img.bricklink.com/ItemImage/PN/5/3045.png"}, "99780": {"nick": "Inverted bracket", "name": "Bracket 1 x 2 - 1 x 2 Inverted", "img": "https://img.bricklink.com/ItemImage/PN/86/99780.png"}, "99781": {"nick": "Bracket", "name": "Bracket 1 x 2 - 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/86/99781.png"}, "32028": {"nick": "Door rail plate", "name": "Plate, Modified 1 x 2 with Door Rail", "img": "https://img.bricklink.com/ItemImage/PN/86/32028.png"}, "3839b": {"nick": "Handle plate", "name": "Plate, Modified 1 x 2 with Bar Handles - Flat Ends", "img": "https://img.bricklink.com/ItemImage/PN/86/3839b.png"}, "60470b": {"nick": "Double clip plate", "name": "Plate, Modified 1 x 2 with Clips Horizontal (thick open O clips)", "img": "https://img.bricklink.com/ItemImage/PN/86/60470b.png"}, "4085d": {"nick": "Vertical clip", "name": "Plate, Modified 1 x 1 with Clip Vertical", "img": "https://img.bricklink.com/ItemImage/PN/86/4085d.png"}, "61252": {"nick": "O-clip", "name": "Plate, Modified 1 x 1 with Open O Clip Horizontal", "img": "https://img.bricklink.com/ItemImage/PN/86/61252.png"}, "30414": {"nick": "1x4 SNOT brick", "name": "Brick, Modified 1 x 4 with 4 Studs on Side", "img": "https://img.bricklink.com/ItemImage/PN/5/30414.png"}, "3937": {"nick": "Hinge base", "name": "Hinge Brick 1 x 2 Base", "img": "https://img.bricklink.com/ItemImage/PN/5/3937.png"}, "3938": {"nick": "Hinge top", "name": "Hinge Brick 1 x 2 Top Plate", "img": "https://img.bricklink.com/ItemImage/PN/5/3938.png"}, "3176": {"nick": "Coupling plate", "name": "Plate, Modified 3 x 2 with Hole", "img": "https://img.bricklink.com/ItemImage/PN/86/3176.png"}, "2540": {"nick": "Side handle plate", "name": "Plate, Modified 1 x 2 with Bar Handle on Side - Free Ends", "img": "https://img.bricklink.com/ItemImage/PN/86/2540.png"}, "2780": {"nick": "Black pin", "name": "Technic, Pin with Friction Ridges Lengthwise and Center Slots", "img": "https://img.bricklink.com/ItemImage/PN/11/2780.png"}, "3673": {"nick": "Gray pin", "name": "Technic, Pin without Friction Ridges Lengthwise", "img": "https://img.bricklink.com/ItemImage/PN/86/3673.png"}, "6558": {"nick": "Long blue pin", "name": "Technic, Pin 3L with Friction Ridges Lengthwise", "img": "https://img.bricklink.com/ItemImage/PN/7/6558.png"}, "43093": {"nick": "Axle pin", "name": "Technic, Axle 1L with Pin with Friction Ridges Lengthwise", "img": "https://img.bricklink.com/ItemImage/PN/7/43093.png"}, "4274": {"nick": "Half pin", "name": "Technic, Pin 1/2", "img": "https://img.bricklink.com/ItemImage/PN/86/4274.png"}, "32062": {"nick": "Red 2L axle", "name": "Technic, Axle 2L Notched", "img": "https://img.bricklink.com/ItemImage/PN/5/32062.png"}, "3713": {"nick": "Bushing", "name": "Technic, Bush", "img": "https://img.bricklink.com/ItemImage/PN/86/3713.png"}, "4265c": {"nick": "Half bush", "name": "Technic, Bush 1/2 Smooth", "img": "https://img.bricklink.com/ItemImage/PN/86/4265c.png"}, "3648": {"nick": "24-tooth gear", "name": "Technic, Gear 24 Tooth", "img": "https://img.bricklink.com/ItemImage/PN/86/3648.png"}, "32073": {"nick": "5L axle", "name": "Technic, Axle 5L", "img": "https://img.bricklink.com/ItemImage/PN/86/32073.png"}, "3700": {"nick": "Technic brick 1x2", "name": "Technic, Brick 1 x 2 with Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/3700.png"}, "6541": {"nick": "Technic brick 1x1", "name": "Technic, Brick 1 x 1 with Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/6541.png"}, "32064": {"nick": "Axle-hole brick", "name": "Technic, Brick 1 x 2 with Axle Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/32064.png"}, "3062b": {"nick": "1x1 round brick", "name": "Brick, Round 1 x 1 Open Stud", "img": "https://img.bricklink.com/ItemImage/PN/5/3062.png"}, "4073": {"nick": "1x1 round plate", "name": "Plate, Round 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/4073.png"}, "4589b": {"nick": "1x1 cone", "name": "Cone 1 x 1 with Top Groove", "img": "https://img.bricklink.com/ItemImage/PN/5/4589b.png"}, "3941": {"nick": "2x2 round brick", "name": "Brick, Round 2 x 2 with Axle Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/3941.png"}, "14769": {"nick": "2x2 round tile", "name": "Tile, Round 2 x 2 with Bottom Stud Holder", "img": "https://img.bricklink.com/ItemImage/PN/5/14769.png"}, "3960": {"nick": "Radar dish 4x4", "name": "Dish 4 x 4 Inverted (Radar)", "img": "https://img.bricklink.com/ItemImage/PN/86/3960.png"}, "4740": {"nick": "Radar dish 2x2", "name": "Dish 2 x 2 Inverted (Radar)", "img": "https://img.bricklink.com/ItemImage/PN/86/4740.png"}, "3957b": {"nick": "Antenna", "name": "Antenna 1 x 4 - Flat Top", "img": "https://img.bricklink.com/ItemImage/PN/11/3957b.png"}, "30374": {"nick": "Lightsaber blade", "name": "Bar 4L (Lightsaber Blade / Wand)", "img": "https://img.bricklink.com/ItemImage/PN/12/30374.png"}, "3626": {"nick": "Minifigure head", "name": "Minifigure, Head", "img": "https://img.bricklink.com/ItemImage/PN/3/3626pb1965.png"}, "970c00": {"nick": "Legs", "name": "Hips and Legs", "img": "https://img.bricklink.com/ItemImage/PN/7/970c00.png"}, "3901": {"nick": "Classic hair", "name": "Minifigure, Hair Male", "img": "https://img.bricklink.com/ItemImage/PN/11/3901.png"}, "3899": {"nick": "Mug", "name": "Minifigure, Utensil Cup", "img": "https://img.bricklink.com/ItemImage/PN/1/3899.png"}, "2343": {"nick": "Goblet", "name": "Minifigure, Utensil Goblet", "img": "https://img.bricklink.com/ItemImage/PN/12/2343.png"}, "3959": {"nick": "Space gun / torch", "name": "Minifigure, Utensil Space Gun / Torch", "img": "https://img.bricklink.com/ItemImage/PN/11/3959.png"}, "30162": {"nick": "Binoculars", "name": "Minifigure, Utensil Binoculars", "img": "https://img.bricklink.com/ItemImage/PN/11/30162.png"}, "3962b": {"nick": "Walkie-talkie", "name": "Minifigure, Utensil Radio", "img": "https://img.bricklink.com/ItemImage/PN/11/3962b.png"}, "3847": {"nick": "Shortsword", "name": "Minifigure, Weapon Sword, Shortsword", "img": "https://img.bricklink.com/ItemImage/PN/95/3847.png"}};  // {partNo: {nick,name,img}} for parts with their own encyclopedia page
+
+    let ITEMS = [], SHOWN = [];
+
+    function img(it){return "https://img.bricklink.com/ItemImage/" + (TLET[it.type]||"P") + "N/" + (it.color_id||0) + "/" + it.no + ".png";}
+    function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+    const qEl = document.getElementById('q');
+    const typeEl = document.getElementById('type');
+    const sortEl = document.getElementById('sort');
+    const statusEl = document.getElementById('status');
+    const resEl = document.getElementById('results');
+    const spotEl = document.getElementById('landing-spotlight');
+    const browseEl = document.getElementById('browse-section');
+
+    function findLanding(q){
+      if (!q) return null;
+      // Exact part-number match wins
+      if (LANDING[q]) return Object.assign({no:q}, LANDING[q]);
+      const qLow = q.toLowerCase();
+      // Nickname / name match (loose: substring)
+      for (const no in LANDING) {
+        const row = LANDING[no];
+        if (row.nick.toLowerCase() === qLow) return Object.assign({no:no}, row);
+      }
+      for (const no in LANDING) {
+        const row = LANDING[no];
+        if (row.nick.toLowerCase().includes(qLow) && qLow.length >= 4) return Object.assign({no:no}, row);
+      }
+      return null;
+    }
+
+    function renderSpotlight(land){
+      if (!land) { spotEl.innerHTML = ""; return; }
+      spotEl.innerHTML = '<div class="landing-spotlight">' +
+        '<img src="' + land.img + '" alt="' + esc(land.nick) + ' LEGO piece" loading="lazy">' +
+        '<div>' +
+          '<div class="ls-kicker">Encyclopedia page</div>' +
+          '<h3 class="ls-title">' + esc(land.nick) + ' <span style="color:var(--muted);font-weight:600;font-size:0.9rem;">(Part ' + land.no + ')</span></h3>' +
+          '<p class="ls-name">Official name: ' + esc(land.name) + '</p>' +
+          '<a href="/parts/' + land.no + '/">Open the full encyclopedia page for part ' + land.no + ' &rarr;</a>' +
+        '</div>' +
+        '</div>';
+    }
+
+    function run(){
+      const q = qEl.value.trim();
+      const qLow = q.toLowerCase();
+      const type = typeEl.value, sort = sortEl.value;
+      const terms = qLow.split(/\s+/).filter(Boolean);
+
+      // No query: hide inventory, show browse grid, hide spotlight.
+      if (!q && !type){
+        statusEl.textContent = "Showing the full parts encyclopedia below. Search above to filter our live inventory.";
+        resEl.innerHTML = "";
+        spotEl.innerHTML = "";
+        browseEl.style.display = "";
+        return;
+      }
+
+      // Any query: hide the browse grid so results dominate.
+      browseEl.style.display = "none";
+
+      // Spotlight on a landing page if one matches.
+      renderSpotlight(findLanding(q));
+
+      // Inventory search (same algorithm as /finder/).
+      let hits = [];
+      for (const it of ITEMS){
+        if (type && it.type !== type) continue;
+        const name = (it.name||"").toLowerCase();
+        const no = (it.no||"").toLowerCase();
+        const hay = name + " " + no + " " + (it.cat||"").toLowerCase() + " " + (it.color||"").toLowerCase();
+        if (terms.length && !terms.every(t => hay.includes(t))) continue;
+        let score = 0;
+        if (terms.length){
+          if (no === qLow) score += 1000;
+          if (name.startsWith(qLow)) score += 200;
+          if (terms.some(t => name.startsWith(t) || name.includes(" " + t))) score += 50;
+        }
+        hits.push({it, score});
+      }
+      if (sort === "asc") hits.sort((a,b)=>a.it.price-b.it.price);
+      else if (sort === "desc") hits.sort((a,b)=>b.it.price-a.it.price);
+      else hits.sort((a,b)=>b.score-a.score || (a.it.name||"").localeCompare(b.it.name||""));
+
+      if (!hits.length){
+        statusEl.textContent = "";
+        resEl.innerHTML = '<div class="inv-empty">No in-stock matches. Try fewer or different words &mdash; or <a href="' + STORE + '?p=PiecePavilion#/shop" target="_blank" rel="noopener">browse the full store &#8599;</a></div>';
+        return;
+      }
+      SHOWN = hits.slice(0, 120).map(h => h.it);
+      statusEl.innerHTML = '<b>' + hits.length + '</b> item' + (hits.length===1 ? '' : 's') + ' in stock' + (hits.length>120 ? ' (showing first 120)' : '');
+
+      resEl.innerHTML = SHOWN.map((it, i) => {
+        const landed = LANDING[it.no];
+        const learn = landed ? ('<a class="inv-learn" href="/parts/' + it.no + '/">Learn about this part &rarr;</a>') : '';
+        return '<div class="inv-card">' +
+          '<img src="' + img(it) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+          '<div>' +
+            '<div class="inv-nm">' + (esc(it.name) || esc(it.no)) + '</div>' +
+            '<div class="inv-meta">' + (it.color ? esc(it.color) + ' &middot; ' : '') + esc(it.cond) + (it.qty>1 ? ' &middot; ' + it.qty + ' avail' : '') + '</div>' +
+            '<div class="inv-price">$' + Number(it.price).toFixed(2) + '</div>' +
+            '<button class="inv-cta add" data-idx="' + i + '">+ Add to Cart &rarr;</button>' +
+            learn +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Cart integration (shared with the rest of the site).
+    function cartItems(){ try{ return JSON.parse(localStorage.getItem(CART_KEY)) || []; }catch(e){ return []; } }
+    function updateBadge(){
+      const n = cartItems().reduce((s,i) => s + (i.qty||0), 0);
+      const el = document.getElementById('cartn');
+      if (el){ el.textContent = n; el.style.display = n>0 ? 'inline-block' : 'none'; }
+    }
+    function addToCart(it, btn){
+      const items = cartItems();
+      const ex = items.find(i => i.lot === it.lot);
+      if (ex) ex.qty += 1;
+      else items.push({lot:it.lot, no:it.no, name:it.name, price:Number(it.price)||0, img:img(it), qty:1});
+      localStorage.setItem(CART_KEY, JSON.stringify(items));
+      if (typeof gtag === 'function') gtag('event','cart_add',{item_id:it.no,lot_id:it.lot,price:it.price});
+      updateBadge();
+      if (btn){
+        btn.innerHTML = 'Added &#10003;'; btn.classList.add('added');
+        clearTimeout(btn._t);
+        btn._t = setTimeout(() => { btn.innerHTML = '+ Add to Cart &rarr;'; btn.classList.remove('added'); }, 1300);
+      }
+    }
+    resEl.addEventListener('click', e => {
+      const b = e.target.closest('.add'); if (!b) return;
+      const it = SHOWN[+b.dataset.idx]; if (it) addToCart(it, b);
+    });
+    updateBadge();
+
+    // debounce typing
+    let t;
+    qEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(run, 180); });
+    typeEl.addEventListener('change', run);
+    sortEl.addEventListener('change', run);
+    document.getElementById('go').addEventListener('click', run);
+    qEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+
+    // Load inventory, then honor ?q= / ?type= deep links from the homepage.
+    fetch('/finder-data.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(d => {
+        ITEMS = d.items || [];
+        const p = new URLSearchParams(location.search);
+        if (p.get('q')) qEl.value = p.get('q');
+        if (p.get('type')) typeEl.value = p.get('type');
+        run();
+      })
+      .catch(() => {
+        statusEl.innerHTML = '<span style="color:var(--red)">Could not load inventory right now. Please refresh.</span>';
+      });
+  })();
+  </script>
 </body>
 </html>
