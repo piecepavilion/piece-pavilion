@@ -164,6 +164,10 @@ PAGE_TMPL = """<!DOCTYPE html>
     .fact {{ background: var(--cream); border-radius: 12px; padding: 14px 16px; }}
     .fact-label {{ font-size: 0.72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }}
     .fact-value {{ font-family: 'Fredoka','Nunito',sans-serif; font-size: 1.25rem; color: var(--ink); margin-top: 2px; }}
+    /* .blog-article a sets all article links to red; override for buttons. */
+    .blog-article .btn-primary, .blog-article a.btn-primary {{ color: #fff; }}
+    .blog-article .btn-primary:hover, .blog-article a.btn-primary:hover {{ color: #fff; }}
+    .blog-article .btn-ghost, .blog-article a.btn-ghost {{ color: var(--red); }}
     @media (max-width: 640px) {{ .part-hero {{ grid-template-columns: 1fr; }} .part-hero-img {{ max-width: 300px; margin: 0 auto; }} }}
   </style>
 </head>
@@ -323,9 +327,11 @@ def build_stock_block(stock):
         len(stock), "" if len(stock) == 1 else "s",
         "\n".join(rows), cheapest["price"],
     )
+    # Open BrickLink shop pre-filtered to this part. The {"q":"<no>"} JSON
+    # has to be URL-encoded, otherwise its double quotes close the href attribute.
     cta_href = (
-        "https://store.bricklink.com/PiecePavilion?utm_source=parts_page&utm_medium=cta"
-        "&p=PiecePavilion#/shop?o={\"q\":\"" + "{no}" + "\"}"
+        "https://store.bricklink.com/PiecePavilion?utm_source=parts_page&amp;utm_medium=cta"
+        "&amp;p=PiecePavilion#/shop?o=%7B%22q%22%3A%22" + "{no}" + "%22%7D"
     )
     return (block, '<span class="part-tag">In Stock</span>', cta_href,
             "Shop This Part on BrickLink")

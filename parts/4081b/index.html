@@ -105,6 +105,10 @@
     .fact { background: var(--cream); border-radius: 12px; padding: 14px 16px; }
     .fact-label { font-size: 0.72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
     .fact-value { font-family: 'Fredoka','Nunito',sans-serif; font-size: 1.25rem; color: var(--ink); margin-top: 2px; }
+    /* .blog-article a sets all article links to red; override for buttons. */
+    .blog-article .btn-primary, .blog-article a.btn-primary { color: #fff; }
+    .blog-article .btn-primary:hover, .blog-article a.btn-primary:hover { color: #fff; }
+    .blog-article .btn-ghost, .blog-article a.btn-ghost { color: var(--red); }
     @media (max-width: 640px) { .part-hero { grid-template-columns: 1fr; } .part-hero-img { max-width: 300px; margin: 0 auto; } }
   </style>
 </head>
@@ -181,7 +185,7 @@
         <span class="part-no-big">Part Number 4081b</span>
         <p class="part-tip">A 1x1 plate with a side ring that grips a bar or a round 1x1. &ldquo;Light Attachment&rdquo; comes from its original job: holding headlights on classic Town cars.</p>
         <div class="btn-row">
-          <a href="https://store.bricklink.com/PiecePavilion?utm_source=parts_page&utm_medium=cta&p=PiecePavilion#/shop?o={"q":"4081b"}" target="_blank" rel="noopener" class="btn-primary">Shop This Part on BrickLink &rarr;</a>
+          <a href="https://store.bricklink.com/PiecePavilion?utm_source=parts_page&amp;utm_medium=cta&amp;p=PiecePavilion#/shop?o=%7B%22q%22%3A%224081b%22%7D" target="_blank" rel="noopener" class="btn-primary">Shop This Part on BrickLink &rarr;</a>
           <a href="/finder/?q=4081b" class="btn-ghost">Search Inventory</a>
         </div>
       </div>
