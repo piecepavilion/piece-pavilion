@@ -41,10 +41,12 @@ if (siteHeader) {
   window.addEventListener('scroll', onScroll, { passive: true });
 }
 
-// ===== ANNOUNCEMENT BANNER (content managed in /banner.txt) =====
-// Staff edit banner.txt via the GitHub editor (tile on /employees).
-// Dismissing remembers the MESSAGE — so a new announcement still shows
-// even if a visitor dismissed the previous one this session.
+// ===== ANNOUNCEMENT BANNER + TICKER =====
+// Staff edit the banner message via the "PiecePavilion Site Banner" Google
+// Sheet (link on /employees). The sheet row becomes item #1 of the ticker.
+// On the homepage, the first 5 "Just Added" listings are appended as the
+// next items so the ticker reads like a running stream — pattern lifted
+// from the MSW Hub intranet.
 document.querySelectorAll('.announcement-close').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -58,6 +60,88 @@ document.querySelectorAll('.announcement-close').forEach(btn => {
 if (sessionStorage.getItem('banner-dismissed')) {
   document.querySelectorAll('.announcement-banner').forEach(b => b.classList.add('hidden'));
 }
+
+// --- Build the ticker: reposition the banner element below the sticky
+//     header, then replace its single-line markup with a scrolling track.
+function buildTicker() {
+  const banner = document.querySelector('.announcement-banner');
+  if (!banner || banner.dataset.ticker === 'built') return;
+
+  // 1. Move the banner below the sticky header (per the MSW Hub pattern).
+  const header = document.getElementById('site-header');
+  if (header && header.parentElement && banner.parentElement) {
+    header.insertAdjacentElement('afterend', banner);
+  }
+
+  // 2. Gather items. First item: the current announcement (strong + optional link).
+  const esc = (s) => (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const announcementAnchor = banner.querySelector('.announcement-text');
+  const items = [];
+  if (announcementAnchor) {
+    const strong = announcementAnchor.querySelector('strong');
+    const span = announcementAnchor.querySelector('span');
+    const href = announcementAnchor.getAttribute('href') || '/blog/';
+    const title = strong ? strong.innerHTML : 'New on the blog';
+    const cta = span ? span.innerHTML : '';
+    items.push(
+      '<a class="ticker-item" href="' + esc(href) + '">' +
+        '<span class="ticker-pill hot">New</span>' +
+        '<span class="ticker-text">' + title + (cta ? ' <span style="color:rgba(255,255,255,0.7);font-weight:600;">' + cta + '</span>' : '') + '</span>' +
+      '</a>'
+    );
+  }
+
+  // 3. Homepage only: pull the first 5 Just Added listings into the ticker.
+  const newest = Array.from(document.querySelectorAll('#newest .featured-item')).slice(0, 5);
+  newest.forEach(a => {
+    const h4 = a.querySelector('h4');
+    const priceEl = a.querySelector('.featured-price');
+    const imgEl = a.querySelector('img');
+    const href = a.getAttribute('href');
+    if (!h4 || !priceEl || !imgEl || !href) return;
+    // Trim trailing ellipsis and shorten long names for the ticker.
+    let name = h4.textContent.replace(/…\s*$/, '').trim();
+    if (name.length > 48) name = name.slice(0, 48).replace(/\s+\S*$/, '') + '…';
+    const price = priceEl.textContent.trim();
+    const img = imgEl.getAttribute('src');
+    items.push(
+      '<a class="ticker-item" href="' + esc(href) + '" target="_blank" rel="noopener">' +
+        '<img src="' + esc(img) + '" alt="" loading="lazy">' +
+        '<span class="ticker-pill">Just added</span>' +
+        '<span class="ticker-text">' + esc(name) + '<span class="price">' + esc(price) + '</span></span>' +
+      '</a>'
+    );
+  });
+
+  // Nothing to show (no announcement, no Just Added) — leave the plain banner alone.
+  if (!items.length) return;
+
+  // Duplicate the item list so the CSS translateX(-50%) animation loops seamlessly.
+  const sep = '<span class="ticker-sep" aria-hidden="true">•</span>';
+  const trackInner = items.join(sep) + sep + items.join(sep);
+
+  banner.innerHTML =
+    '<div class="ticker-viewport"><div class="ticker-track">' + trackInner + '</div></div>' +
+    '<button class="announcement-close" aria-label="Dismiss">&times;</button>';
+  banner.classList.add('ticker');
+  banner.dataset.ticker = 'built';
+
+  // Re-wire the dismiss button on the new markup.
+  const closeBtn = banner.querySelector('.announcement-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      banner.classList.add('hidden');
+      sessionStorage.setItem('banner-dismissed', 'ticker');
+    });
+  }
+}
+
+// Build at DOM ready — the Just Added cards are static HTML so they're
+// already in the DOM. loadBannerConfig below also calls buildTicker again
+// once the sheet-driven message arrives, so an edit to the sheet refreshes
+// item #1 without a page reload.
+document.addEventListener('DOMContentLoaded', buildTicker);
 
 (function loadBannerConfig() {
   const banner = document.querySelector('.announcement-banner');
@@ -123,6 +207,12 @@ if (sessionStorage.getItem('banner-dismissed')) {
     } else {
       banner.classList.remove('hidden');
     }
+
+    // Rebuild the ticker so the fresh sheet message becomes item #1. The
+    // "ticker" dataset guard prevents duplicate builds on repeat calls, so
+    // we clear it before re-running.
+    delete banner.dataset.ticker;
+    buildTicker();
   };
 
   // cache-busting query so edits appear in ~1 min
