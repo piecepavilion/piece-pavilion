@@ -211,11 +211,23 @@ buildTicker();
       banner.classList.remove('hidden');
     }
 
-    // Rebuild the ticker so the fresh sheet message becomes item #1. The
-    // "ticker" dataset guard prevents duplicate builds on repeat calls, so
-    // we clear it before re-running.
-    delete banner.dataset.ticker;
-    buildTicker();
+    // If buildTicker already ran, update item #1 in place so a sheet edit
+    // propagates without destroying the Just Added items. We DON'T rebuild
+    // the ticker from scratch — that would re-read the DOM (which no longer
+    // has .announcement-text) and drop the announcement entirely.
+    const firstTickerItem = banner.querySelector('.ticker-item');
+    if (banner.dataset.ticker === 'built' && firstTickerItem && cfg.message) {
+      const textSpan = firstTickerItem.querySelector('.ticker-text');
+      if (textSpan) {
+        // Preserve the "Read the latest" CTA on the right
+        const existingCta = textSpan.querySelector('span[style]');
+        textSpan.innerHTML = (cfg.message || '') +
+          (existingCta ? ' ' + existingCta.outerHTML : '');
+      }
+      if (cfg.link && cfg.link.trim().toUpperCase() !== 'LATEST') {
+        firstTickerItem.setAttribute('href', cfg.link);
+      }
+    }
   };
 
   // cache-busting query so edits appear in ~1 min
