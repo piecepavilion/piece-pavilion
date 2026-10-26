@@ -56,7 +56,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20261015a" />
+  <link rel="stylesheet" href="style.css?v=20261026a" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -162,6 +162,45 @@
 
   <!-- ===== HERO ===== -->
   <section class="hero" id="hero">
+    <!-- Floating LEGO brick wallpaper (decorative, aria-hidden). The 2x4 brick
+         SVG is reused with different sizes/colors/positions via .brick-1 etc. -->
+    <div class="hero-bricks" aria-hidden="true">
+      <svg class="brick-1" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+        <circle cx="14" cy="12" r="8" fill="currentColor"/>
+        <circle cx="38" cy="12" r="8" fill="currentColor"/>
+        <circle cx="62" cy="12" r="8" fill="currentColor"/>
+        <circle cx="86" cy="12" r="8" fill="currentColor"/>
+      </svg>
+      <svg class="brick-2" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+        <circle cx="14" cy="12" r="8" fill="currentColor"/>
+        <circle cx="38" cy="12" r="8" fill="currentColor"/>
+        <circle cx="62" cy="12" r="8" fill="currentColor"/>
+        <circle cx="86" cy="12" r="8" fill="currentColor"/>
+      </svg>
+      <svg class="brick-3" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+        <circle cx="14" cy="12" r="8" fill="currentColor"/>
+        <circle cx="38" cy="12" r="8" fill="currentColor"/>
+        <circle cx="62" cy="12" r="8" fill="currentColor"/>
+        <circle cx="86" cy="12" r="8" fill="currentColor"/>
+      </svg>
+      <svg class="brick-4" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+        <circle cx="14" cy="12" r="8" fill="currentColor"/>
+        <circle cx="38" cy="12" r="8" fill="currentColor"/>
+        <circle cx="62" cy="12" r="8" fill="currentColor"/>
+        <circle cx="86" cy="12" r="8" fill="currentColor"/>
+      </svg>
+      <svg class="brick-5" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+        <circle cx="14" cy="12" r="8" fill="currentColor"/>
+        <circle cx="38" cy="12" r="8" fill="currentColor"/>
+        <circle cx="62" cy="12" r="8" fill="currentColor"/>
+        <circle cx="86" cy="12" r="8" fill="currentColor"/>
+      </svg>
+    </div>
     <div class="hero-content">
       <span class="hero-badge">Now on BrickLink</span>
       <h1>Your Brick<br /><span class="accent">Destination</span></h1>
@@ -256,18 +295,30 @@
   <section class="proof-bar" aria-label="Store highlights">
     <div class="proof-inner">
       <div class="proof-stat">
+        <div class="proof-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17l-6.1 3.5 1.5-6.8L2.2 9l6.9-.7L12 2z"/></svg>
+        </div>
         <div class="proof-num"><span class="star">&#9733;</span> <!--FEEDBACK-->100%<!--/FEEDBACK--></div>
         <div class="proof-label">Positive Feedback</div>
       </div>
       <div class="proof-stat">
+        <div class="proof-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18l-1 11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L3 6zm3-2a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2h-2V4a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v2H6V4z"/></svg>
+        </div>
         <div class="proof-num"><!--ORDERS-->84<!--/ORDERS--></div>
         <div class="proof-label">Orders</div>
       </div>
       <div class="proof-stat">
+        <div class="proof-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2zm8 2.5l1.4 3 3.3.3-2.5 2.3.8 3.3L12 13.5 8.9 15.4l.8-3.3L7.2 9.8l3.3-.3L12 6.5z"/></svg>
+        </div>
         <div class="proof-num"><!--REVIEWS-->43<!--/REVIEWS--></div>
         <div class="proof-label">5-Star Reviews</div>
       </div>
       <div class="proof-stat">
+        <div class="proof-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        </div>
         <div class="proof-num">1&ndash;2</div>
         <div class="proof-label">Day Handling</div>
       </div>
@@ -431,7 +482,14 @@
 
         <div class="card">
           <div class="card-icon" style="background:#fff0f0; color:#e3000b;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+            <!-- Individual Pieces: single LEGO plate silhouette with 4 studs -->
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
+              <rect x="4" y="18" width="40" height="22" rx="2.5"/>
+              <circle cx="12" cy="18" r="5"/>
+              <circle cx="22" cy="18" r="5"/>
+              <circle cx="32" cy="18" r="5"/>
+              <circle cx="42" cy="18" r="5"/>
+            </svg>
           </div>
           <h3>Individual Pieces</h3>
           <p>Find the exact brick, plate, tile, or specialty element you need — sorted by type, color, and condition.</p>
@@ -441,7 +499,10 @@
 
         <div class="card featured-card">
           <div class="card-icon" style="background:#fff8e0; color:#d4a000;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <!-- Sets & Builds: classic LEGO minifigure head silhouette -->
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
+              <path d="M18 6 L30 6 Q33 6 33 9 L33 12 L36 12 Q38 12 38 14 L38 36 Q38 40 34 40 L14 40 Q10 40 10 36 L10 14 Q10 12 12 12 L15 12 L15 9 Q15 6 18 6 Z"/>
+            </svg>
           </div>
           <h3>Sets &amp; Builds</h3>
           <p>New and used sets — complete, partial, and in-between. Great for collectors, builders, and gifters.</p>
@@ -450,7 +511,17 @@
 
         <div class="card card-coming-soon">
           <div class="card-icon" style="background:#f0fff4; color:#1a8a3c;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            <!-- Bulk Lots: stack of 3 LEGO bricks in different sizes -->
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">
+              <rect x="4" y="30" width="40" height="12" rx="1.5"/>
+              <circle cx="10" cy="30" r="3"/><circle cx="18" cy="30" r="3"/>
+              <circle cx="26" cy="30" r="3"/><circle cx="34" cy="30" r="3"/><circle cx="42" cy="30" r="3"/>
+              <rect x="8" y="18" width="32" height="10" rx="1.5"/>
+              <circle cx="14" cy="18" r="2.5"/><circle cx="22" cy="18" r="2.5"/>
+              <circle cx="30" cy="18" r="2.5"/><circle cx="38" cy="18" r="2.5"/>
+              <rect x="14" y="8" width="20" height="8" rx="1.5"/>
+              <circle cx="20" cy="8" r="2"/><circle cx="28" cy="8" r="2"/>
+            </svg>
           </div>
           <h3>Bulk Lots</h3>
           <p>Mixed bags and bulk lots perfect for MOCs, classroom builds, or stocking up your parts bin.</p>
