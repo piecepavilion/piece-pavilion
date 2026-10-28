@@ -205,7 +205,8 @@
       const style = document.createElement('style');
       style.textContent =
         '.embed #kpi-topbar{display:none}' +
-        '.embed body{background:transparent}' +
+        '.embed body{background:transparent;min-height:0}' +
+        '.embed html{min-height:0}' +
         '.embed .wrap{padding-top:14px;padding-bottom:14px;max-width:none}';
       document.head.appendChild(style);
       function postHeight() {
