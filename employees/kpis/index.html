@@ -116,6 +116,10 @@
       padding:3px 10px; border-radius:999px; background:var(--cream); color:#8a5a00;
     }
     .card .card-head .meta { font-size:.82rem; color:var(--mid); font-weight:700; }
+    .rev-tabs { display:inline-flex; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:2px; }
+    .rev-tabs button { border:none; background:transparent; padding:5px 12px; border-radius:999px; font-size:.78rem; font-weight:700; color:var(--mid); cursor:pointer; letter-spacing:0.3px; }
+    .rev-tabs button.active { background:var(--ink); color:#fff; }
+    .rev-tabs button:not(.active):hover { background:#f3f4f6; color:var(--ink); }
     .card .chart-wrap { position:relative; height:280px; }
     .card.tall .chart-wrap { height:360px; }
 
@@ -246,8 +250,15 @@
     <div class="section-grid">
       <div class="card tall">
         <div class="card-head">
-          <h3>Revenue &amp; orders over time <span class="pill">30d</span></h3>
-          <span class="meta" id="rev-meta">—</span>
+          <h3>Sales trend <span class="pill">30d</span></h3>
+          <div style="display:flex;gap:12px;align-items:center;">
+            <div class="rev-tabs" id="rev-tabs" role="tablist">
+              <button data-view="revenue" class="active" role="tab">Revenue</button>
+              <button data-view="orders" role="tab">Orders</button>
+              <button data-view="aov" role="tab">AOV</button>
+            </div>
+            <span class="meta" id="rev-meta">—</span>
+          </div>
         </div>
         <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
       </div>
@@ -495,6 +506,58 @@
     function periodLabel() {
       return state.period === 'all' ? 'all time' : state.period + 'd';
     }
+    // Pick a bucket granularity that keeps the x-axis readable regardless of period:
+    //   7d, 30d → daily     90d → weekly     365d, All → monthly
+    function bucketGrain(period) {
+      if (period === 'all' || period >= 180) return 'month';
+      if (period >= 60) return 'week';
+      return 'day';
+    }
+    // Aggregate the daily series into day/week/month buckets.
+    // Returns [{label, orders, revenue, aov, key}, ...] in chronological order.
+    function bucketize(dO, dR, grain) {
+      const map = new Map();
+      const order = [];
+      const bucketKey = (date) => {
+        const d = new Date(date);
+        if (grain === 'day') return date;
+        if (grain === 'week') {
+          // ISO-ish week: Monday-anchored
+          const mon = new Date(d);
+          mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+          return mon.toISOString().slice(0, 10);
+        }
+        return date.slice(0, 7); // YYYY-MM
+      };
+      const bucketLabel = (key) => {
+        if (grain === 'day') {
+          const d = new Date(key);
+          return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+        if (grain === 'week') {
+          const d = new Date(key);
+          return 'w/o ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+        const d = new Date(key + '-15');
+        return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+      };
+      for (let i = 0; i < dO.length; i++) {
+        const key = bucketKey(dO[i].date);
+        if (!map.has(key)) {
+          map.set(key, { label: bucketLabel(key), orders: 0, revenue: 0, key });
+          order.push(key);
+        }
+        const b = map.get(key);
+        b.orders += dO[i].orders;
+        b.revenue += dR[i].revenue;
+      }
+      return order.map(k => {
+        const b = map.get(k);
+        b.revenue = Math.round(b.revenue * 100) / 100;
+        b.aov = b.orders ? b.revenue / b.orders : 0;
+        return b;
+      });
+    }
 
     function renderKpiTiles() {
       const k = state.kpis;
@@ -546,10 +609,11 @@
       }
       document.getElementById('kpi-stock-ch').textContent = 'live inventory';
 
-      // Sparklines
-      drawSpark('spark-orders',  dO.map(x => x.orders),  COLORS.red);
-      drawSpark('spark-revenue', dR.map(x => x.revenue), COLORS.red);
-      drawSpark('spark-aov',     dO.map((x, i) => (dR[i]?.revenue || 0) / (x.orders || 1)), COLORS.red);
+      // Sparklines use the same bucket grain so they aren't a wall of zeros at longer periods
+      const sparkBuckets = bucketize(dO, dR, bucketGrain(state.period));
+      drawSpark('spark-orders',  sparkBuckets.map(b => b.orders),  COLORS.red);
+      drawSpark('spark-revenue', sparkBuckets.map(b => b.revenue), COLORS.red);
+      drawSpark('spark-aov',     sparkBuckets.map(b => b.aov),     COLORS.red);
       drawSpark('spark-stock',   [stock || 0, stock || 0, stock || 0], COLORS.blue);
     }
 
@@ -573,53 +637,70 @@
       });
     }
 
+    // Which series the main chart is showing. Toggle buttons in the card
+    // header flip this; default is Revenue.
+    state.revView = state.revView || 'revenue';
+
     function renderRevenueChart() {
       const { dO, dR } = sliceDaily(state.period);
-      // when "All" is active, label from actual dates so months align correctly
-      const labels = state.period === 'all'
-        ? dO.map(x => {
-            const d = new Date(x.date);
-            return d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
-          })
-        : daysAgoLabels(dO.length);
+      const grain = bucketGrain(state.period);
+      const buckets = bucketize(dO, dR, grain);
+      const labels = buckets.map(b => b.label);
+
+      let data, color, ySuffix, tooltipFmt, total;
+      if (state.revView === 'orders') {
+        data = buckets.map(b => b.orders);
+        color = '#15151f';
+        ySuffix = '';
+        tooltipFmt = v => v + (v === 1 ? ' order' : ' orders');
+        total = data.reduce((s, x) => s + x, 0);
+      } else if (state.revView === 'aov') {
+        data = buckets.map(b => Math.round(b.aov * 100) / 100);
+        color = COLORS.amber;
+        ySuffix = '$';
+        tooltipFmt = v => fmt$(v);
+        const ords = buckets.reduce((s, b) => s + b.orders, 0);
+        const rev = buckets.reduce((s, b) => s + b.revenue, 0);
+        total = ords ? rev / ords : 0;
+      } else {
+        data = buckets.map(b => b.revenue);
+        color = COLORS.red;
+        ySuffix = '$';
+        tooltipFmt = v => fmt$(v);
+        total = data.reduce((s, x) => s + x, 0);
+      }
+
       if (charts.revenue) charts.revenue.destroy();
       charts.revenue = new Chart(document.getElementById('chart-revenue'), {
         type: 'bar',
         data: {
           labels,
-          datasets: [
-            {
-              label: 'Revenue ($)',
-              data: dR.map(x => x.revenue),
-              backgroundColor: COLORS.red + 'cc',
-              borderRadius: 6,
-              yAxisID: 'y',
-              order: 2,
-            },
-            {
-              label: 'Orders',
-              data: dO.map(x => x.orders),
-              backgroundColor: '#15151f',
-              borderRadius: 4,
-              yAxisID: 'y1',
-              order: 1,
-              barPercentage: 0.55,
-              categoryPercentage: 0.9,
-            },
-          ],
+          datasets: [{
+            label: state.revView === 'orders' ? 'Orders' : (state.revView === 'aov' ? 'AOV' : 'Revenue'),
+            data,
+            backgroundColor: color,
+            borderRadius: 6,
+            maxBarThickness: 48,
+          }],
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'bottom', labels: { usePointStyle:true } } },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => tooltipFmt(ctx.parsed.y) } },
+          },
           scales: {
-            x: { grid: { display:false }, ticks: { maxTicksLimit:10 } },
-            y:  { position:'left', grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } },
-            y1: { position:'right', grid: { display:false }, title: { display:true, text:'Orders' } },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 12, autoSkip: true } },
+            y: { grid: { color: COLORS.grid }, ticks: { callback: v => ySuffix ? ySuffix + v : v } },
           },
         },
       });
-      const total = dR.reduce((s, x) => s + x.revenue, 0);
-      document.getElementById('rev-meta').textContent = fmt$(total) + ' total';
+
+      const grainLabel = { day: 'daily', week: 'weekly', month: 'monthly' }[grain];
+      const totalStr = state.revView === 'orders'
+        ? (total + ' orders')
+        : fmt$(total) + (state.revView === 'aov' ? ' avg' : ' total');
+      document.getElementById('rev-meta').textContent = totalStr + ' · ' + grainLabel;
     }
 
     function renderCategoryChart() {
@@ -787,6 +868,15 @@
       });
     });
 
+    document.querySelectorAll('#rev-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#rev-tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.revView = btn.dataset.view;
+        renderRevenueChart();
+      });
+    });
+
     // ====================================================================
     // DRILL-DOWN DRAWER
     // ====================================================================
@@ -820,12 +910,15 @@
     });
 
     function drillOrders() {
-      const { dO } = sliceDaily(state.period);
+      const { dO, dR } = sliceDaily(state.period);
+      const grain = bucketGrain(state.period);
+      const buckets = bucketize(dO, dR, grain);
       // Group by weekday
       const byDow = [0,0,0,0,0,0,0];
       dO.forEach(x => { const d = new Date(x.date); byDow[d.getDay()] += x.orders; });
+      const grainWord = { day: 'Daily', week: 'Weekly', month: 'Monthly' }[grain];
       const html = `
-        <h4>Daily orders (${periodLabel()})</h4>
+        <h4>${grainWord} orders (${periodLabel()})</h4>
         <div class="chart-wrap"><canvas id="drillOrders"></canvas></div>
         <h4>Orders by day of week</h4>
         <div class="chart-wrap" style="height:220px;"><canvas id="drillOrdersDow"></canvas></div>
@@ -833,8 +926,8 @@
       openDrawer('Orders — Drill-down', html);
       charts.drillOrders = new Chart(document.getElementById('drillOrders'), {
         type: 'bar',
-        data: { labels: dO.map(x => x.date.slice(5)), datasets: [{ data: dO.map(x => x.orders), backgroundColor: COLORS.red, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid } } } },
+        data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => b.orders), backgroundColor: COLORS.red, borderRadius: 4, maxBarThickness: 48 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false } }, scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 14, autoSkip: true } }, y: { grid: { color: COLORS.grid }, ticks: { precision: 0 } } } },
       });
       charts.drillOrdersDow = new Chart(document.getElementById('drillOrdersDow'), {
         type: 'bar',
@@ -844,42 +937,48 @@
     }
 
     function drillRevenue() {
-      const { dR } = sliceDaily(state.period);
-      // Weekly rollup
-      const weeks = {};
-      dR.forEach(x => { const d = new Date(x.date); const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-        const k = monday.toISOString().slice(0,10); weeks[k] = (weeks[k] || 0) + x.revenue; });
+      const { dO, dR } = sliceDaily(state.period);
+      const grain = bucketGrain(state.period);
+      const buckets = bucketize(dO, dR, grain);
+      // Secondary rollup — if main grain is daily, show weekly below; if weekly, show monthly;
+      // if monthly, show cumulative total.
+      const secondGrain = grain === 'day' ? 'week' : (grain === 'week' ? 'month' : 'month');
+      const second = bucketize(dO, dR, secondGrain);
+      const grainWord = { day: 'Daily', week: 'Weekly', month: 'Monthly' }[grain];
+      const secondWord = { day: 'Daily', week: 'Weekly', month: 'Monthly' }[secondGrain];
       const html = `
-        <h4>Daily revenue (${periodLabel()})</h4>
+        <h4>${grainWord} revenue (${periodLabel()})</h4>
         <div class="chart-wrap"><canvas id="drillRevenue"></canvas></div>
-        <h4>Weekly rollup</h4>
+        <h4>${secondWord} rollup</h4>
         <div class="chart-wrap" style="height:220px;"><canvas id="drillRevenueWk"></canvas></div>
       `;
       openDrawer('Revenue — Drill-down', html);
       charts.drillRevenue = new Chart(document.getElementById('drillRevenue'), {
         type: 'bar',
-        data: { labels: dR.map(x => x.date.slice(5)), datasets: [{ data: dR.map(x => x.revenue), backgroundColor: COLORS.red, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
+        data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => b.revenue), backgroundColor: COLORS.red, borderRadius: 4, maxBarThickness: 48 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 14, autoSkip: true } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
       });
       charts.drillRevenueWk = new Chart(document.getElementById('drillRevenueWk'), {
         type: 'bar',
-        data: { labels: Object.keys(weeks), datasets: [{ data: Object.values(weeks), backgroundColor: COLORS.amber, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
+        data: { labels: second.map(b => b.label), datasets: [{ data: second.map(b => b.revenue), backgroundColor: COLORS.amber, borderRadius: 4, maxBarThickness: 56 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 14, autoSkip: true } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
       });
     }
 
     function drillAov() {
       const { dO, dR } = sliceDaily(state.period);
-      const data = dO.map((x, i) => (x.orders ? (dR[i].revenue / x.orders) : 0));
+      const grain = bucketGrain(state.period);
+      const buckets = bucketize(dO, dR, grain);
+      const grainWord = { day: 'Daily', week: 'Weekly', month: 'Monthly' }[grain];
       const html = `
-        <h4>Avg Order Value trend (${periodLabel()})</h4>
+        <h4>${grainWord} avg order value (${periodLabel()})</h4>
         <div class="chart-wrap"><canvas id="drillAov"></canvas></div>
       `;
       openDrawer('Avg Order Value — Drill-down', html);
       charts.drillAov = new Chart(document.getElementById('drillAov'), {
         type: 'bar',
-        data: { labels: dO.map(x => x.date.slice(5)), datasets: [{ data, backgroundColor: COLORS.red, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
+        data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => Math.round(b.aov * 100) / 100), backgroundColor: COLORS.red, borderRadius: 4, maxBarThickness: 48 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 14, autoSkip: true } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
       });
     }
 
