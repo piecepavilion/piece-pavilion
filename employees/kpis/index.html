@@ -641,8 +641,96 @@
     // header flip this; default is Revenue.
     state.revView = state.revView || 'revenue';
 
+    // Bucket by month-of-year across years, so each year becomes its own series:
+    // "All" view then renders Sep '25 next to Sep '26 for apples-to-apples comparison.
+    function bucketizeYearOverYear(dO, dR) {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const byYear = {};
+      for (let i = 0; i < dO.length; i++) {
+        const d = new Date(dO[i].date);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        if (!byYear[y]) byYear[y] = {
+          revenue: Array(12).fill(0), orders: Array(12).fill(0),
+        };
+        byYear[y].revenue[m] += dR[i].revenue;
+        byYear[y].orders[m]  += dO[i].orders;
+      }
+      // round + aov
+      Object.values(byYear).forEach(s => {
+        for (let i = 0; i < 12; i++) {
+          s.revenue[i] = Math.round(s.revenue[i] * 100) / 100;
+          s.aov = s.aov || Array(12).fill(0);
+          s.aov[i] = s.orders[i] ? Math.round((s.revenue[i] / s.orders[i]) * 100) / 100 : 0;
+        }
+      });
+      return { months, byYear };
+    }
+
+    // Red for current year, blue for prior, amber/purple for earlier (unlikely but future-proof)
+    const YEAR_COLORS = [
+      () => COLORS.red,   // most recent
+      () => COLORS.blue,  // 1 year back
+      () => COLORS.amber,
+      () => COLORS.purple,
+    ];
+
     function renderRevenueChart() {
       const { dO, dR } = sliceDaily(state.period);
+
+      // "All" view = year-over-year grouped bars, one dataset per calendar year
+      if (state.period === 'all') {
+        const { months, byYear } = bucketizeYearOverYear(dO, dR);
+        const years = Object.keys(byYear).map(Number).sort((a, b) => b - a); // newest first
+        const key = state.revView;
+        const yField = key === 'orders' ? 'orders' : (key === 'aov' ? 'aov' : 'revenue');
+        const ySuffix = key === 'orders' ? '' : '$';
+        const tooltipFmt = key === 'orders'
+          ? (v => v + (v === 1 ? ' order' : ' orders'))
+          : (v => fmt$(v));
+
+        const datasets = years.map((y, idx) => ({
+          label: String(y),
+          data: byYear[y][yField],
+          backgroundColor: YEAR_COLORS[idx] ? YEAR_COLORS[idx]() : COLORS.green,
+          borderRadius: 6,
+          maxBarThickness: 32,
+        }));
+
+        if (charts.revenue) charts.revenue.destroy();
+        charts.revenue = new Chart(document.getElementById('chart-revenue'), {
+          type: 'bar',
+          data: { labels: months, datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 10 } },
+              tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + tooltipFmt(ctx.parsed.y) } },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: { grid: { color: COLORS.grid }, ticks: { callback: v => ySuffix ? ySuffix + v : v } },
+            },
+          },
+        });
+
+        // Caption: compare each year's total side by side
+        const totals = years.map(y => {
+          const vals = byYear[y][yField];
+          if (key === 'aov') {
+            const ords = byYear[y].orders.reduce((s, x) => s + x, 0);
+            const rev = byYear[y].revenue.reduce((s, x) => s + x, 0);
+            return { y, total: ords ? rev / ords : 0 };
+          }
+          return { y, total: vals.reduce((s, x) => s + x, 0) };
+        });
+        document.getElementById('rev-meta').textContent = totals.map(t => (
+          t.y + ': ' + (key === 'orders' ? t.total + ' orders' : fmt$(t.total))
+        )).join('  ·  ') + '  ·  year-over-year';
+        return;
+      }
+
+      // Single-period view (7/30/90/365) = one dataset, aggregated by grain
       const grain = bucketGrain(state.period);
       const buckets = bucketize(dO, dR, grain);
       const labels = buckets.map(b => b.label);
