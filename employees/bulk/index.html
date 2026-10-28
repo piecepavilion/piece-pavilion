@@ -245,8 +245,9 @@
       }
 
       return '<div class="card">' +
-        '<div class="no">' + (unassigned ? "Unlinked bins" :
-          esc(p.purchase_id) + (p.date ? " · " + esc(p.date) : "") + (p.source ? " · " + esc(p.source) : "")) + "</div>" +
+        '<div class="no">' + (unassigned
+          ? (p._synthetic ? "Unlinked bin · " + esc(p.bins[0]) : "Unlinked bins")
+          : esc(p.purchase_id) + (p.date ? " · " + esc(p.date) : "") + (p.source ? " · " + esc(p.source) : "")) + "</div>" +
         "<h3>" + esc(title) + "</h3>" +
         '<div class="chips">' + (chips || '<span class="chip warn">no bins tagged yet</span>') + "</div>" +
         '<div class="barwrap"><div class="barfill" style="width:' + Math.min(pv * 100, 100) + '%"></div>' +
@@ -383,13 +384,58 @@
       $("flags").innerHTML = out.join("");
     }
 
+    // Explode the single UNASSIGNED purchase into one synthetic purchase per
+    // unlinked bin, each pulling its stats from DATA.lots. This gives B-6 its
+    // own tracker card, B-7 its own, etc. instead of lumping them together.
+    function syntheticFromLot(l) {
+      var binDetail = (l.subs || []).map(function (s) {
+        return {
+          bulk_id: l.bulk_id, sub: s.sub,
+          pieces_sold: s.pieces_sold || 0,
+          pieces_stock: s.pieces_stock || 0,
+          revenue: s.revenue || 0,
+          ask_value: s.ask_value || 0,
+        };
+      });
+      return {
+        purchase_id: "UNASSIGNED",
+        description: l.bulk_id + (l.label ? " — " + l.label : l.bulk_id === l.label ? "" : ""),
+        source: "", date: "",
+        bins: [l.bulk_id],
+        missing_bins: [],
+        bin_detail: binDetail,
+        has_cost: false,
+        revenue: l.revenue || 0,
+        net_revenue: l.net_revenue != null ? l.net_revenue : (l.revenue || 0),
+        ask_value_remaining: l.ask_value_remaining || 0,
+        pieces_sold: l.pieces_sold || 0,
+        pieces_ever: l.pieces_ever || 0,
+        pct_sold_pieces: l.pct_sold_pieces || 0,
+        orders: l.orders || 0,
+        last_sale: l.last_sale || "",
+        notes: "",
+        _synthetic: true,
+      };
+    }
+    function explodeUnassigned(items) {
+      var out = [];
+      items.forEach(function (p) {
+        if (p.purchase_id !== "UNASSIGNED") { out.push(p); return; }
+        (p.bins || []).forEach(function (binId) {
+          var lot = (DATA.lots || []).find(function (l) { return l.bulk_id === binId; });
+          if (lot) out.push(syntheticFromLot(lot));
+        });
+      });
+      return out;
+    }
+
     function render() {
       var q = ($("q").value || "").trim().toLowerCase();
       var sort = $("sort").value;
       var items, html;
 
       if (view === "purchases") {
-        items = (DATA.purchases || []).slice();
+        items = explodeUnassigned((DATA.purchases || []).slice());
         if (q) items = items.filter(function (p) {
           return (p.purchase_id + " " + p.date + " " + p.source + " " + p.description + " " +
             (p.bins || []).join(" ")).toLowerCase().indexOf(q) >= 0;
