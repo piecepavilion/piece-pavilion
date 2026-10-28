@@ -188,12 +188,36 @@
 </head>
 <body>
 
-  <div class="topbar">
+  <div class="topbar" id="kpi-topbar">
     <a href="/employees/" aria-label="Back to Staff Portal"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
     <div><span class="crumb">Staff / </span><h1>KPI Dashboard</h1></div>
     <div class="spacer"></div>
     <a class="back" href="/employees/">&larr; Back to portal</a>
   </div>
+
+  <script>
+    // When embedded in the staff landing page (iframe with ?embed=1), hide our
+    // own top bar (the parent already shows one), slim down the wrap padding,
+    // and post our content height up so the iframe auto-resizes with no scrollbar.
+    (function embedMode() {
+      if (!/[?&]embed=1\b/.test(location.search)) return;
+      document.documentElement.classList.add('embed');
+      const style = document.createElement('style');
+      style.textContent =
+        '.embed #kpi-topbar{display:none}' +
+        '.embed body{background:transparent}' +
+        '.embed .wrap{padding-top:14px;padding-bottom:14px;max-width:none}';
+      document.head.appendChild(style);
+      function postHeight() {
+        const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+        try { parent.postMessage({ type: 'kpi-height', h }, location.origin); } catch (e) {}
+      }
+      new ResizeObserver(postHeight).observe(document.documentElement);
+      window.addEventListener('load', postHeight);
+      setTimeout(postHeight, 500);
+      setTimeout(postHeight, 1500);
+    })();
+  </script>
 
   <div class="wrap">
 

@@ -167,6 +167,23 @@
     }
     .tile.hidden { display:none; }
 
+    .kpi-embed-head {
+      display:flex; align-items:center; justify-content:space-between;
+      margin:4px 0 14px;
+    }
+    .kpi-embed-head h2 {
+      font-size:1.3rem; font-family:'Fredoka','Nunito',sans-serif;
+      display:flex; align-items:center; gap:10px;
+    }
+    .kpi-embed-head h2::before {
+      content:""; width:8px; height:8px; border-radius:50%; background:var(--red);
+    }
+    .kpi-embed-head .kpi-full {
+      font-size:.84rem; font-weight:800; color:var(--mid);
+      border:1.5px solid var(--line); border-radius:999px; padding:6px 14px;
+      transition:border-color .15s,color .15s,background .15s;
+    }
+    .kpi-embed-head .kpi-full:hover { color:var(--ink); border-color:var(--ink); background:#f6f7fa; }
     .note { margin-top:36px; font-size:.82rem; color:var(--muted); text-align:center; }
     .note svg { vertical-align:-3px; }
   </style>
@@ -188,31 +205,24 @@
 
   <div class="wrap">
 
-    <!-- ===== QUICK STATS ===== -->
-    <div class="stats-row" id="stats-row">
-      <a class="stat-tile sales" href="/employees/kpis/#sales">
-        <div class="label">&#128188; Orders / 7d</div>
-        <div class="value" id="st-orders">—</div>
-        <div class="change flat" id="st-orders-ch">loading…</div>
-      </a>
-      <a class="stat-tile sales" href="/employees/kpis/#sales">
-        <div class="label">&#128181; Revenue / 7d</div>
-        <div class="value" id="st-revenue">—</div>
-        <div class="change flat" id="st-revenue-ch">loading…</div>
-      </a>
-      <a class="stat-tile inventory" href="/employees/kpis/#inventory">
-        <div class="label">&#128230; Lots in stock</div>
-        <div class="value" id="st-stock">—</div>
-        <div class="change flat" id="st-stock-ch">loading…</div>
-      </a>
-      <a class="stat-tile customer" href="/employees/kpis/#customer">
-        <div class="label">&#11088; Feedback</div>
-        <div class="value" id="st-feedback">100%</div>
-        <div class="change flat" id="st-feedback-ch">positive</div>
-      </a>
+    <!-- ===== EMBEDDED KPI DASHBOARD =====
+         The KPI dashboard IS the staff overview. Rendered inline here so staff
+         land straight on the numbers instead of having to click into a tab.
+         The iframe is same-origin and reports its content height via postMessage
+         so the whole dashboard sits in-page with no scrollbar inside the iframe. -->
+    <div class="kpi-embed-head">
+      <h2>Business Overview</h2>
+      <a class="kpi-full" href="/employees/kpis/">Open full dashboard &rarr;</a>
     </div>
+    <iframe
+      id="kpi-iframe"
+      src="/employees/kpis/?embed=1"
+      title="KPI Dashboard"
+      loading="eager"
+      style="width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);height:1800px;display:block;margin-bottom:28px;"
+    ></iframe>
 
-    <p class="lead">Everything the team needs in one place — <strong>edit the site</strong>, <strong>track sales</strong>, <strong>manage inventory</strong>, and <strong>run operations</strong> without digging through sheets.</p>
+    <p class="lead" style="margin-top:14px;">Tools below — <strong>edit the site</strong>, <strong>manage inventory</strong>, <strong>run operations</strong>.</p>
 
     <!-- Search / filter -->
     <div class="search-row">
@@ -295,12 +305,6 @@
         <span class="section-sub">Numbers behind the store</span>
       </div>
       <div class="grid">
-        <a class="tile featured" href="/employees/kpis/" data-tile="kpi dashboard analytics orders revenue drill-down charts">
-          <div class="ico">&#128202;</div>
-          <h3>KPI Dashboard</h3>
-          <p>Live sales, inventory, customer and traffic KPIs with click-to-drill-down charts. Replaces the old embedded Looker reports.</p>
-          <span class="go">Open dashboard &rarr;</span>
-        </a>
         <a class="tile" href="/employees/partout/" data-tile="partout part-out set profit tracking">
           <div class="ico">&#129513;</div>
           <h3>Part-Out Tracker</h3>
@@ -344,58 +348,18 @@
       el.textContent = g;
     })();
 
-    // Live stats bar — reads /employees/kpis-data.json (new, pp-ops writes it)
-    // or falls back to /finder-data.json for inventory count. Graceful if missing.
-    (async function liveStats() {
-      try {
-        const inv = await fetch('/finder-data.json?t=' + Date.now()).then(r => r.json());
-        const count = inv.count || (inv.items ? inv.items.length : 0);
-        if (count) document.getElementById('st-stock').textContent = count.toLocaleString();
-        const ch = document.getElementById('st-stock-ch');
-        if (ch) { ch.textContent = 'lots live'; ch.className = 'change flat'; }
-      } catch (e) {}
-
-      try {
-        const k = await fetch('/employees/kpis-data.json?t=' + Date.now()).then(r => {
-          if (!r.ok) throw new Error('no kpis-data');
-          return r.json();
-        });
-
-        // Compute 7-day totals from the daily series the dashboard already publishes
-        const dO = k.dailyOrders  || [];
-        const dR = k.dailyRevenue || [];
-        const sum = (arr, key) => arr.reduce((s, x) => s + (x[key] || 0), 0);
-        const orders7d       = sum(dO.slice(-7),       'orders');
-        const orders7dPrev   = sum(dO.slice(-14, -7),  'orders');
-        const revenue7d      = sum(dR.slice(-7),       'revenue');
-        const revenue7dPrev  = sum(dR.slice(-14, -7),  'revenue');
-        const pct = (now, prev) => prev ? Math.round((now - prev) / prev * 100) : null;
-        const orders7dChange  = pct(orders7d,  orders7dPrev);
-        const revenue7dChange = pct(revenue7d, revenue7dPrev);
-
-        document.getElementById('st-orders').textContent  = orders7d.toLocaleString();
-        document.getElementById('st-revenue').textContent = '$' + Math.round(revenue7d).toLocaleString();
-        if (k.feedbackPct != null) document.getElementById('st-feedback').textContent = Math.round(k.feedbackPct) + '%';
-
-        const dir = (v) => v == null ? 'flat' : v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
-        const sign = (v) => (v > 0 ? '+' : '') + v + '%';
-        const setCh = (id, v, label) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          el.className = 'change ' + dir(v);
-          el.textContent = (v == null)
-            ? (orders7dPrev === 0 && revenue7dPrev === 0 ? 'new vs prev 7d' : label)
-            : sign(v) + ' vs prev 7d';
-        };
-        setCh('st-orders-ch',  orders7dChange,  'vs prev 7d');
-        setCh('st-revenue-ch', revenue7dChange, 'vs prev 7d');
-      } catch (e) {
-        // kpis-data.json isn't published yet — swap "loading…" for "coming soon"
-        ['st-orders', 'st-revenue'].forEach(id => {
-          const ch = document.getElementById(id + '-ch');
-          if (ch) { ch.textContent = 'feed pending'; ch.className = 'change flat'; }
-        });
-      }
+    // Resize the KPI iframe as the dashboard inside posts its content height.
+    // Both pages are same-origin so no cross-origin dance is needed.
+    (function sizeKpiIframe() {
+      const iframe = document.getElementById('kpi-iframe');
+      if (!iframe) return;
+      window.addEventListener('message', (e) => {
+        if (e.origin !== location.origin) return;
+        const msg = e.data || {};
+        if (msg.type === 'kpi-height' && typeof msg.h === 'number' && msg.h > 100) {
+          iframe.style.height = Math.ceil(msg.h + 24) + 'px';
+        }
+      });
     })();
 
     // Tile search / filter
