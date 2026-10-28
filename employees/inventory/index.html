@@ -247,6 +247,17 @@
     var S = { all: [], view: [], shown: PAGE, q: {}, sort: "bin", dir: "asc", preset: "" };
     var $ = function (id) { return document.getElementById(id); };
 
+    // Inline age-tier helper. Also lives in inv-core.js, but kept here too so a
+    // stale-cached inv-core.js (missing V.ageTier) doesn't blow up the whole page.
+    function ageTierLocal(days) {
+      if (days == null) return null;
+      if (days >= 730) return { key: "veryold", label: "2 yr+" };
+      if (days >= 365) return { key: "old",     label: "1 yr+" };
+      if (days >= 180) return { key: "stale",   label: "180d" };
+      if (days >= 90)  return { key: "aging",   label: "90d" };
+      return null;
+    }
+
     function esc(s) {
       return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -411,10 +422,22 @@
       $("t-noloc-sub").textContent = t.unlocated
         ? t.blank + " not set" + (t.unrecognised ? ", " + t.unrecognised + " unrecognised" : "")
         : "";
-      $("t-aged90").textContent  = C.money(t.aged90_value);
-      $("t-aged90-sub").textContent  = t.aged90  ? t.aged90.toLocaleString()  + " lot" + (t.aged90  === 1 ? "" : "s") : "none";
-      $("t-aged365").textContent = C.money(t.aged365_value);
-      $("t-aged365-sub").textContent = t.aged365 ? t.aged365.toLocaleString() + " lot" + (t.aged365 === 1 ? "" : "s") : "none";
+      // If inv-core is stale (cached from before the age fields), fall back to
+      // computing the aged totals here from the view in memory.
+      var aged90 = t.aged90, aged90v = t.aged90_value, aged365 = t.aged365, aged365v = t.aged365_value;
+      if (aged90 == null || aged90v == null || aged365 == null || aged365v == null) {
+        aged90 = 0; aged90v = 0; aged365 = 0; aged365v = 0;
+        S.view.forEach(function (it) {
+          if (it.days != null && it.days >= 90)  { aged90++;  aged90v  += it.value; }
+          if (it.days != null && it.days >= 365) { aged365++; aged365v += it.value; }
+        });
+        aged90v  = Math.round(aged90v  * 100) / 100;
+        aged365v = Math.round(aged365v * 100) / 100;
+      }
+      $("t-aged90").textContent  = C.money(aged90v);
+      $("t-aged90-sub").textContent  = aged90  ? aged90.toLocaleString()  + " lot" + (aged90  === 1 ? "" : "s") : "none";
+      $("t-aged365").textContent = C.money(aged365v);
+      $("t-aged365-sub").textContent = aged365 ? aged365.toLocaleString() + " lot" + (aged365 === 1 ? "" : "s") : "none";
     }
 
     var COLS = [
@@ -474,7 +497,7 @@
             ? esc(it.added_date) + '<div class="muted" style="font-size:.7rem;font-weight:700">' +
               (it.days == null ? "" : it.days + "d ago") + "</div>" +
               (function () {
-                var tier = V.ageTier(it.days);
+                var tier = ageTierLocal(it.days);
                 return tier ? '<span class="agepill ' + tier.key + '">' + tier.label + '</span>' : '';
               })()
             : "—") + "</td>" +
