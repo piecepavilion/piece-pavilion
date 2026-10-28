@@ -745,3 +745,45 @@ if (navDropdown) {
     if (e.key === 'Escape') closeDropdown();
   });
 }
+
+/* ---------- Viewer counter ----------
+ * Shows a running total of pageviews in the header badge. One hit per
+ * browser-session so a refresh storm doesn't inflate it. Backed by
+ * abacus.jasoncameron.dev — zero-config free Cloudflare Worker; the
+ * namespace keys the counter to our site.
+ */
+(async function viewerCounter() {
+  const el = document.getElementById('viewer-count');
+  if (!el) return;
+
+  const STORAGE_KEY = 'pp-viewer-count-cached';
+  const SESSION_KEY = 'pp-viewer-counted-this-session';
+  const ENDPOINT_HIT = 'https://abacus.jasoncameron.dev/hit/piecepavilion.com/views';
+  const ENDPOINT_GET = 'https://abacus.jasoncameron.dev/get/piecepavilion.com/views';
+
+  // Show the last cached count instantly so the badge isn't a long em-dash.
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) el.textContent = Number(cached).toLocaleString();
+  } catch (_) {}
+
+  // Only increment once per browser session (prevents refresh-pumping).
+  let counted = false;
+  try { counted = sessionStorage.getItem(SESSION_KEY) === '1'; } catch (_) {}
+
+  try {
+    const r = await fetch(counted ? ENDPOINT_GET : ENDPOINT_HIT, { cache: 'no-store' });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const j = await r.json();
+    const n = Number(j.value);
+    if (!Number.isNaN(n)) {
+      el.textContent = n.toLocaleString();
+      try {
+        localStorage.setItem(STORAGE_KEY, String(n));
+        if (!counted) sessionStorage.setItem(SESSION_KEY, '1');
+      } catch (_) {}
+    }
+  } catch (_) {
+    // Offline or counter service down — leave the cached number in place.
+  }
+})();
