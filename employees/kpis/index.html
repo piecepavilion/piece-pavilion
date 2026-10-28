@@ -403,39 +403,29 @@
       return out;
     }
 
-    // Sample fallback data (used until kpis-data.json ships).
-    // Shape mirrors the real feed so dropping in real data is zero-work.
-    function sampleKpis() {
-      const now = Date.now();
+    // Empty-shell data used until pp-ops publishes real /employees/kpis-data.json.
+    // Every value is intentionally zero so no fake $$$$ ever shows up on the
+    // dashboard — the UI shows a visible "feed not wired yet" banner instead.
+    function emptyKpis() {
       const dailyOrders = [];
       const dailyRevenue = [];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(now - i * 86400000);
-        const wd = d.getDay();
-        const base = wd === 0 || wd === 6 ? 4 : 2.5;
-        const orders = Math.max(0, Math.round(base + (Math.sin(i / 3.4) * 1.6) + (Math.random() * 1.8)));
-        const avg = 18 + (Math.random() * 22) + (wd === 5 ? 10 : 0);
-        dailyOrders.push({ date: d.toISOString().slice(0,10), orders });
-        dailyRevenue.push({ date: d.toISOString().slice(0,10), revenue: Math.round(orders * avg * 100) / 100 });
+      const now = Date.now();
+      // 365 days of zeros so period pills (7/30/90/365) all have an empty baseline.
+      for (let i = 364; i >= 0; i--) {
+        const d = new Date(now - i * 86400000).toISOString().slice(0, 10);
+        dailyOrders.push({ date: d, orders: 0 });
+        dailyRevenue.push({ date: d, revenue: 0 });
       }
-      const revByCat = { Minifigure: 2820, Set: 1860, Part: 790, Keychain: 310, Custom: 180 };
-      const statesCount = { CA: 10, TX: 7, NY: 6, FL: 5, MA: 5, NJ: 4, PA: 4, CO: 3, IL: 3, OR: 3, WA: 2, GA: 2 };
       return {
-        asof: new Date().toISOString(),
-        orders30d: 84,
-        orders30dChange: 12,
-        revenue30d: 2860.75,
-        revenue30dChange: 18,
-        aov30d: 34.05,
-        aov30dChange: 6,
-        feedbackPct: 100,
+        asof: null,
+        feedbackPct: 100,         // real — BrickLink feedback is live
         feedbackCount: 43,
-        feedbackSpanDays: 820,
+        feedbackSpanDays: null,
         dailyOrders,
         dailyRevenue,
-        revByCategory: revByCat,
-        statesCount,
-        _sample: true,
+        revByCategory: {},
+        statesCount: {},
+        _needsFeed: true,
       };
     }
 
@@ -452,18 +442,38 @@
         const r = await fetch('/employees/kpis-data.json?t=' + Date.now());
         if (r.ok) {
           state.kpis = await r.json();
-          state.kpis._sample = false;
+          state.kpis._needsFeed = false;
         } else {
-          state.kpis = sampleKpis();
+          state.kpis = emptyKpis();
         }
       } catch (e) {
-        state.kpis = sampleKpis();
+        state.kpis = emptyKpis();
       }
 
-      // "As of" line
-      const asof = state.kpis.asof ? new Date(state.kpis.asof) : new Date();
-      document.getElementById('asof').textContent = (state.kpis._sample ? 'Sample data' : 'Updated ' + asof.toLocaleString()) +
-        (state.kpis._sample ? ' — wire pp-ops kpis_data.py to publish /employees/kpis-data.json' : '');
+      // "As of" line + visible banner when the orders feed isn't wired yet.
+      const asofEl = document.getElementById('asof');
+      if (state.kpis._needsFeed) {
+        asofEl.innerHTML = '<span style="color:#92400e;font-weight:800;">⚠ Orders feed not wired yet — only live inventory + feedback are real below.</span> ' +
+          '<a href="#" id="feed-info" style="color:var(--red);font-weight:800;">How to wire it →</a>';
+        document.getElementById('feed-info').addEventListener('click', e => {
+          e.preventDefault();
+          alert('Have pp-ops publish /employees/kpis-data.json hourly with this shape:\n\n' +
+            '{\n' +
+            '  "asof": "ISO datetime",\n' +
+            '  "feedbackPct": 100,\n' +
+            '  "feedbackCount": 43,\n' +
+            '  "feedbackSpanDays": 820,\n' +
+            '  "dailyOrders":  [{"date":"YYYY-MM-DD","orders":N}, ...],  // 365 days\n' +
+            '  "dailyRevenue": [{"date":"YYYY-MM-DD","revenue":N}, ...], // 365 days\n' +
+            '  "revByCategory": { "Minifigure": N, "Set": N, "Part": N, ... },\n' +
+            '  "statesCount":   { "CA": N, "TX": N, ... }\n' +
+            '}\n\n' +
+            'Dashboard will pick it up automatically on next load.');
+        });
+      } else {
+        const d = state.kpis.asof ? new Date(state.kpis.asof) : new Date();
+        asofEl.textContent = 'Updated ' + d.toLocaleString();
+      }
 
       renderAll();
     }
@@ -501,14 +511,28 @@
       const stock = state.inventory ? (state.inventory.count || (state.inventory.items ? state.inventory.items.length : 0)) : null;
       document.getElementById('kpi-stock').textContent = stock ? stock.toLocaleString() : '—';
 
-      const setCh = (id, v) => {
-        const el = document.getElementById(id);
-        el.className = 'change ' + clsPct(v);
-        el.textContent = v == null ? 'vs prev' : fmtPct(v) + ' vs prev ' + state.period + 'd';
-      };
-      setCh('kpi-orders-ch', chOrders);
-      setCh('kpi-revenue-ch', chRevenue);
-      setCh('kpi-aov-ch', chAov);
+      // When the orders feed isn't wired, replace the big values with "—" so
+      // no fake $$$ ever renders on the dashboard, and the change line shows
+      // "feed pending" instead of a bogus percent.
+      if (state.kpis._needsFeed) {
+        document.getElementById('kpi-orders').textContent  = '—';
+        document.getElementById('kpi-revenue').textContent = '—';
+        document.getElementById('kpi-aov').textContent     = '—';
+        ['kpi-orders-ch', 'kpi-revenue-ch', 'kpi-aov-ch'].forEach(id => {
+          const el = document.getElementById(id);
+          el.className = 'change flat';
+          el.textContent = 'feed pending';
+        });
+      } else {
+        const setCh = (id, v) => {
+          const el = document.getElementById(id);
+          el.className = 'change ' + clsPct(v);
+          el.textContent = v == null ? 'vs prev' : fmtPct(v) + ' vs prev ' + state.period + 'd';
+        };
+        setCh('kpi-orders-ch', chOrders);
+        setCh('kpi-revenue-ch', chRevenue);
+        setCh('kpi-aov-ch', chAov);
+      }
       document.getElementById('kpi-stock-ch').textContent = 'live inventory';
 
       // Sparklines
@@ -587,8 +611,18 @@
       const cats = state.kpis.revByCategory || {};
       const labels = Object.keys(cats);
       const data = Object.values(cats);
+      const ctx = document.getElementById('chart-category');
       if (charts.category) charts.category.destroy();
-      charts.category = new Chart(document.getElementById('chart-category'), {
+      // No real category data yet → show a clean empty state instead of a
+      // misleading doughnut built from zeros.
+      if (!labels.length) {
+        ctx.closest('.chart-wrap').innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:.9rem;font-weight:700;text-align:center;padding:20px;">' +
+          '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3 v9 l6 4"/></svg>' +
+          '<div>Awaiting orders feed</div>' +
+          '</div>';
+        return;
+      }
+      charts.category = new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels,
@@ -674,8 +708,15 @@
       const states = state.kpis.statesCount || {};
       const entries = Object.entries(states).sort((a, b) => b[1] - a[1]).slice(0, 12);
       const max = entries.length ? entries[0][1] : 1;
-      document.getElementById('states-meta').textContent = entries.length + ' states';
-      document.getElementById('states-bars').innerHTML = entries.map(([state, count]) => (
+      const metaEl = document.getElementById('states-meta');
+      const wrap = document.getElementById('states-bars');
+      if (!entries.length) {
+        metaEl.textContent = '';
+        wrap.innerHTML = '<div style="padding:28px 10px;text-align:center;color:var(--muted);font-size:.9rem;font-weight:700;">Awaiting orders feed. Shipping map on <a href="/" style="color:var(--red)">piecepavilion.com</a> shows live state coverage until this fills in.</div>';
+        return;
+      }
+      metaEl.textContent = entries.length + ' states';
+      wrap.innerHTML = entries.map(([state, count]) => (
         '<div class="bar-row">' +
           '<span class="lbl">' + state + '</span>' +
           '<span class="track"><span class="fill" style="width:' + Math.round(count / max * 100) + '%"></span></span>' +
