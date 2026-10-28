@@ -321,11 +321,31 @@ img { display: block; max-width: 100%; }
 }
 .nav-staff:hover { border-color: var(--ink); color: var(--ink) !important; background: #f6f7fa; }
 
-.sidebar-staff {
+/* Mobile sidebar Staff Portal entry — distinct styling so staff see it even
+   though it's a utility link, not a customer-facing section. */
+.sidebar-staff { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.sidebar-staff a {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
   color: var(--mid) !important;
-  font-weight: 800;
-  font-size: 0.9rem;
+  font-weight: 800 !important;
+  font-size: 0.88rem !important;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px 7px 11px !important;
+  background: #f6f7fa;
 }
+.sidebar-staff a::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  background: currentColor;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z'/></svg>") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z'/></svg>") center/contain no-repeat;
+  flex-shrink: 0;
+}
+.sidebar-staff a:hover { color: var(--ink) !important; border-color: var(--ink); background: #fff; }
 
 .header-burger {
   display: none;
