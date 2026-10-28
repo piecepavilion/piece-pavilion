@@ -327,26 +327,41 @@
     <div class="section-head traffic" id="traffic"><h2><span class="dot"></span> Traffic &amp; content</h2></div>
     <div class="section-grid">
       <div class="card">
-        <div class="card-head"><h3>Blog &amp; parts page views</h3><span class="meta">GA4 — last 30 days</span></div>
-        <div class="chart-wrap"><canvas id="chart-pageviews"></canvas></div>
-        <div class="stub-note">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <div><strong>Needs GA4 Reporting API wire-up.</strong> Showing sample shape with blog/parts page URLs. Wire GA4 service-account creds in pp-ops and the chart fills in automatically.</div>
+        <div class="card-head"><h3>Live traffic</h3><span class="meta" id="ga-asof">—</span></div>
+        <div class="live-windows" id="live-windows">
+          <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#16a34a"></span>Last 10 min</div><div class="win-users" id="w10-users">—</div><div class="win-sub" id="w10-sub">visitors</div><ul class="win-pages" id="w10-pages"></ul></div>
+          <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#d97706"></span>Last 1 hour</div><div class="win-users" id="w1h-users">—</div><div class="win-sub" id="w1h-sub">visitors</div><ul class="win-pages" id="w1h-pages"></ul></div>
+          <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#2563eb"></span>Last 6 hours</div><div class="win-users" id="w6h-users">—</div><div class="win-sub" id="w6h-sub">visitors</div><ul class="win-pages" id="w6h-pages"></ul></div>
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><h3>Top blog posts (click-through to BrickLink)</h3></div>
-        <div style="overflow-x:auto;">
-          <table class="data-table" id="top-posts"><thead>
-            <tr><th>Post</th><th class="num">Views</th><th class="num">BL clicks</th><th class="num">CVR</th></tr>
-          </thead><tbody><tr><td colspan="4" style="padding:20px;color:var(--mid)">GA4 wire-up pending — placeholder below:</td></tr>
-          <tr><td>LEGO Advent Calendars 2026, Ranked</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-          <tr><td>LEGO Halloween Minifigure Guide</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-          <tr><td>Name That LEGO Piece: 71 Part Names</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
-          </tbody></table>
-        </div>
+        <div class="card-head"><h3>Where traffic comes from</h3><span class="meta">Last 6 hours</span></div>
+        <table class="data-table" id="ga-sources"><thead>
+          <tr><th>Source</th><th class="num">Visitors</th></tr>
+        </thead><tbody><tr><td colspan="2" style="padding:20px;color:var(--mid)">Loading…</td></tr></tbody></table>
+        <div class="card-head" style="margin-top:14px;"><h3 style="font-size:1rem;">Top countries</h3></div>
+        <table class="data-table" id="ga-countries"><thead>
+          <tr><th>Country</th><th class="num">Visitors</th></tr>
+        </thead><tbody><tr><td colspan="2" style="padding:12px;color:var(--mid)">—</td></tr></tbody></table>
       </div>
     </div>
+
+    <style>
+      .live-windows { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+      .live-win { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; min-height:220px; }
+      .live-win .win-head { display:flex; align-items:center; gap:8px; font-size:.76rem; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:var(--mid); margin-bottom:6px; }
+      .live-win .win-dot { width:8px; height:8px; border-radius:50%; display:inline-block; animation:livePulse 2s ease-in-out infinite; }
+      .live-win .win-users { font-family:'Fredoka','Nunito',sans-serif; font-weight:700; font-size:2.4rem; color:var(--ink); line-height:1; }
+      .live-win .win-sub { font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+      .live-win .win-pages { list-style:none; padding:0; margin:0; font-size:.84rem; }
+      .live-win .win-pages li { padding:4px 0; border-top:1px dashed var(--line); display:flex; justify-content:space-between; gap:8px; }
+      .live-win .win-pages li:first-child { border-top:none; }
+      .live-win .win-pages .p-name { color:var(--ink); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+      .live-win .win-pages .p-count { color:var(--mid); font-weight:800; font-variant-numeric:tabular-nums; flex-shrink:0; }
+      .live-win .win-empty { color:var(--muted); font-size:.82rem; font-style:italic; }
+      @keyframes livePulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+      @media (max-width:900px) { .live-windows { grid-template-columns:1fr; } }
+    </style>
 
   </div>
 
@@ -941,6 +956,80 @@
       renderFeedback();
       renderStatesBars();
       renderPageviewsChart();
+      loadGaData();
+    }
+
+    // ====================================================================
+    // LIVE TRAFFIC (GA4)
+    // ====================================================================
+    async function loadGaData() {
+      try {
+        const r = await fetch('/employees/ga-data.json?t=' + Date.now());
+        if (!r.ok) throw new Error('no ga-data');
+        const g = await r.json();
+        renderGaWindows(g);
+      } catch (e) {
+        // leave the "—" placeholders
+      }
+    }
+
+    function renderGaWindows(g) {
+      const asof = g.asof ? new Date(g.asof).toLocaleTimeString() : '';
+      const asofEl = document.getElementById('ga-asof');
+      if (asofEl) asofEl.textContent = asof ? 'Updated ' + asof : '';
+
+      const fill = (prefix, win) => {
+        if (!win) return;
+        document.getElementById(prefix + '-users').textContent = (win.users || 0).toLocaleString();
+        document.getElementById(prefix + '-sub').textContent =
+          (win.views ? (win.views.toLocaleString() + ' page views') : 'visitors');
+        const ul = document.getElementById(prefix + '-pages');
+        const pages = win.topPages || [];
+        if (!pages.length) {
+          ul.innerHTML = '<li class="win-empty">No traffic in this window</li>';
+          return;
+        }
+        ul.innerHTML = pages.slice(0, 5).map(p => {
+          const name = (p.page || '')
+            .replace(' | Piece Pavilion', '')
+            .replace(' - Piece Pavilion', '')
+            .replace('Piece Pavilion | ', '');
+          const n = p.views != null ? p.views : (p.users || 0);
+          return '<li><span class="p-name" title="' + escapeHtml(p.page || '') + '">' +
+            escapeHtml(name || '(home)') + '</span><span class="p-count">' + n + '</span></li>';
+        }).join('');
+      };
+
+      fill('w10', g.windows ? g.windows['10m'] : null);
+      fill('w1h', g.windows ? g.windows['1h']  : null);
+      fill('w6h', g.windows ? g.windows['6h']  : null);
+
+      // Sources table (6h)
+      const w6 = g.windows ? g.windows['6h'] : null;
+      const srcs = (w6 && w6.topSources) || [];
+      const srcTable = document.getElementById('ga-sources').querySelector('tbody');
+      if (srcs.length) {
+        srcTable.innerHTML = srcs.map(s =>
+          '<tr><td>' + escapeHtml(s.name) + '</td><td class="num">' + s.users + '</td></tr>'
+        ).join('');
+      } else {
+        srcTable.innerHTML = '<tr><td colspan="2" style="padding:12px;color:var(--muted);font-style:italic;">No traffic in the last 6 hours (standard reports lag ~15 min)</td></tr>';
+      }
+
+      const countries = (w6 && w6.topCountries) || [];
+      const ctryTable = document.getElementById('ga-countries').querySelector('tbody');
+      if (countries.length) {
+        ctryTable.innerHTML = countries.map(c =>
+          '<tr><td>' + escapeHtml(c.name) + '</td><td class="num">' + c.users + '</td></tr>'
+        ).join('');
+      } else {
+        ctryTable.innerHTML = '<tr><td colspan="2" style="padding:12px;color:var(--muted);">—</td></tr>';
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
     }
 
     // Period pill wiring
