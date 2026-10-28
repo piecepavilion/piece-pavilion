@@ -262,7 +262,9 @@
   // ---------------------------------------------------------------- totals
   function totals(items) {
     var t = { lots: items.length, pieces: 0, value: 0, unlocated: 0,
-              blank: 0, unrecognised: 0, stockroom: 0 };
+              blank: 0, unrecognised: 0, stockroom: 0,
+              aged90: 0, aged90_value: 0,
+              aged365: 0, aged365_value: 0 };
     items.forEach(function (it) {
       t.pieces += it.qty;
       t.value += it.value;
@@ -271,9 +273,23 @@
         if (it.bin_state === 'blank') t.blank++; else t.unrecognised++;
       }
       if (it.stockroom) t.stockroom++;
+      if (it.days != null && it.days >= 90)  { t.aged90++;  t.aged90_value  += it.value; }
+      if (it.days != null && it.days >= 365) { t.aged365++; t.aged365_value += it.value; }
     });
     t.value = Math.round(t.value * 100) / 100;
+    t.aged90_value = Math.round(t.aged90_value * 100) / 100;
+    t.aged365_value = Math.round(t.aged365_value * 100) / 100;
     return t;
+  }
+
+  // Age tier for a lot. Used both for the row badge and for the quick summary.
+  function ageTier(days) {
+    if (days == null) return null;
+    if (days >= 730) return { key: "veryold", label: "2 yr+" };
+    if (days >= 365) return { key: "old",     label: "1 yr+" };
+    if (days >= 180) return { key: "stale",   label: "180d" };
+    if (days >= 90)  return { key: "aging",   label: "90d" };
+    return null;
   }
 
   // ------------------------------------------------------------------- CSV
@@ -308,12 +324,17 @@
 
   // --------------------------------------------------------------- presets
   // The saved views worth a single tap. "No location" is first because it is
-  // the reason this page exists.
+  // the reason this page exists. Age chips sort oldest-first so staff see the
+  // worst offenders without touching the sort control.
   var PRESETS = [
     { id: "noloc",     label: "No location",      q: { located: false } },
     { id: "badloc",    label: "Unrecognised bin",  q: { bin_state: "unrecognised" } },
     { id: "stockroom", label: "In stockroom",     q: { stockroom: true } },
-    { id: "aging",     label: "In stock 90+ days", q: { minDays: 90 } },
+    { id: "oldest",    label: "Oldest first",     q: {}, sort: "days", dir: "desc" },
+    { id: "aging90",   label: "90+ days",         q: { minDays: 90 },  sort: "days", dir: "desc" },
+    { id: "aging180",  label: "180+ days",        q: { minDays: 180 }, sort: "days", dir: "desc" },
+    { id: "aging365",  label: "1 yr+",            q: { minDays: 365 }, sort: "days", dir: "desc" },
+    { id: "aging730",  label: "2 yr+",            q: { minDays: 730 }, sort: "days", dir: "desc" },
     { id: "last",      label: "Last one left",    q: { maxQty: 1 } },
     { id: "onsale",    label: "On sale",          q: { onSale: true } },
     { id: "figs",      label: "Minifigures",      q: { type: "MINIFIG" } },
@@ -332,6 +353,7 @@
     sort: sort,
     sortKeys: Object.keys(SORTS),
     totals: totals,
+    ageTier: ageTier,
     toCsv: toCsv,
     PRESETS: PRESETS,
   };

@@ -115,6 +115,13 @@
       color:var(--muted);margin-left:5px}
     .tagx.sr{background:var(--amber-l);color:var(--amber)}
     .tagx.sale{background:var(--green-l);color:var(--green)}
+    /* Age pills — colored by how long the lot has been sitting. */
+    .agepill{display:inline-block;margin-top:3px;font-size:.63rem;font-weight:900;text-transform:uppercase;
+      letter-spacing:.05em;padding:2px 7px;border-radius:999px;line-height:1.4;white-space:nowrap}
+    .agepill.aging  {background:#fff6dc;color:#92540b}
+    .agepill.stale  {background:#ffe5c7;color:#a3450a}
+    .agepill.old    {background:#ffdada;color:#a1070e}
+    .agepill.veryold{background:#15151f;color:#ffce00}
     .lnk{color:var(--red);font-weight:800;text-decoration:none;cursor:pointer;background:none;border:0;padding:0}
     .lnk:hover{text-decoration:underline}
     .binc{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;white-space:nowrap}
@@ -212,6 +219,10 @@
       <div><span class="k">Value</span><span class="v" id="t-value">—</span></div>
       <div><span class="k">No location</span><span class="v" id="t-noloc">—</span>
         <span class="muted" id="t-noloc-sub" style="font-size:.72rem;font-weight:700;display:block"></span></div>
+      <div><span class="k">Aged 90+d</span><span class="v" id="t-aged90">—</span>
+        <span class="muted" id="t-aged90-sub" style="font-size:.72rem;font-weight:700;display:block"></span></div>
+      <div><span class="k">Aged 1 yr+</span><span class="v" id="t-aged365">—</span>
+        <span class="muted" id="t-aged365-sub" style="font-size:.72rem;font-weight:700;display:block"></span></div>
       <div class="acts noprint">
         <button class="btn ghost sm" id="csv">Export CSV</button>
         <button class="btn ghost sm" id="print">Print</button>
@@ -374,7 +385,16 @@
 
     function apply() {
       S.q = currentQuery();
-      S.sort = $("f-sort").value;
+      // Preset-controlled sort: age presets flip to "oldest first" automatically
+      // so staff never have to also change the sort dropdown.
+      var preset = V.PRESETS.find(function (p) { return p.id === S.preset; });
+      if (preset && preset.sort) {
+        S.sort = preset.sort;
+        S.dir = preset.dir || "asc";
+        $("f-sort").value = S.sort;
+      } else {
+        S.sort = $("f-sort").value;
+      }
       S.view = V.sort(V.filter(S.all, S.q), S.sort, S.dir);
       S.shown = PAGE;
       renderTotals();
@@ -391,6 +411,10 @@
       $("t-noloc-sub").textContent = t.unlocated
         ? t.blank + " not set" + (t.unrecognised ? ", " + t.unrecognised + " unrecognised" : "")
         : "";
+      $("t-aged90").textContent  = C.money(t.aged90_value);
+      $("t-aged90-sub").textContent  = t.aged90  ? t.aged90.toLocaleString()  + " lot" + (t.aged90  === 1 ? "" : "s") : "none";
+      $("t-aged365").textContent = C.money(t.aged365_value);
+      $("t-aged365-sub").textContent = t.aged365 ? t.aged365.toLocaleString() + " lot" + (t.aged365 === 1 ? "" : "s") : "none";
     }
 
     var COLS = [
@@ -448,7 +472,11 @@
           '<td data-l="Value" class="num">' + esc(C.money(it.value)) + "</td>" +
           '<td data-l="Added" class="num">' + (it.added_date
             ? esc(it.added_date) + '<div class="muted" style="font-size:.7rem;font-weight:700">' +
-              (it.days == null ? "" : it.days + "d ago") + "</div>"
+              (it.days == null ? "" : it.days + "d ago") + "</div>" +
+              (function () {
+                var tier = V.ageTier(it.days);
+                return tier ? '<span class="agepill ' + tier.key + '">' + tier.label + '</span>' : '';
+              })()
             : "—") + "</td>" +
           "</tr>";
       });
