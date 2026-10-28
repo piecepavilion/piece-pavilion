@@ -734,8 +734,11 @@
     function cartItems(){ try{ return JSON.parse(localStorage.getItem(CART_KEY)) || []; }catch(e){ return []; } }
     function updateBadge(){
       const n = cartItems().reduce((s,i) => s + (i.qty||0), 0);
-      const el = document.getElementById('cartn');
-      if (el){ el.textContent = n; el.style.display = n>0 ? 'inline-block' : 'none'; }
+      // Shared .cart-count badge lives inside the header's cart icon on every page.
+      document.querySelectorAll('.cart-count').forEach(el => {
+        el.textContent = n;
+        el.style.display = n > 0 ? 'inline-block' : 'none';
+      });
     }
     function addToCart(it, btn){
       const items = cartItems();
