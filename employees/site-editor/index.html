@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Site Editor — Staff | Piece Pavilion</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --ink:#15151f;
+      --slate:#3a4150; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
+      --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec;
+      --amber:#d97706; --green:#16a34a;
+      --radius:12px;
+      --shadow-sm: 0 2px 8px rgba(20,22,29,.05);
+      --shadow: 0 6px 18px rgba(20,22,29,.08);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Nunito',system-ui,sans-serif;
+      background:var(--bg); color:var(--ink); min-height:100vh;
+    }
+    h1,h2,h3 { font-family:'Fredoka','Nunito',sans-serif; font-weight:700; letter-spacing:-.01em; }
+    a { color:var(--red); text-decoration:none; }
+
+    .topbar {
+      background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+      box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55);
+      color:#fff; padding:16px 24px;
+      display:flex; align-items:center; gap:14px;
+    }
+    .topbar img { height:40px; border-radius:50%; }
+    .topbar .back { color:#fff; text-decoration:none; font-weight:800; font-size:.86rem;
+      border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
+    .topbar .back:hover { background:rgba(255,255,255,.14); }
+    .topbar .crumb { font-size:.85rem; color:rgba(255,255,255,.78); font-weight:700; margin-right:6px; }
+    .topbar h1 { font-size:1.2rem; color:#fff; }
+    .topbar .spacer { flex:1; }
+
+    .wrap { max-width:1240px; margin:0 auto; padding:28px 24px 60px; }
+    .intro {
+      background:var(--surface); border-radius:14px;
+      border:1px solid var(--line); box-shadow:var(--shadow-sm);
+      padding:22px 26px; margin-bottom:22px;
+      display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    }
+    .intro h2 { font-size:1.3rem; margin-bottom:4px; }
+    .intro p { color:var(--mid); font-size:.95rem; max-width:640px; }
+    .intro .actions { margin-left:auto; display:flex; gap:10px; flex-wrap:wrap; }
+    .btn {
+      font:inherit; font-weight:800; font-size:.9rem;
+      padding:10px 18px; border-radius:999px; cursor:pointer;
+      border:0; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+      transition:background .15s, transform .1s;
+    }
+    .btn:active { transform:scale(.97); }
+    .btn-primary { background:var(--red); color:#fff; }
+    .btn-primary:hover { background:var(--red-dark); color:#fff; }
+    .btn-ghost { background:#fff; color:var(--ink); border:1.5px solid var(--line); }
+    .btn-ghost:hover { border-color:var(--ink); }
+    .btn-gold { background:var(--yellow); color:var(--ink); }
+    .btn-gold:hover { background:#e8ba00; }
+
+    .layout {
+      display:grid; grid-template-columns:1fr 460px; gap:22px;
+    }
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns:1fr; }
+      .preview-col { position:static !important; max-height:none !important; }
+    }
+
+    .section {
+      background:var(--surface); border-radius:14px; border:1px solid var(--line);
+      box-shadow:var(--shadow-sm); padding:22px 24px; margin-bottom:18px;
+    }
+    .section-head {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin-bottom:16px;
+    }
+    .section-head h3 { font-size:1.1rem; display:flex; align-items:center; gap:10px; }
+    .section-head .dot {
+      width:10px; height:10px; border-radius:50%; display:inline-block; background:var(--amber);
+    }
+    .section.hero-section    .section-head .dot { background:var(--red); }
+    .section.sections        .section-head .dot { background:#2563eb; }
+    .section.ctas            .section-head .dot { background:var(--amber); }
+
+    label {
+      display:block; font-size:.78rem; font-weight:800;
+      letter-spacing:.08em; text-transform:uppercase; color:var(--mid);
+      margin:14px 0 6px;
+    }
+    input[type=text], input[type=url], textarea {
+      width:100%; font:inherit; font-size:.96rem;
+      padding:11px 14px; border:1.5px solid var(--line); border-radius:10px;
+      background:#fcfcfd; color:var(--ink);
+      transition:border-color .15s;
+    }
+    input[type=text]:focus, input[type=url]:focus, textarea:focus { outline:none; border-color:var(--red); }
+    textarea { min-height:72px; resize:vertical; font-family:inherit; }
+
+    .toggle-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 14px; background:#fbfbfd; border:1px solid var(--line);
+      border-radius:10px; margin-bottom:8px; gap:12px;
+    }
+    .toggle-row .t-name { font-weight:800; font-size:.94rem; }
+    .toggle-row .t-desc { color:var(--muted); font-size:.82rem; margin-top:2px; }
+    .toggle {
+      position:relative; width:46px; height:26px; flex-shrink:0;
+    }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle span {
+      position:absolute; inset:0; cursor:pointer; background:#d1d5db;
+      border-radius:999px; transition:background .18s;
+    }
+    .toggle span::before {
+      content:""; position:absolute; left:3px; top:3px; width:20px; height:20px;
+      background:#fff; border-radius:50%; transition:transform .18s;
+      box-shadow:0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle input:checked + span { background:var(--green); }
+    .toggle input:checked + span::before { transform:translateX(20px); }
+    .hint {
+      display:block; color:var(--muted); font-size:.78rem; margin-top:4px;
+    }
+
+    /* Right-side preview column */
+    .preview-col {
+      position:sticky; top:16px;
+      max-height:calc(100vh - 32px);
+      display:flex; flex-direction:column;
+    }
+    .preview-card {
+      background:var(--surface); border-radius:14px; border:1px solid var(--line);
+      box-shadow:var(--shadow); overflow:hidden; flex:1;
+      display:flex; flex-direction:column;
+    }
+    .preview-head {
+      padding:14px 18px; border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between;
+      background:linear-gradient(180deg, #fcfcfd 0%, #f6f7fa 100%);
+    }
+    .preview-head h3 { font-size:.95rem; }
+    .preview-head .dots { display:inline-flex; gap:5px; }
+    .preview-head .dots span { width:10px; height:10px; border-radius:50%; display:inline-block; background:#d1d5db; }
+    .preview-head .dots span:nth-child(1) { background:#ff5f57; }
+    .preview-head .dots span:nth-child(2) { background:#febc2e; }
+    .preview-head .dots span:nth-child(3) { background:#28c840; }
+    .preview-frame { flex:1; width:100%; border:0; min-height:620px; background:#fff; }
+
+    .output-card {
+      background:#1a1b22; color:#f4f5f8; border-radius:14px;
+      padding:18px 20px; margin-top:18px;
+      font-family:'JetBrains Mono', ui-monospace, Menlo, monospace; font-size:.84rem;
+      border:1px solid #2b2c35;
+    }
+    .output-card .ohead {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px; font-family:'Nunito', sans-serif;
+    }
+    .output-card .ohead h4 { font-family:'Fredoka',sans-serif; font-size:.95rem; color:var(--yellow); }
+    .output-card pre {
+      background:#0f1016; padding:12px 14px; border-radius:8px;
+      overflow:auto; white-space:pre; line-height:1.55;
+      max-height:220px;
+    }
+    .output-card .btn-copy { background:var(--yellow); color:var(--ink); font-size:.78rem; padding:6px 14px; }
+
+    .toast {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      background:var(--ink); color:#fff; padding:12px 20px;
+      border-radius:999px; font-weight:800; font-size:.9rem;
+      opacity:0; pointer-events:none; transition:opacity .2s;
+      z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/employees/" aria-label="Back to Staff Portal"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div><span class="crumb">Staff / </span><h1 style="display:inline;">Site Editor</h1></div>
+    <div class="spacer"></div>
+    <a class="back" href="/employees/">&larr; Back to portal</a>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      <div style="flex:1; min-width:260px;">
+        <h2>Edit the homepage without code</h2>
+        <p>Change hero copy, swap the hero image, hide or show sections. When you save, click <strong>Copy to Sheet</strong>, open the Site Config sheet, and paste. Changes go live in about a minute.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="https://piecepavilion.com/" target="_blank" rel="noopener">Preview live site &#8599;</a>
+        <a class="btn btn-primary" id="open-sheet" href="https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/edit" target="_blank" rel="noopener">Open Site Config sheet &rarr;</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="editor-col">
+
+        <!-- HERO -->
+        <section class="section hero-section">
+          <div class="section-head">
+            <h3><span class="dot"></span> Hero (top of homepage)</h3>
+          </div>
+          <label for="hero_badge">Badge pill (above the headline)</label>
+          <input type="text" id="hero_badge" placeholder="Now on BrickLink" value="Now on BrickLink">
+
+          <label for="hero_headline">Headline <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:600;">— use ⏎ for the colored second line</span></label>
+          <textarea id="hero_headline" placeholder="Your Brick&#10;Destination">Your Brick
+Destination</textarea>
+
+          <label for="hero_sub">Sub-headline</label>
+          <textarea id="hero_sub" placeholder="Short one- or two-sentence pitch under the headline…">Individual bricks, complete sets, and bulk lots — all quality-checked and ready to ship. Find exactly what your build needs.</textarea>
+
+          <label for="hero_image">Hero image URL <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:600;">— paste any image URL (Google Drive, imgur, cloudinary, etc.)</span></label>
+          <input type="url" id="hero_image" placeholder="https://… leave blank to use the rotating product carousel">
+        </section>
+
+        <!-- CTAs -->
+        <section class="section ctas">
+          <div class="section-head">
+            <h3><span class="dot"></span> Call-to-action buttons</h3>
+          </div>
+          <label for="cta_primary">Primary button text</label>
+          <input type="text" id="cta_primary" value="Shop Now">
+
+          <label for="cta_primary_href">Primary button link</label>
+          <input type="url" id="cta_primary_href" value="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop">
+
+          <label for="cta_secondary">Secondary button text</label>
+          <input type="text" id="cta_secondary" value="See What We Carry">
+        </section>
+
+        <!-- SECTION VISIBILITY -->
+        <section class="section sections">
+          <div class="section-head">
+            <h3><span class="dot"></span> Which homepage sections should show</h3>
+          </div>
+          <div id="toggles"></div>
+          <span class="hint">Tip: hide seasonal sections before a photo shoot or test, show them again right after. No code touch needed.</span>
+        </section>
+
+        <!-- OUTPUT -->
+        <div class="output-card">
+          <div class="ohead">
+            <h4>&#128272; Copy these rows into the Site Config sheet</h4>
+            <button class="btn btn-copy" id="copy-rows">Copy to clipboard</button>
+          </div>
+          <pre id="sheet-rows">(Edit a field above to generate rows…)</pre>
+          <p style="color:#a8a9b4;font-size:.78rem;margin-top:8px;line-height:1.55;">
+            After copying, click <em>Open Site Config sheet</em> above, delete the existing rows (or append), and paste. Changes go live within ~1 min.
+          </p>
+        </div>
+
+      </div>
+
+      <aside class="preview-col">
+        <div class="preview-card">
+          <div class="preview-head">
+            <h3>Live preview</h3>
+            <span class="dots"><span></span><span></span><span></span></span>
+          </div>
+          <iframe class="preview-frame" id="preview" src="/" title="Homepage preview"></iframe>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied.</div>
+
+  <script>
+    // Section visibility toggles — map each UI toggle to a sheet field.
+    const SECTIONS = [
+      { field: 'show_just_added',  name: 'Just Added',           desc: 'The amber product row directly below the hero.', checked: true },
+      { field: 'show_what_we_carry', name: 'What We Carry',       desc: 'Three category tiles: Individual Pieces, Sets & Builds.', checked: true },
+      { field: 'show_featured',    name: 'Featured From Our Store', desc: 'Hand-picked items with the filter tabs.',       checked: true },
+      { field: 'show_testimonials', name: 'What Buyers Say',       desc: 'Customer review cards from BrickLink.',         checked: true },
+      { field: 'show_our_story',   name: 'Our Story',             desc: 'The "Started 2022…" section with founder note.', checked: true },
+      { field: 'show_blog_preview', name: 'From the Blog',         desc: 'Three latest post thumbnails.',                 checked: true },
+      { field: 'show_instagram',   name: 'Instagram feed',        desc: 'Embedded Instagram "Name That Quote" post.',    checked: true },
+      { field: 'show_sell_consign', name: 'Sell or Consign',       desc: 'Dark navy sell/consign offer block.',          checked: true },
+    ];
+    const togglesWrap = document.getElementById('toggles');
+    SECTIONS.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'toggle-row';
+      row.innerHTML =
+        '<div><div class="t-name">' + s.name + '</div>' +
+        '<div class="t-desc">' + s.desc + '</div></div>' +
+        '<label class="toggle"><input type="checkbox" ' + (s.checked ? 'checked' : '') +
+        ' data-field="' + s.field + '"><span></span></label>';
+      togglesWrap.appendChild(row);
+    });
+
+    function csvEscape(v) {
+      v = (v == null ? '' : String(v)).replace(/\r?\n/g, '\\n');
+      return '"' + v.replace(/"/g, '""') + '"';
+    }
+
+    function buildRows() {
+      const rows = [];
+      const pairs = [
+        ['hero_badge',       document.getElementById('hero_badge').value],
+        ['hero_headline',    document.getElementById('hero_headline').value],
+        ['hero_sub',         document.getElementById('hero_sub').value],
+        ['hero_image',       document.getElementById('hero_image').value],
+        ['cta_primary',      document.getElementById('cta_primary').value],
+        ['cta_primary_href', document.getElementById('cta_primary_href').value],
+        ['cta_secondary',    document.getElementById('cta_secondary').value],
+      ];
+      document.querySelectorAll('.toggle input').forEach(cb => {
+        pairs.push([cb.dataset.field, cb.checked ? 'YES' : 'NO']);
+      });
+      pairs.forEach(([k, v]) => {
+        rows.push(csvEscape(k) + ',' + csvEscape(v));
+      });
+      return rows.join('\n');
+    }
+
+    function refresh() {
+      document.getElementById('sheet-rows').textContent = buildRows();
+    }
+    document.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', refresh));
+    refresh();
+
+    // Copy button
+    const toast = document.getElementById('toast');
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+    document.getElementById('copy-rows').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(buildRows());
+        showToast('Copied — now paste into the Site Config sheet');
+      } catch (e) {
+        showToast('Could not copy — select and copy manually');
+      }
+    });
+  </script>
+</body>
+</html>

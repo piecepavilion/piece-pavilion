@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI Dashboard — Staff | Piece Pavilion</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --ink:#15151f;
+      --slate:#3a4150; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
+      --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec;
+      --blue:#2563eb; --blue-soft:#eff6ff;
+      --green:#16a34a; --green-soft:#ecfdf5;
+      --amber:#d97706; --amber-soft:#fef3c7;
+      --purple:#7c3aed; --purple-soft:#f5f3ff;
+      --radius:14px;
+      --shadow-sm: 0 2px 8px rgba(20,22,29,.05);
+      --shadow:    0 6px 18px rgba(20,22,29,.08);
+      --shadow-lg: 0 14px 40px rgba(20,22,29,.14);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Nunito',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+    h1,h2,h3,h4 { font-family:'Fredoka','Nunito',sans-serif; font-weight:700; letter-spacing:-.01em; }
+    a { color:var(--red); text-decoration:none; }
+
+    /* ===== TOP BAR ===== */
+    .topbar {
+      background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+      box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55);
+      color:#fff; padding:16px 24px; display:flex; align-items:center; gap:14px;
+    }
+    .topbar img { height:40px; border-radius:50%; }
+    .topbar .crumb { font-size:.85rem; color:rgba(255,255,255,.78); font-weight:700; margin-right:6px; }
+    .topbar h1 { font-size:1.2rem; color:#fff; display:inline; }
+    .topbar .spacer { flex:1; }
+    .topbar .back { color:#fff; text-decoration:none; font-weight:800; font-size:.86rem;
+      border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
+    .topbar .back:hover { background:rgba(255,255,255,.14); }
+
+    .wrap { max-width:1400px; margin:0 auto; padding:28px 24px 60px; }
+
+    /* ===== PERIOD SELECTOR ===== */
+    .period-row {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:14px; margin-bottom:22px; flex-wrap:wrap;
+    }
+    .period-row .intro { color:var(--mid); font-size:.95rem; }
+    .period-row .intro strong { color:var(--ink); }
+    .period-pills { display:flex; gap:4px; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px; }
+    .period-pills button {
+      font:inherit; font-weight:800; font-size:.82rem;
+      padding:7px 14px; border-radius:999px; border:0; background:transparent; cursor:pointer; color:var(--mid);
+      transition:background .15s, color .15s;
+    }
+    .period-pills button.active { background:var(--ink); color:#fff; }
+    .period-pills button:not(.active):hover { background:#f3f4f6; color:var(--ink); }
+
+    /* ===== KPI TILES ===== */
+    .kpi-row {
+      display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:28px;
+    }
+    @media (max-width:980px) { .kpi-row { grid-template-columns:repeat(2, 1fr); } }
+    @media (max-width:460px) { .kpi-row { grid-template-columns:1fr; } }
+    .kpi {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow-sm); padding:18px 20px 16px;
+      cursor:pointer; transition:transform .15s, box-shadow .15s;
+      display:flex; flex-direction:column; gap:4px;
+      position:relative; overflow:hidden;
+    }
+    .kpi:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+    .kpi .label {
+      font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--muted);
+      display:flex; align-items:center; gap:6px;
+    }
+    .kpi .value {
+      font-family:'Fredoka',sans-serif; font-weight:700; font-size:2rem; color:var(--ink); line-height:1.1;
+      margin-top:2px;
+    }
+    .kpi .row {
+      display:flex; align-items:center; justify-content:space-between; margin-top:6px; gap:8px;
+    }
+    .kpi .change { font-size:.78rem; font-weight:800; }
+    .kpi .change.up   { color:var(--green); }
+    .kpi .change.down { color:var(--red); }
+    .kpi .change.flat { color:var(--muted); }
+    .kpi .spark { width:84px; height:30px; opacity:.9; flex-shrink:0; }
+    .kpi.sales::before     { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--red); }
+    .kpi.inventory::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--blue); }
+    .kpi.customer::before  { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--green); }
+    .kpi.traffic::before   { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--purple); }
+
+    /* ===== SECTION CARDS ===== */
+    .section-grid {
+      display:grid; grid-template-columns:2fr 1fr; gap:18px; margin-bottom:22px;
+    }
+    @media (max-width:980px) { .section-grid { grid-template-columns:1fr; } }
+    .card {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow-sm); padding:22px 24px;
+    }
+    .card .card-head {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:16px; gap:12px; flex-wrap:wrap;
+    }
+    .card .card-head h3 { font-size:1.1rem; display:flex; align-items:center; gap:8px; }
+    .card .card-head h3 .pill {
+      font-size:.68rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase;
+      padding:3px 10px; border-radius:999px; background:var(--cream); color:#8a5a00;
+    }
+    .card .card-head .meta { font-size:.82rem; color:var(--mid); font-weight:700; }
+    .card .chart-wrap { position:relative; height:280px; }
+    .card.tall .chart-wrap { height:360px; }
+
+    /* ===== TABLE ===== */
+    .data-table { width:100%; border-collapse:collapse; font-size:.9rem; }
+    .data-table th {
+      text-align:left; font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+      color:var(--muted); font-weight:800; padding:8px 12px 10px; border-bottom:1px solid var(--line);
+    }
+    .data-table td { padding:9px 12px; border-bottom:1px solid #f0f2f5; vertical-align:middle; }
+    .data-table tr:last-child td { border-bottom:0; }
+    .data-table tr:hover td { background:#fafbfd; }
+    .data-table .num { text-align:right; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .data-table .pos { color:var(--green); }
+    .data-table .neg { color:var(--red); }
+    .data-table img { width:28px; height:28px; object-fit:contain; vertical-align:middle; margin-right:8px; background:#fff; border-radius:5px; padding:2px; border:1px solid var(--line); }
+
+    /* ===== PROGRESS BAR ===== */
+    .bar-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; font-size:.9rem; }
+    .bar-row .lbl { flex:0 0 128px; color:var(--mid); font-weight:700; }
+    .bar-row .track { flex:1; height:10px; background:#eef0f3; border-radius:999px; overflow:hidden; }
+    .bar-row .fill { height:100%; background:linear-gradient(90deg, var(--red) 0%, var(--yellow) 100%); border-radius:999px; }
+    .bar-row .val { flex:0 0 56px; text-align:right; font-weight:900; color:var(--ink); font-variant-numeric:tabular-nums; }
+
+    .stub-note {
+      padding:16px 18px; background:var(--amber-soft); border:1px solid #fcd34d;
+      border-radius:12px; color:#78350f; font-size:.88rem; font-weight:700; margin-top:14px;
+      display:flex; gap:10px; align-items:flex-start;
+    }
+    .stub-note strong { color:#78350f; }
+    .stub-note svg { flex-shrink:0; margin-top:2px; }
+
+    .section-head {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin:30px 4px 14px;
+    }
+    .section-head h2 { font-size:1.3rem; display:flex; align-items:center; gap:10px; }
+    .section-head h2 .dot { width:10px; height:10px; border-radius:50%; background:var(--red); }
+    .section-head.inventory h2 .dot { background:var(--blue); }
+    .section-head.customer h2 .dot { background:var(--green); }
+    .section-head.traffic h2 .dot { background:var(--purple); }
+
+    /* ===== DRILL-DOWN DRAWER ===== */
+    .drawer-mask { position:fixed; inset:0; background:rgba(21,21,31,.5); backdrop-filter:blur(4px); z-index:9000; opacity:0; pointer-events:none; transition:opacity .2s; }
+    .drawer-mask.open { opacity:1; pointer-events:auto; }
+    .drawer {
+      position:fixed; top:0; right:0; bottom:0; width:min(90vw, 760px); background:var(--surface);
+      box-shadow:-10px 0 40px rgba(0,0,0,.2); z-index:9001; transform:translateX(100%);
+      transition:transform .25s cubic-bezier(.2,.8,.2,1); overflow-y:auto;
+    }
+    .drawer.open { transform:translateX(0); }
+    .drawer-head {
+      position:sticky; top:0; z-index:1; background:var(--surface); border-bottom:1px solid var(--line);
+      padding:18px 24px; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    }
+    .drawer-head h3 { font-size:1.2rem; }
+    .drawer-close {
+      background:transparent; border:1.5px solid var(--line); border-radius:50%; width:36px; height:36px;
+      cursor:pointer; font-size:1.2rem; line-height:1; color:var(--mid);
+    }
+    .drawer-close:hover { color:var(--ink); border-color:var(--ink); }
+    .drawer-body { padding:22px 24px 40px; }
+    .drawer-body h4 { font-size:1rem; margin:18px 0 10px; color:var(--slate); }
+    .drawer-body .chart-wrap { position:relative; height:260px; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/employees/" aria-label="Back to Staff Portal"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div><span class="crumb">Staff / </span><h1>KPI Dashboard</h1></div>
+    <div class="spacer"></div>
+    <a class="back" href="/employees/">&larr; Back to portal</a>
+  </div>
+
+  <div class="wrap">
+
+    <!-- Period selector -->
+    <div class="period-row">
+      <div class="intro">Live KPIs with click-to-drill-down. <strong id="asof">Loading data…</strong></div>
+      <div class="period-pills" id="period-pills">
+        <button data-period="7">7 days</button>
+        <button data-period="30" class="active">30 days</button>
+        <button data-period="90">90 days</button>
+        <button data-period="365">1 year</button>
+      </div>
+    </div>
+
+    <!-- KPI TILES -->
+    <div class="kpi-row" id="kpi-row">
+      <div class="kpi sales"     data-kpi="orders"     role="button" tabindex="0">
+        <div class="label">&#128188; Orders</div>
+        <div class="value" id="kpi-orders">—</div>
+        <div class="row">
+          <span class="change flat" id="kpi-orders-ch">loading…</span>
+          <canvas class="spark" id="spark-orders"></canvas>
+        </div>
+      </div>
+      <div class="kpi sales"     data-kpi="revenue"    role="button" tabindex="0">
+        <div class="label">&#128181; Revenue</div>
+        <div class="value" id="kpi-revenue">—</div>
+        <div class="row">
+          <span class="change flat" id="kpi-revenue-ch">loading…</span>
+          <canvas class="spark" id="spark-revenue"></canvas>
+        </div>
+      </div>
+      <div class="kpi sales"     data-kpi="aov"        role="button" tabindex="0">
+        <div class="label">&#127919; Avg Order</div>
+        <div class="value" id="kpi-aov">—</div>
+        <div class="row">
+          <span class="change flat" id="kpi-aov-ch">loading…</span>
+          <canvas class="spark" id="spark-aov"></canvas>
+        </div>
+      </div>
+      <div class="kpi inventory" data-kpi="stock"      role="button" tabindex="0">
+        <div class="label">&#128230; Lots in stock</div>
+        <div class="value" id="kpi-stock">—</div>
+        <div class="row">
+          <span class="change flat" id="kpi-stock-ch">live</span>
+          <canvas class="spark" id="spark-stock"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALES SECTION -->
+    <div class="section-head" id="sales"><h2><span class="dot"></span> Sales health</h2></div>
+    <div class="section-grid">
+      <div class="card tall">
+        <div class="card-head">
+          <h3>Revenue &amp; orders over time <span class="pill">30d</span></h3>
+          <span class="meta" id="rev-meta">—</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-revenue"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Revenue by category</h3>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-category"></canvas></div>
+      </div>
+    </div>
+
+    <!-- INVENTORY SECTION -->
+    <div class="section-head inventory" id="inventory"><h2><span class="dot"></span> Inventory</h2></div>
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-head">
+          <h3>Top 10 SKUs by inventory value</h3>
+          <span class="meta" id="top-skus-meta">—</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="top-skus"><thead>
+            <tr><th>#</th><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Value</th></tr>
+          </thead><tbody><tr><td colspan="5" style="padding:20px;color:var(--mid)">Loading inventory…</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Inventory mix</h3></div>
+        <div class="chart-wrap"><canvas id="chart-mix"></canvas></div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER SECTION -->
+    <div class="section-head customer" id="customer"><h2><span class="dot"></span> Customer &amp; feedback</h2></div>
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-head"><h3>Feedback score</h3></div>
+        <div style="display:flex; align-items:center; gap:28px; padding:14px 0;">
+          <div style="position:relative;">
+            <canvas id="chart-feedback" width="180" height="180"></canvas>
+            <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+              <div style="font-family:'Fredoka',sans-serif; font-size:2.6rem; font-weight:700;" id="fb-val">100%</div>
+              <div style="font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);">Positive</div>
+            </div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:.85rem; color:var(--mid); line-height:1.6;">
+              Across <strong id="fb-count" style="color:var(--ink)">—</strong> BrickLink reviews.<br>
+              Mean rating: <strong style="color:var(--ink)">5.00</strong> / 5<br>
+              Zero negative or neutral in <strong style="color:var(--ink)" id="fb-span">—</strong>.
+            </div>
+            <div style="margin-top:18px;">
+              <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/feedback" target="_blank" rel="noopener" style="font-weight:800; font-size:.9rem;">Open BrickLink feedback &#8599;</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>States shipped to</h3><span class="meta" id="states-meta">—</span></div>
+        <div style="padding:4px 0;" id="states-bars">
+          <div class="bar-row"><span class="lbl">Loading…</span><span class="track"></span><span class="val"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRAFFIC / CONTENT SECTION -->
+    <div class="section-head traffic" id="traffic"><h2><span class="dot"></span> Traffic &amp; content</h2></div>
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-head"><h3>Blog &amp; parts page views</h3><span class="meta">GA4 — last 30 days</span></div>
+        <div class="chart-wrap"><canvas id="chart-pageviews"></canvas></div>
+        <div class="stub-note">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><strong>Needs GA4 Reporting API wire-up.</strong> Showing sample shape with blog/parts page URLs. Wire GA4 service-account creds in pp-ops and the chart fills in automatically.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Top blog posts (click-through to BrickLink)</h3></div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="top-posts"><thead>
+            <tr><th>Post</th><th class="num">Views</th><th class="num">BL clicks</th><th class="num">CVR</th></tr>
+          </thead><tbody><tr><td colspan="4" style="padding:20px;color:var(--mid)">GA4 wire-up pending — placeholder below:</td></tr>
+          <tr><td>LEGO Advent Calendars 2026, Ranked</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+          <tr><td>LEGO Halloween Minifigure Guide</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+          <tr><td>Name That LEGO Piece: 71 Part Names</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Drill-down drawer -->
+  <div class="drawer-mask" id="drawer-mask"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <h3 id="drawer-title">Detail</h3>
+      <button class="drawer-close" id="drawer-close">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+
+  <script>
+    // ====================================================================
+    // KPI DASHBOARD — single-file static page.
+    // Reads:
+    //   /finder-data.json           (live, present) — current inventory
+    //   /employees/kpis-data.json   (new, pp-ops writes it hourly)
+    // Falls back to sample data for metrics that need the pp-ops feed.
+    // ====================================================================
+
+    // Shared Chart.js defaults for the whole page.
+    Chart.defaults.font.family = "'Nunito', sans-serif";
+    Chart.defaults.font.weight = 600;
+    Chart.defaults.color = '#6b7280';
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.boxHeight = 10;
+
+    const COLORS = {
+      red: '#e3000b',
+      yellow: '#ffce00',
+      blue: '#2563eb',
+      green: '#16a34a',
+      amber: '#d97706',
+      purple: '#7c3aed',
+      grid: 'rgba(21,21,31,0.06)',
+    };
+
+    const state = {
+      period: 30,
+      inventory: null,
+      kpis: null,
+    };
+    const charts = {};
+
+    function fmt$(n) {
+      if (n == null) return '—';
+      return '$' + Math.round(n).toLocaleString();
+    }
+    function fmtPct(v) {
+      if (v == null) return '';
+      return (v > 0 ? '+' : '') + Math.round(v) + '%';
+    }
+    function clsPct(v) {
+      if (v == null) return 'flat';
+      return v > 1 ? 'up' : v < -1 ? 'down' : 'flat';
+    }
+    function daysAgoLabels(n) {
+      const out = [];
+      const now = Date.now();
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(now - i * 86400000);
+        out.push(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }));
+      }
+      return out;
+    }
+
+    // Sample fallback data (used until kpis-data.json ships).
+    // Shape mirrors the real feed so dropping in real data is zero-work.
+    function sampleKpis() {
+      const now = Date.now();
+      const dailyOrders = [];
+      const dailyRevenue = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now - i * 86400000);
+        const wd = d.getDay();
+        const base = wd === 0 || wd === 6 ? 4 : 2.5;
+        const orders = Math.max(0, Math.round(base + (Math.sin(i / 3.4) * 1.6) + (Math.random() * 1.8)));
+        const avg = 18 + (Math.random() * 22) + (wd === 5 ? 10 : 0);
+        dailyOrders.push({ date: d.toISOString().slice(0,10), orders });
+        dailyRevenue.push({ date: d.toISOString().slice(0,10), revenue: Math.round(orders * avg * 100) / 100 });
+      }
+      const revByCat = { Minifigure: 2820, Set: 1860, Part: 790, Keychain: 310, Custom: 180 };
+      const statesCount = { CA: 10, TX: 7, NY: 6, FL: 5, MA: 5, NJ: 4, PA: 4, CO: 3, IL: 3, OR: 3, WA: 2, GA: 2 };
+      return {
+        asof: new Date().toISOString(),
+        orders30d: 84,
+        orders30dChange: 12,
+        revenue30d: 2860.75,
+        revenue30dChange: 18,
+        aov30d: 34.05,
+        aov30dChange: 6,
+        feedbackPct: 100,
+        feedbackCount: 43,
+        feedbackSpanDays: 820,
+        dailyOrders,
+        dailyRevenue,
+        revByCategory: revByCat,
+        statesCount,
+        _sample: true,
+      };
+    }
+
+    // ====================================================================
+    // DATA LOAD
+    // ====================================================================
+    async function loadData() {
+      try {
+        const r = await fetch('/finder-data.json?t=' + Date.now());
+        state.inventory = await r.json();
+      } catch (e) {}
+
+      try {
+        const r = await fetch('/employees/kpis-data.json?t=' + Date.now());
+        if (r.ok) {
+          state.kpis = await r.json();
+          state.kpis._sample = false;
+        } else {
+          state.kpis = sampleKpis();
+        }
+      } catch (e) {
+        state.kpis = sampleKpis();
+      }
+
+      // "As of" line
+      const asof = state.kpis.asof ? new Date(state.kpis.asof) : new Date();
+      document.getElementById('asof').textContent = (state.kpis._sample ? 'Sample data' : 'Updated ' + asof.toLocaleString()) +
+        (state.kpis._sample ? ' — wire pp-ops kpis_data.py to publish /employees/kpis-data.json' : '');
+
+      renderAll();
+    }
+
+    // ====================================================================
+    // RENDER
+    // ====================================================================
+    function sliceDaily(period) {
+      const dO = (state.kpis.dailyOrders || []).slice(-period);
+      const dR = (state.kpis.dailyRevenue || []).slice(-period);
+      return { dO, dR };
+    }
+
+    function renderKpiTiles() {
+      const k = state.kpis;
+      const { dO, dR } = sliceDaily(state.period);
+      const orders  = dO.reduce((s, x) => s + x.orders, 0);
+      const revenue = dR.reduce((s, x) => s + x.revenue, 0);
+      const aov     = orders ? revenue / orders : 0;
+
+      // Period-over-period change (compare to prior equal window)
+      const dOprev = (state.kpis.dailyOrders  || []).slice(-state.period * 2, -state.period);
+      const dRprev = (state.kpis.dailyRevenue || []).slice(-state.period * 2, -state.period);
+      const prevOrders  = dOprev.reduce((s, x) => s + x.orders, 0);
+      const prevRevenue = dRprev.reduce((s, x) => s + x.revenue, 0);
+      const prevAov     = prevOrders ? prevRevenue / prevOrders : 0;
+      const chOrders    = prevOrders  ? Math.round((orders  - prevOrders)  / prevOrders  * 100) : null;
+      const chRevenue   = prevRevenue ? Math.round((revenue - prevRevenue) / prevRevenue * 100) : null;
+      const chAov       = prevAov     ? Math.round((aov     - prevAov)     / prevAov     * 100) : null;
+
+      document.getElementById('kpi-orders').textContent  = orders.toLocaleString();
+      document.getElementById('kpi-revenue').textContent = fmt$(revenue);
+      document.getElementById('kpi-aov').textContent     = fmt$(aov);
+
+      const stock = state.inventory ? (state.inventory.count || (state.inventory.items ? state.inventory.items.length : 0)) : null;
+      document.getElementById('kpi-stock').textContent = stock ? stock.toLocaleString() : '—';
+
+      const setCh = (id, v) => {
+        const el = document.getElementById(id);
+        el.className = 'change ' + clsPct(v);
+        el.textContent = v == null ? 'vs prev' : fmtPct(v) + ' vs prev ' + state.period + 'd';
+      };
+      setCh('kpi-orders-ch', chOrders);
+      setCh('kpi-revenue-ch', chRevenue);
+      setCh('kpi-aov-ch', chAov);
+      document.getElementById('kpi-stock-ch').textContent = 'live inventory';
+
+      // Sparklines
+      drawSpark('spark-orders',  dO.map(x => x.orders),  COLORS.red);
+      drawSpark('spark-revenue', dR.map(x => x.revenue), COLORS.red);
+      drawSpark('spark-aov',     dO.map((x, i) => (dR[i]?.revenue || 0) / (x.orders || 1)), COLORS.red);
+      drawSpark('spark-stock',   [stock || 0, stock || 0, stock || 0], COLORS.blue);
+    }
+
+    function drawSpark(id, data, color) {
+      if (charts[id]) charts[id].destroy();
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      charts[id] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(() => ''),
+          datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.35, fill: true,
+            backgroundColor: color + '22' }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display:false }, tooltip: { enabled:false } },
+          scales: { x: { display:false }, y: { display:false } },
+          interaction: { mode:'nearest', axis:'x', intersect:false },
+        },
+      });
+    }
+
+    function renderRevenueChart() {
+      const { dO, dR } = sliceDaily(state.period);
+      const labels = daysAgoLabels(state.period);
+      if (charts.revenue) charts.revenue.destroy();
+      charts.revenue = new Chart(document.getElementById('chart-revenue'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Revenue ($)',
+              data: dR.map(x => x.revenue),
+              backgroundColor: COLORS.red + 'cc',
+              borderRadius: 6,
+              yAxisID: 'y',
+              order: 2,
+            },
+            {
+              label: 'Orders',
+              data: dO.map(x => x.orders),
+              borderColor: COLORS.ink || '#15151f',
+              backgroundColor: '#15151f',
+              borderWidth: 2.5,
+              pointRadius: 2,
+              type: 'line',
+              yAxisID: 'y1',
+              order: 1,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'bottom', labels: { usePointStyle:true } } },
+          scales: {
+            x: { grid: { display:false }, ticks: { maxTicksLimit:10 } },
+            y:  { position:'left', grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } },
+            y1: { position:'right', grid: { display:false }, title: { display:true, text:'Orders' } },
+          },
+        },
+      });
+      const total = dR.reduce((s, x) => s + x.revenue, 0);
+      document.getElementById('rev-meta').textContent = fmt$(total) + ' total';
+    }
+
+    function renderCategoryChart() {
+      const cats = state.kpis.revByCategory || {};
+      const labels = Object.keys(cats);
+      const data = Object.values(cats);
+      if (charts.category) charts.category.destroy();
+      charts.category = new Chart(document.getElementById('chart-category'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: [COLORS.red, COLORS.amber, COLORS.blue, COLORS.green, COLORS.purple], borderWidth: 0 }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '58%',
+          plugins: {
+            legend: { position:'bottom', labels: { usePointStyle:true, padding:14 } },
+            tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmt$(ctx.parsed) } },
+          },
+        },
+      });
+    }
+
+    function renderInventoryTable() {
+      const items = state.inventory && state.inventory.items ? state.inventory.items : [];
+      // Rank by value = qty × price, descending.
+      const ranked = items
+        .map(it => Object.assign({}, it, { value: (it.qty || 0) * (it.price || 0) }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+
+      const tbody = document.querySelector('#top-skus tbody');
+      if (!ranked.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;color:var(--mid)">No inventory data</td></tr>';
+        return;
+      }
+      const img = it => {
+        const tletter = { PART:'P', SET:'S', MINIFIG:'M', GEAR:'G' }[it.type] || 'P';
+        return 'https://img.bricklink.com/ItemImage/' + tletter + 'N/' + (it.color_id || 0) + '/' + it.no + '.png';
+      };
+      tbody.innerHTML = ranked.map((it, i) => (
+        '<tr>' +
+          '<td><strong>' + (i + 1) + '</strong></td>' +
+          '<td><img src="' + img(it) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+            '<strong>' + (it.name || it.no) + '</strong>' +
+            '<div style="font-size:.78rem; color:var(--muted);">' + (it.color || '') + ' · ' + (it.cond || '') + '</div>' +
+          '</td>' +
+          '<td class="num">' + (it.qty || 0).toLocaleString() + '</td>' +
+          '<td class="num">' + fmt$(it.price) + '</td>' +
+          '<td class="num pos">' + fmt$(it.value) + '</td>' +
+        '</tr>'
+      )).join('');
+
+      const totalValue = items.reduce((s, it) => s + (it.qty || 0) * (it.price || 0), 0);
+      document.getElementById('top-skus-meta').textContent = 'Catalog value: ' + fmt$(totalValue);
+    }
+
+    function renderMixChart() {
+      const items = state.inventory && state.inventory.items ? state.inventory.items : [];
+      const mix = {};
+      items.forEach(it => {
+        const key = it.type || 'OTHER';
+        mix[key] = (mix[key] || 0) + 1;
+      });
+      const labels = Object.keys(mix);
+      const data = Object.values(mix);
+      if (charts.mix) charts.mix.destroy();
+      charts.mix = new Chart(document.getElementById('chart-mix'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: [COLORS.blue, COLORS.red, COLORS.amber, COLORS.green, COLORS.purple], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position:'bottom', labels: { usePointStyle:true, padding:14 } } } },
+      });
+    }
+
+    function renderFeedback() {
+      const pct = state.kpis.feedbackPct != null ? state.kpis.feedbackPct : 100;
+      document.getElementById('fb-val').textContent = pct + '%';
+      document.getElementById('fb-count').textContent = state.kpis.feedbackCount || '—';
+      document.getElementById('fb-span').textContent = (state.kpis.feedbackSpanDays || 0) + ' days';
+
+      if (charts.feedback) charts.feedback.destroy();
+      charts.feedback = new Chart(document.getElementById('chart-feedback'), {
+        type: 'doughnut',
+        data: { datasets: [{ data: [pct, 100 - pct], backgroundColor: [COLORS.green, '#eef0f3'], borderWidth: 0 }] },
+        options: { responsive: false, maintainAspectRatio: false, cutout: '76%',
+          plugins: { legend: { display:false }, tooltip: { enabled:false } } },
+      });
+    }
+
+    function renderStatesBars() {
+      const states = state.kpis.statesCount || {};
+      const entries = Object.entries(states).sort((a, b) => b[1] - a[1]).slice(0, 12);
+      const max = entries.length ? entries[0][1] : 1;
+      document.getElementById('states-meta').textContent = entries.length + ' states';
+      document.getElementById('states-bars').innerHTML = entries.map(([state, count]) => (
+        '<div class="bar-row">' +
+          '<span class="lbl">' + state + '</span>' +
+          '<span class="track"><span class="fill" style="width:' + Math.round(count / max * 100) + '%"></span></span>' +
+          '<span class="val">' + count + '</span>' +
+        '</div>'
+      )).join('');
+    }
+
+    function renderPageviewsChart() {
+      // Placeholder shape only. GA4 wire-up populates in future.
+      const labels = daysAgoLabels(30);
+      const blog = labels.map((_, i) => 20 + Math.round(Math.sin(i / 4) * 6 + Math.random() * 10 + i * 0.3));
+      const parts = labels.map((_, i) => 10 + Math.round(Math.cos(i / 5) * 4 + Math.random() * 6 + i * 0.5));
+      if (charts.pageviews) charts.pageviews.destroy();
+      charts.pageviews = new Chart(document.getElementById('chart-pageviews'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Blog views', data: blog, borderColor: COLORS.purple, backgroundColor: COLORS.purple + '22', tension: 0.35, fill: true, borderWidth: 2.4, pointRadius: 0 },
+            { label: '/parts/ views', data: parts, borderColor: COLORS.amber, backgroundColor: COLORS.amber + '22', tension: 0.35, fill: true, borderWidth: 2.4, pointRadius: 0 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'bottom', labels: { usePointStyle:true } } },
+          scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 10 } }, y: { grid: { color: COLORS.grid } } },
+        },
+      });
+    }
+
+    function renderAll() {
+      renderKpiTiles();
+      renderRevenueChart();
+      renderCategoryChart();
+      renderInventoryTable();
+      renderMixChart();
+      renderFeedback();
+      renderStatesBars();
+      renderPageviewsChart();
+    }
+
+    // Period pill wiring
+    document.querySelectorAll('#period-pills button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#period-pills button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.period = parseInt(btn.dataset.period, 10);
+        renderKpiTiles();
+        renderRevenueChart();
+        document.querySelector('#rev-meta').closest('.card-head').querySelector('.pill').textContent = state.period + 'd';
+      });
+    });
+
+    // ====================================================================
+    // DRILL-DOWN DRAWER
+    // ====================================================================
+    const drawerMask = document.getElementById('drawer-mask');
+    const drawer = document.getElementById('drawer');
+    const drawerTitle = document.getElementById('drawer-title');
+    const drawerBody = document.getElementById('drawer-body');
+    function openDrawer(title, html) {
+      drawerTitle.textContent = title;
+      drawerBody.innerHTML = html;
+      drawerMask.classList.add('open');
+      drawer.classList.add('open');
+    }
+    function closeDrawer() {
+      drawerMask.classList.remove('open');
+      drawer.classList.remove('open');
+      ['drillOrders','drillRevenue','drillAov','drillStock'].forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
+    }
+    document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+    drawerMask.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+    document.querySelectorAll('.kpi').forEach(tile => {
+      tile.addEventListener('click', () => {
+        const kpi = tile.dataset.kpi;
+        if (kpi === 'orders')  drillOrders();
+        if (kpi === 'revenue') drillRevenue();
+        if (kpi === 'aov')     drillAov();
+        if (kpi === 'stock')   drillStock();
+      });
+    });
+
+    function drillOrders() {
+      const { dO } = sliceDaily(state.period);
+      // Group by weekday
+      const byDow = [0,0,0,0,0,0,0];
+      dO.forEach(x => { const d = new Date(x.date); byDow[d.getDay()] += x.orders; });
+      const html = `
+        <h4>Daily orders (last ${state.period} days)</h4>
+        <div class="chart-wrap"><canvas id="drillOrders"></canvas></div>
+        <h4>Orders by day of week</h4>
+        <div class="chart-wrap" style="height:220px;"><canvas id="drillOrdersDow"></canvas></div>
+      `;
+      openDrawer('Orders — Drill-down', html);
+      charts.drillOrders = new Chart(document.getElementById('drillOrders'), {
+        type: 'bar',
+        data: { labels: dO.map(x => x.date.slice(5)), datasets: [{ data: dO.map(x => x.orders), backgroundColor: COLORS.red, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid } } } },
+      });
+      charts.drillOrdersDow = new Chart(document.getElementById('drillOrdersDow'), {
+        type: 'bar',
+        data: { labels: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], datasets: [{ data: byDow, backgroundColor: COLORS.blue, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid } } } },
+      });
+    }
+
+    function drillRevenue() {
+      const { dR } = sliceDaily(state.period);
+      // Weekly rollup
+      const weeks = {};
+      dR.forEach(x => { const d = new Date(x.date); const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+        const k = monday.toISOString().slice(0,10); weeks[k] = (weeks[k] || 0) + x.revenue; });
+      const html = `
+        <h4>Daily revenue (last ${state.period} days)</h4>
+        <div class="chart-wrap"><canvas id="drillRevenue"></canvas></div>
+        <h4>Weekly rollup</h4>
+        <div class="chart-wrap" style="height:220px;"><canvas id="drillRevenueWk"></canvas></div>
+      `;
+      openDrawer('Revenue — Drill-down', html);
+      charts.drillRevenue = new Chart(document.getElementById('drillRevenue'), {
+        type: 'bar',
+        data: { labels: dR.map(x => x.date.slice(5)), datasets: [{ data: dR.map(x => x.revenue), backgroundColor: COLORS.red, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
+      });
+      charts.drillRevenueWk = new Chart(document.getElementById('drillRevenueWk'), {
+        type: 'bar',
+        data: { labels: Object.keys(weeks), datasets: [{ data: Object.values(weeks), backgroundColor: COLORS.amber, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
+      });
+    }
+
+    function drillAov() {
+      const { dO, dR } = sliceDaily(state.period);
+      const data = dO.map((x, i) => (x.orders ? (dR[i].revenue / x.orders) : 0));
+      const html = `
+        <h4>Avg Order Value trend (last ${state.period} days)</h4>
+        <div class="chart-wrap"><canvas id="drillAov"></canvas></div>
+      `;
+      openDrawer('Avg Order Value — Drill-down', html);
+      charts.drillAov = new Chart(document.getElementById('drillAov'), {
+        type: 'line',
+        data: { labels: dO.map(x => x.date.slice(5)), datasets: [{ data, borderColor: COLORS.red, backgroundColor: COLORS.red + '22', tension: 0.35, fill: true, borderWidth: 2.4, pointRadius: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
+      });
+    }
+
+    function drillStock() {
+      const items = state.inventory && state.inventory.items ? state.inventory.items : [];
+      // Buckets by price band
+      const buckets = { '< $1': 0, '$1–5': 0, '$5–10': 0, '$10–25': 0, '$25+': 0 };
+      items.forEach(it => {
+        const p = Number(it.price || 0);
+        if (p < 1) buckets['< $1']++;
+        else if (p < 5) buckets['$1–5']++;
+        else if (p < 10) buckets['$5–10']++;
+        else if (p < 25) buckets['$10–25']++;
+        else buckets['$25+']++;
+      });
+      const html = `
+        <h4>Lots by price band</h4>
+        <div class="chart-wrap"><canvas id="drillStock"></canvas></div>
+      `;
+      openDrawer('Inventory — Drill-down', html);
+      charts.drillStock = new Chart(document.getElementById('drillStock'), {
+        type: 'bar',
+        data: { labels: Object.keys(buckets), datasets: [{ data: Object.values(buckets), backgroundColor: COLORS.blue, borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid } } } },
+      });
+    }
+
+    // GO!
+    loadData();
+  </script>
+</body>
+</html>

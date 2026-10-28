@@ -296,6 +296,37 @@ img { display: block; max-width: 100%; }
 
 .header-shop { padding: 10px 22px; font-size: 0.92rem; white-space: nowrap; }
 
+/* Staff access link — subtle but always visible so the team can reach the
+   portal from any page, not just the footer. */
+.nav-staff {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 800;
+  color: var(--mid) !important;
+  border: 1.5px solid var(--line);
+  border-radius: 50px;
+  padding: 5px 12px 5px 10px;
+  font-size: 0.82rem;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.nav-staff::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z'/></svg>") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z'/></svg>") center/contain no-repeat;
+  flex-shrink: 0;
+}
+.nav-staff:hover { border-color: var(--ink); color: var(--ink) !important; background: #f6f7fa; }
+
+.sidebar-staff {
+  color: var(--mid) !important;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
 .header-burger {
   display: none;
   background: none;

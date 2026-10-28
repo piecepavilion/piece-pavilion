@@ -3,147 +3,398 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Piece Pavilion — Employees</title>
+  <title>Staff — Piece Pavilion</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Nunito',system-ui,sans-serif;background:#f7f8fa;color:#14161d;min-height:100vh}
-    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
-    .bar{background:linear-gradient(135deg,#e3000b,#9b0008);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:14px}
-    .bar svg{height:40px;width:auto}
-    .bar img{height:46px;width:auto;display:block;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
-    .bar .t{line-height:1.1}
-    .bar .t .sub{font-size:.8rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.08em}
-    .bar h1{font-size:1.5rem}
-    .bar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.92rem;
-      border:2px solid rgba(255,255,255,.45);border-radius:50px;padding:8px 18px;white-space:nowrap;
-      transition:background .15s,border-color .15s}
-    .bar .back:hover{background:rgba(255,255,255,.14);border-color:#fff}
-    @media(max-width:520px){.bar .back{padding:7px 12px;font-size:.8rem}}
-    .wrap{max-width:1140px;margin:0 auto;padding:30px 24px 60px}
-    .lead{color:#3a4150;margin-bottom:22px;font-size:1.05rem}
-    .dash{background:#fff;border-radius:16px;box-shadow:0 6px 20px rgba(20,22,29,.07);border:1px solid #eef0f3;padding:14px;margin-bottom:26px}
-    .dash-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 8px 12px}
-    .dash-head h2{font-size:1.2rem}
-    .dash-head a{font-size:.82rem;font-weight:800;color:#e3000b;text-decoration:none;white-space:nowrap}
-    .dash-head a:hover{text-decoration:underline}
-    .dash iframe{width:100%;height:760px;border:0;border-radius:10px;display:block;background:#f7f8fa}
-    @media(max-width:700px){.dash iframe{height:620px}}
-    .sub-h{font-family:'Fredoka',sans-serif;font-weight:700;font-size:1.15rem;margin:6px 4px 14px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
-    .tile{background:#fff;border-radius:14px;padding:22px;box-shadow:0 4px 16px rgba(20,22,29,.06);
-      display:flex;flex-direction:column;text-decoration:none;color:inherit;border:1px solid #eef0f3;transition:transform .15s,box-shadow .15s}
-    .tile:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(20,22,29,.12)}
-    .tile .ico{font-size:1.7rem;margin-bottom:10px}
-    .tile h3{font-size:1.1rem;margin-bottom:6px}
-    .tile p{color:#6b7280;font-size:.9rem;flex:1;line-height:1.5}
-    .tile .go{margin-top:12px;font-weight:800;color:#e3000b;font-size:.85rem}
-    .note{margin-top:30px;font-size:.82rem;color:#9ca3af;text-align:center}
+    :root {
+      --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --ink:#15151f;
+      --slate:#3a4150; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
+      --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec;
+      --blue:#2563eb; --green:#16a34a; --amber:#d97706; --purple:#7c3aed;
+      --radius:14px;
+      --shadow-sm: 0 2px 8px rgba(20,22,29,.05);
+      --shadow: 0 6px 18px rgba(20,22,29,.08);
+      --shadow-lg: 0 14px 40px rgba(20,22,29,.14);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Nunito',system-ui,sans-serif;
+      background:var(--bg); color:var(--ink); min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+    }
+    a { color:var(--red); text-decoration:none; }
+    h1,h2,h3 { font-family:'Fredoka','Nunito',sans-serif; font-weight:700; letter-spacing:-.01em; }
+
+    /* ===== TOP BAR ===== */
+    .topbar {
+      background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+      box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55);
+      color:#fff; padding:18px 28px;
+      display:flex; align-items:center; gap:16px;
+    }
+    .topbar img { height:44px; width:auto; border-radius:50%; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+    .topbar .brand-wrap { line-height:1.15; }
+    .topbar .brand-wrap .sub { font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--yellow); margin-bottom:1px; }
+    .topbar h1 { font-size:1.45rem; color:#fff; }
+    .topbar .user { margin-left:auto; display:flex; align-items:center; gap:14px; color:rgba(255,255,255,.78); font-size:.9rem; font-weight:700; }
+    .topbar .user .avatar { background:var(--red); color:#fff; width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; }
+    .topbar .back {
+      color:#fff; text-decoration:none; font-weight:800; font-size:.88rem;
+      border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:8px 16px;
+      transition:background .15s,border-color .15s; white-space:nowrap;
+    }
+    .topbar .back:hover { background:rgba(255,255,255,.14); border-color:#fff; }
+    @media(max-width:620px) {
+      .topbar { padding:14px 16px; gap:10px; }
+      .topbar h1 { font-size:1.15rem; }
+      .topbar .user span { display:none; }
+      .topbar .back { padding:6px 12px; font-size:.78rem; }
+    }
+
+    /* ===== QUICK STATS BAR ===== */
+    .wrap { max-width:1240px; margin:0 auto; padding:30px 24px 60px; }
+    .lead { color:var(--slate); margin-bottom:22px; font-size:1.05rem; }
+    .lead strong { color:var(--ink); }
+
+    .stats-row {
+      display:grid; grid-template-columns:repeat(4, 1fr);
+      gap:16px; margin:0 0 32px;
+    }
+    .stat-tile {
+      background:var(--surface); border:1px solid var(--line);
+      border-radius:var(--radius); padding:18px 20px;
+      box-shadow:var(--shadow-sm);
+      position:relative; overflow:hidden;
+      transition:transform .15s, box-shadow .15s;
+      text-decoration:none; color:inherit;
+      display:block;
+    }
+    .stat-tile:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+    .stat-tile::before {
+      content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+      background:var(--red);
+    }
+    .stat-tile.sales::before    { background:var(--red); }
+    .stat-tile.inventory::before { background:var(--blue); }
+    .stat-tile.customer::before { background:var(--green); }
+    .stat-tile.content::before  { background:var(--amber); }
+
+    .stat-tile .label {
+      font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--muted); margin-bottom:4px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .stat-tile .value {
+      font-family:'Fredoka',sans-serif; font-weight:700;
+      font-size:1.9rem; color:var(--ink); line-height:1.1;
+    }
+    .stat-tile .change { font-size:.78rem; font-weight:800; margin-top:2px; }
+    .stat-tile .change.up   { color:var(--green); }
+    .stat-tile .change.down { color:var(--red); }
+    .stat-tile .change.flat { color:var(--muted); }
+    @media(max-width:900px) { .stats-row { grid-template-columns:repeat(2, 1fr); } }
+    @media(max-width:460px) { .stats-row { grid-template-columns:1fr; } }
+
+    /* ===== SECTIONS ===== */
+    .section { margin-bottom:36px; }
+    .section-head {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin:0 4px 16px;
+    }
+    .section-head h2 { font-size:1.3rem; display:flex; align-items:center; gap:10px; }
+    .section-head h2 .dot {
+      display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--red);
+    }
+    .section.content   .section-head h2 .dot { background:var(--amber); }
+    .section.inventory .section-head h2 .dot { background:var(--blue); }
+    .section.business  .section-head h2 .dot { background:var(--green); }
+    .section-head .section-sub { color:var(--muted); font-size:.88rem; }
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+      gap:16px;
+    }
+    .tile {
+      background:var(--surface); border:1px solid var(--line);
+      border-radius:var(--radius); padding:20px 22px;
+      box-shadow:var(--shadow-sm);
+      display:flex; flex-direction:column;
+      text-decoration:none; color:inherit;
+      transition:transform .15s, box-shadow .15s, border-color .15s;
+      position:relative;
+    }
+    .tile:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); border-color:#d7dbe3; }
+    .tile .ico {
+      width:40px; height:40px; border-radius:10px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.3rem; margin-bottom:12px;
+      background:rgba(227,0,11,.08); color:var(--red);
+    }
+    .section.content   .tile .ico { background:rgba(217,119,6,.1);  color:var(--amber); }
+    .section.inventory .tile .ico { background:rgba(37,99,235,.1);  color:var(--blue); }
+    .section.business  .tile .ico { background:rgba(22,163,74,.1);  color:var(--green); }
+    .tile h3 { font-size:1.05rem; margin-bottom:6px; }
+    .tile p { color:var(--mid); font-size:.88rem; flex:1; line-height:1.5; margin:0; }
+    .tile .go { margin-top:14px; font-weight:800; color:var(--red); font-size:.84rem; }
+    .section.content   .tile .go { color:var(--amber); }
+    .section.inventory .tile .go { color:var(--blue); }
+    .section.business  .tile .go { color:var(--green); }
+
+    .tile.featured { border:2px solid var(--yellow); background:linear-gradient(180deg,var(--cream) 0%,#fff 100%); }
+    .tile.featured::after {
+      content:"New"; position:absolute; top:-10px; right:14px;
+      background:var(--yellow); color:var(--ink);
+      font-size:.68rem; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
+      padding:3px 10px; border-radius:50px;
+    }
+
+    .search-row {
+      margin:0 0 24px;
+      display:flex; gap:10px; align-items:center;
+    }
+    .search-row input {
+      flex:1; font:inherit; font-size:1rem; padding:12px 16px;
+      border:1px solid var(--line); border-radius:12px; background:var(--surface);
+    }
+    .search-row input:focus { outline:none; border-color:var(--red); }
+    .search-row .count {
+      font-size:.82rem; color:var(--muted); font-weight:700;
+    }
+    .tile.hidden { display:none; }
+
+    .note { margin-top:36px; font-size:.82rem; color:var(--muted); text-align:center; }
+    .note svg { vertical-align:-3px; }
   </style>
 </head>
 <body>
-  <div class="bar">
+
+  <div class="topbar">
     <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
-    <div class="t"><div class="sub">Employees</div><h1>Piece Pavilion</h1></div>
+    <div class="brand-wrap">
+      <div class="sub">Staff Portal</div>
+      <h1>Piece Pavilion</h1>
+    </div>
+    <div class="user">
+      <span id="greeting">Welcome back</span>
+      <div class="avatar" id="avatar">PP</div>
+    </div>
     <a class="back" href="/">&larr; Back to site</a>
   </div>
 
   <div class="wrap">
-    <p class="lead">Welcome, team. Live sales, inventory, and shipping — updated automatically every morning.</p>
-    <!-- QUICK LINKS -->
-    <h2 class="sub-h">Quick links</h2>
-    <div class="grid">
-      <a class="tile" href="https://docs.google.com/spreadsheets/d/1YvWzKs_lGC539pMlYhausqp52O2VNmMgKPWOTaju8fU/edit" target="_blank" rel="noopener">
-        <div class="ico">📦</div>
-        <h3>Inventory</h3>
-        <p>Full live inventory — search, sort, restock and aging lists.</p>
-        <span class="go">Open sheet &rarr;</span>
+
+    <!-- ===== QUICK STATS ===== -->
+    <div class="stats-row" id="stats-row">
+      <a class="stat-tile sales" href="/employees/kpis/#sales">
+        <div class="label">&#128188; Orders / 7d</div>
+        <div class="value" id="st-orders">—</div>
+        <div class="change flat" id="st-orders-ch">loading…</div>
       </a>
-      <a class="tile" href="https://docs.google.com/spreadsheets/d/1rMNHgywvTNQv9ivBVinMy9nPZIjeCFadOjdx9Lw77f4/edit" target="_blank" rel="noopener">
-        <div class="ico">🚚</div>
-        <h3>Shipment Tracking</h3>
-        <p>Order scan status — in transit, delivered, needs attention.</p>
-        <span class="go">Open tracker &rarr;</span>
+      <a class="stat-tile sales" href="/employees/kpis/#sales">
+        <div class="label">&#128181; Revenue / 7d</div>
+        <div class="value" id="st-revenue">—</div>
+        <div class="change flat" id="st-revenue-ch">loading…</div>
       </a>
-      <a class="tile" href="https://www.bricklink.com/v2/mystore/inventory.page" target="_blank" rel="noopener">
-        <div class="ico">🛒</div>
-        <h3>BrickLink Store</h3>
-        <p>Manage listings, orders, and inventory on BrickLink.</p>
-        <span class="go">Open BrickLink &rarr;</span>
+      <a class="stat-tile inventory" href="/employees/kpis/#inventory">
+        <div class="label">&#128230; Lots in stock</div>
+        <div class="value" id="st-stock">—</div>
+        <div class="change flat" id="st-stock-ch">loading…</div>
       </a>
-      <a class="tile" href="https://docs.google.com/spreadsheets/d/1YvWzKs_lGC539pMlYhausqp52O2VNmMgKPWOTaju8fU/edit#gid=1260502769" target="_blank" rel="noopener">
-        <div class="ico">🔖</div>
-        <h3>Reserved Items</h3>
-        <p>Every lot currently on hold for a customer — who it's for, price, and location. Updates from BrickLink every morning.</p>
-        <span class="go">View reservations &rarr;</span>
-      </a>
-      <a class="tile" href="https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/edit" target="_blank" rel="noopener">
-        <div class="ico">📢</div>
-        <h3>Site Ticker</h3>
-        <p>Control the scrolling ticker below the top menu — write up to 3 custom announcements, toggle the latest blog post, toggle the "Just Added" product row, or hide the whole thing. It's a Google Sheet, you're already signed in. Changes go live in about a minute. (Field list is on the first sheet row.)</p>
-        <span class="go">Edit ticker &rarr;</span>
-      </a>
-      <a class="tile" href="https://docs.google.com/spreadsheets/d/1PKc6WzElm8DSQ7lQlNgKpPjcaX6JkGL8EOzpQr1sNtU/edit" target="_blank" rel="noopener">
-        <div class="ico">📒</div>
-        <h3>Purchases</h3>
-        <p>Log every lot, set, and collection we buy to resell — source, cost, shipping, status, and estimated resale value. Put the bins a bulk buy filled in <em>Bulk Bins</em> and the Bulk Tracker reports its profit.</p>
-        <span class="go">Open log &rarr;</span>
-      </a>
-      <a class="tile" href="/employees/bulk/">
-        <div class="ico">🧱</div>
-        <h3>Bulk Tracker</h3>
-        <p>Every sale traced back to the bulk buy it came from, by the B- location tag in each lot's remarks — % sold, revenue, and profit per purchase. Enter cost on the Purchases sheet.</p>
-        <span class="go">Open tracker &rarr;</span>
-      </a>
-      <a class="tile" href="/employees/inventory/">
-        <div class="ico">🔎</div>
-        <h3>Inventory Lookup</h3>
-        <p>Search live store inventory by colour, size, shape, bin or age — including the one-tap list of every lot with no location assigned. Export any view to CSV.</p>
-        <span class="go">Open lookup &rarr;</span>
-      </a>
-      <a class="tile" href="/employees/pick/">
-        <div class="ico">📋</div>
-        <h3>Pick Sheet</h3>
-        <p>Turn a BrickLink order into a bin-ordered pick sheet with pictures — one bin per screen, tap to mark picked or can't-find, and a not-found list ready to send. Works on a phone in the aisle.</p>
-        <span class="go">Open pick sheet &rarr;</span>
-      </a>
-      <a class="tile" href="/employees/partout/">
-        <div class="ico">🧩</div>
-        <h3>Part-Out Tracker</h3>
-        <p>Type a set number to see its 6-month part-out value, how much we've sold through, and live profit as each set clears — with a % sold bar per set.</p>
-        <span class="go">Open tracker &rarr;</span>
-      </a>
-      <a class="tile" href="/employees/spotlight/">
-        <div class="ico">🌟</div>
-        <h3>Spotlight Editor</h3>
-        <p>Upload and arrange the images shown on our BrickLink store splash. Add captions and links, reorder, show/hide — changes go live in about a minute.</p>
-        <span class="go">Edit spotlight &rarr;</span>
+      <a class="stat-tile customer" href="/employees/kpis/#customer">
+        <div class="label">&#11088; Feedback</div>
+        <div class="value" id="st-feedback">100%</div>
+        <div class="change flat" id="st-feedback-ch">positive</div>
       </a>
     </div>
 
+    <p class="lead">Everything the team needs in one place — <strong>edit the site</strong>, <strong>track sales</strong>, <strong>manage inventory</strong>, and <strong>run operations</strong> without digging through sheets.</p>
 
-    <!-- ORDER KPIs (embedded Looker report) -->
-    <div class="dash">
-      <div class="dash-head">
-        <h2>📈 Order KPIs</h2>
-        <a href="https://lookerstudio.google.com/reporting/afbe5220-2877-41be-999f-5b11e1059555" target="_blank" rel="noopener">Open full report ↗</a>
+    <!-- Search / filter -->
+    <div class="search-row">
+      <input type="search" id="tile-search" placeholder="&#128269; Jump to a tool (ticker, pick, kpi, bulk…)" aria-label="Search tiles">
+      <span class="count" id="tile-count"></span>
+    </div>
+
+    <!-- ===== CONTENT & SITE EDITING ===== -->
+    <section class="section content">
+      <div class="section-head">
+        <h2><span class="dot"></span> Content &amp; Site Editing</h2>
+        <span class="section-sub">What customers see on piecepavilion.com</span>
       </div>
-      <iframe src="https://datastudio.google.com/embed/reporting/afbe5220-2877-41be-999f-5b11e1059555/page/GQJ0F" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Order KPIs"></iframe>
-    </div>
-
-    <!-- INVENTORY KPIs (embedded Looker report) -->
-    <div class="dash">
-      <div class="dash-head">
-        <h2>📊 Inventory KPIs</h2>
-        <a href="https://lookerstudio.google.com/reporting/a5ce8b82-2836-4fcb-bfd4-1239859e2e24" target="_blank" rel="noopener">Open full report ↗</a>
+      <div class="grid">
+        <a class="tile featured" href="/employees/site-editor/" data-tile="site editor hero image text homepage">
+          <div class="ico">&#128396;</div>
+          <h3>Site Editor</h3>
+          <p>Change the homepage without touching code: hero headline, sub-headline, hero image, section visibility, button labels. Saves to the live site in about a minute.</p>
+          <span class="go">Open editor &rarr;</span>
+        </a>
+        <a class="tile" href="https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/edit" target="_blank" rel="noopener" data-tile="ticker banner announcement blog">
+          <div class="ico">&#128226;</div>
+          <h3>Site Ticker</h3>
+          <p>Control the yellow ticker below the top menu — write up to 3 custom announcements, toggle the latest blog post, toggle "Just Added" products, or hide it all. Field list is on the first sheet row.</p>
+          <span class="go">Edit ticker &rarr;</span>
+        </a>
+        <a class="tile" href="/employees/spotlight/" data-tile="spotlight bricklink splash images">
+          <div class="ico">&#127775;</div>
+          <h3>Spotlight Editor</h3>
+          <p>Arrange the images shown on our BrickLink store splash. Add captions and links, reorder, show/hide — changes go live in about a minute.</p>
+          <span class="go">Edit spotlight &rarr;</span>
+        </a>
       </div>
-      <iframe src="https://datastudio.google.com/embed/reporting/a5ce8b82-2836-4fcb-bfd4-1239859e2e24/page/4jC0F" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" title="Inventory KPIs"></iframe>
-    </div>
-    <p class="note">🔒 Piece Pavilion internal — staff only. Charts load for signed-in team members.</p>
+    </section>
+
+    <!-- ===== INVENTORY & FULFILLMENT ===== -->
+    <section class="section inventory">
+      <div class="section-head">
+        <h2><span class="dot"></span> Inventory &amp; Fulfillment</h2>
+        <span class="section-sub">Day-to-day operations on the floor</span>
+      </div>
+      <div class="grid">
+        <a class="tile" href="/employees/pick/" data-tile="pick sheet order bin picking">
+          <div class="ico">&#128203;</div>
+          <h3>Pick Sheet</h3>
+          <p>Turn a BrickLink order into a bin-ordered pick sheet with pictures — one bin per screen, tap to mark picked or can't-find, and a not-found list ready to send. Works on a phone in the aisle.</p>
+          <span class="go">Open pick sheet &rarr;</span>
+        </a>
+        <a class="tile" href="/employees/inventory/" data-tile="inventory lookup search bins">
+          <div class="ico">&#128269;</div>
+          <h3>Inventory Lookup</h3>
+          <p>Search live store inventory by color, size, shape, bin or age — including the one-tap list of every lot with no location assigned. Export any view to CSV.</p>
+          <span class="go">Open lookup &rarr;</span>
+        </a>
+        <a class="tile" href="https://docs.google.com/spreadsheets/d/1rMNHgywvTNQv9ivBVinMy9nPZIjeCFadOjdx9Lw77f4/edit" target="_blank" rel="noopener" data-tile="shipping shipment tracking delivery">
+          <div class="ico">&#128666;</div>
+          <h3>Shipment Tracking</h3>
+          <p>Order scan status — in transit, delivered, needs attention. Updates from the carrier automatically.</p>
+          <span class="go">Open tracker &rarr;</span>
+        </a>
+        <a class="tile" href="https://docs.google.com/spreadsheets/d/1YvWzKs_lGC539pMlYhausqp52O2VNmMgKPWOTaju8fU/edit#gid=1260502769" target="_blank" rel="noopener" data-tile="reserved reservations hold">
+          <div class="ico">&#128278;</div>
+          <h3>Reserved Items</h3>
+          <p>Every lot currently on hold for a customer — who it's for, price, and location. Updates from BrickLink every morning.</p>
+          <span class="go">View reservations &rarr;</span>
+        </a>
+        <a class="tile" href="https://docs.google.com/spreadsheets/d/1YvWzKs_lGC539pMlYhausqp52O2VNmMgKPWOTaju8fU/edit" target="_blank" rel="noopener" data-tile="inventory full sheet raw">
+          <div class="ico">&#128230;</div>
+          <h3>Full Inventory Sheet</h3>
+          <p>Raw live inventory data — search, sort, restock lists and aging. Opens in Google Sheets.</p>
+          <span class="go">Open sheet &rarr;</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ===== BUSINESS & ANALYTICS ===== -->
+    <section class="section business">
+      <div class="section-head">
+        <h2><span class="dot"></span> Business &amp; Analytics</h2>
+        <span class="section-sub">Numbers behind the store</span>
+      </div>
+      <div class="grid">
+        <a class="tile featured" href="/employees/kpis/" data-tile="kpi dashboard analytics orders revenue drill-down charts">
+          <div class="ico">&#128202;</div>
+          <h3>KPI Dashboard</h3>
+          <p>Live sales, inventory, customer and traffic KPIs with click-to-drill-down charts. Replaces the old embedded Looker reports.</p>
+          <span class="go">Open dashboard &rarr;</span>
+        </a>
+        <a class="tile" href="/employees/partout/" data-tile="partout part-out set profit tracking">
+          <div class="ico">&#129513;</div>
+          <h3>Part-Out Tracker</h3>
+          <p>Type a set number to see its 6-month part-out value, how much we've sold through, and live profit as each set clears — with a % sold bar per set.</p>
+          <span class="go">Open tracker &rarr;</span>
+        </a>
+        <a class="tile" href="/employees/bulk/" data-tile="bulk tracker profit sale">
+          <div class="ico">&#129521;</div>
+          <h3>Bulk Tracker</h3>
+          <p>Every sale traced back to the bulk buy it came from, by the B- location tag — % sold, revenue, and profit per purchase.</p>
+          <span class="go">Open tracker &rarr;</span>
+        </a>
+        <a class="tile" href="https://docs.google.com/spreadsheets/d/1PKc6WzElm8DSQ7lQlNgKpPjcaX6JkGL8EOzpQr1sNtU/edit" target="_blank" rel="noopener" data-tile="purchases cost acquisition">
+          <div class="ico">&#128210;</div>
+          <h3>Purchases Log</h3>
+          <p>Log every lot, set, or collection we buy to resell — source, cost, shipping, status, and estimated resale value.</p>
+          <span class="go">Open log &rarr;</span>
+        </a>
+        <a class="tile" href="https://www.bricklink.com/v2/mystore/inventory.page" target="_blank" rel="noopener" data-tile="bricklink store orders">
+          <div class="ico">&#128722;</div>
+          <h3>BrickLink Store</h3>
+          <p>Manage listings, orders, and inventory on BrickLink.</p>
+          <span class="go">Open BrickLink &rarr;</span>
+        </a>
+      </div>
+    </section>
+
+    <p class="note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Piece Pavilion internal — staff only. Access gated by Google sign-in. Live data updates every ~1 min.
+    </p>
   </div>
+
+  <script>
+    // Welcome message with time-of-day
+    (function greet() {
+      const el = document.getElementById('greeting');
+      if (!el) return;
+      const h = new Date().getHours();
+      const g = h < 5 ? 'Up early' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      el.textContent = g;
+    })();
+
+    // Live stats bar — reads /employees/kpis-data.json (new, pp-ops writes it)
+    // or falls back to /finder-data.json for inventory count. Graceful if missing.
+    (async function liveStats() {
+      try {
+        const inv = await fetch('/finder-data.json?t=' + Date.now()).then(r => r.json());
+        const count = inv.count || (inv.items ? inv.items.length : 0);
+        if (count) document.getElementById('st-stock').textContent = count.toLocaleString();
+        const ch = document.getElementById('st-stock-ch');
+        if (ch) { ch.textContent = 'lots live'; ch.className = 'change flat'; }
+      } catch (e) {}
+
+      try {
+        const k = await fetch('/employees/kpis-data.json?t=' + Date.now()).then(r => {
+          if (!r.ok) throw new Error('no kpis-data');
+          return r.json();
+        });
+        if (k.orders7d != null)  document.getElementById('st-orders').textContent  = k.orders7d.toLocaleString();
+        if (k.revenue7d != null) document.getElementById('st-revenue').textContent = '$' + Number(k.revenue7d).toLocaleString(undefined, {minimumFractionDigits: 0});
+        if (k.feedback != null)  document.getElementById('st-feedback').textContent = k.feedback + '%';
+        const dir = (v) => v == null ? 'flat' : v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+        const sign = (v) => (v > 0 ? '+' : '') + v + '%';
+        if (k.orders7dChange  != null) { const el = document.getElementById('st-orders-ch');  el.className = 'change ' + dir(k.orders7dChange);  el.textContent = sign(k.orders7dChange) + ' vs prev 7d'; }
+        if (k.revenue7dChange != null) { const el = document.getElementById('st-revenue-ch'); el.className = 'change ' + dir(k.revenue7dChange); el.textContent = sign(k.revenue7dChange) + ' vs prev 7d'; }
+      } catch (e) {
+        // kpis-data.json isn't published yet — leave placeholders.
+        ['st-orders', 'st-revenue'].forEach(id => {
+          const v = document.getElementById(id);
+          if (v && v.textContent === '—') v.textContent = '—';
+          const ch = document.getElementById(id + '-ch');
+          if (ch) { ch.textContent = 'coming soon'; ch.className = 'change flat'; }
+        });
+      }
+    })();
+
+    // Tile search / filter
+    (function tileSearch() {
+      const input = document.getElementById('tile-search');
+      const count = document.getElementById('tile-count');
+      const tiles = Array.from(document.querySelectorAll('.tile'));
+      input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        let shown = 0;
+        tiles.forEach(t => {
+          const hay = (t.dataset.tile || '') + ' ' + t.textContent.toLowerCase();
+          const match = !q || hay.includes(q);
+          t.classList.toggle('hidden', !match);
+          if (match) shown++;
+        });
+        count.textContent = q ? shown + ' of ' + tiles.length + ' tools' : '';
+      });
+    })();
+  </script>
 </body>
 </html>
