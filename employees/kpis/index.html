@@ -334,6 +334,22 @@
           <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#2563eb"></span>Last 6 hours</div><div class="win-users" id="w6h-users">—</div><div class="win-sub" id="w6h-sub">visitors</div><ul class="win-pages" id="w6h-pages"></ul></div>
         </div>
       </div>
+      <div class="card" style="grid-column:1 / -1;">
+        <div class="card-head">
+          <h3>Daily visitors — by week</h3>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="week-nav" id="week-prev" aria-label="Previous week">&larr;</button>
+            <span class="meta" id="week-range" style="min-width:170px;text-align:center;">—</span>
+            <button class="week-nav" id="week-next" aria-label="Next week">&rarr;</button>
+          </div>
+        </div>
+        <div class="week-grid" id="week-grid"></div>
+        <div class="week-footer">
+          <span id="week-total">—</span>
+          <span class="week-vs" id="week-vs"></span>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-head"><h3>Where traffic comes from</h3><span class="meta">Last 6 hours</span></div>
         <table class="data-table" id="ga-sources"><thead>
@@ -361,6 +377,35 @@
       .live-win .win-empty { color:var(--muted); font-size:.82rem; font-style:italic; }
       @keyframes livePulse { 0%,100% { opacity:1; } 50% { opacity:.35; } }
       @media (max-width:900px) { .live-windows { grid-template-columns:1fr; } }
+
+      /* Daily-visitors week grid */
+      .week-grid { display:grid; grid-template-columns:repeat(7, 1fr); gap:10px; margin-top:4px; }
+      .day-tile { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 10px 10px; text-align:center; position:relative; transition:transform .12s, box-shadow .12s; }
+      .day-tile .d-label { font-size:.68rem; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+      .day-tile .d-date  { font-size:.72rem; font-weight:800; color:var(--mid); margin-bottom:6px; }
+      .day-tile .d-count { font-family:'Fredoka','Nunito',sans-serif; font-weight:700; font-size:1.75rem; color:var(--ink); line-height:1; }
+      .day-tile .d-views { font-size:.68rem; font-weight:800; color:var(--muted); margin-top:4px; }
+      .day-tile .d-bar   { position:absolute; left:10px; right:10px; bottom:4px; height:3px; border-radius:999px; background:var(--line); overflow:hidden; }
+      .day-tile .d-bar-fill { height:100%; background:var(--red); border-radius:999px; transition:width .3s; }
+      .day-tile.today { border-color:var(--red); box-shadow:0 2px 10px rgba(227,0,11,.14); }
+      .day-tile.today .d-label { color:var(--red); }
+      .day-tile.future { opacity:.35; }
+      .day-tile.future .d-count { color:var(--muted); }
+      .week-nav { background:transparent; border:1.5px solid var(--line); border-radius:999px; width:36px; height:36px; font-size:1rem; font-weight:800; color:var(--ink); cursor:pointer; transition:background .12s,border-color .12s; }
+      .week-nav:hover:not(:disabled) { background:#f3f4f6; border-color:var(--ink); }
+      .week-nav:disabled { opacity:.35; cursor:not-allowed; }
+      .week-footer { display:flex; justify-content:space-between; align-items:baseline; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); }
+      .week-footer #week-total { font-family:'Fredoka','Nunito',sans-serif; font-size:1.1rem; font-weight:700; color:var(--ink); }
+      .week-vs { font-size:.82rem; font-weight:800; }
+      .week-vs.up   { color:var(--green); }
+      .week-vs.down { color:var(--red); }
+      .week-vs.flat { color:var(--mid); }
+      @media (max-width:720px) {
+        .week-grid { gap:6px; }
+        .day-tile { padding:10px 6px 8px; }
+        .day-tile .d-count { font-size:1.3rem; }
+        .day-tile .d-views { display:none; }
+      }
     </style>
 
   </div>
@@ -1004,6 +1049,11 @@
       fill('w1h', g.windows ? g.windows['1h']  : null);
       fill('w6h', g.windows ? g.windows['6h']  : null);
 
+      // Daily visitors by week
+      weekState.daily = g.daily || [];
+      weekState.offset = 0;
+      renderWeek();
+
       // Sources table (6h)
       const w6 = g.windows ? g.windows['6h'] : null;
       const srcs = (w6 && w6.topSources) || [];
@@ -1031,6 +1081,104 @@
       return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
         ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
     }
+
+    // ---- weekly navigator: shows one Sun–Sat week at a time, lets staff
+    //      scroll back through previous weeks (up to the start of the daily feed).
+    const weekState = { offset: 0, daily: [] };
+
+    function renderWeek() {
+      const daily = weekState.daily || [];
+      if (!daily.length) {
+        document.getElementById('week-grid').innerHTML =
+          '<div style="grid-column:1 / -1;padding:28px;text-align:center;color:var(--muted);font-weight:700;">No daily data yet.</div>';
+        return;
+      }
+      // Current week starts on Sunday — standard US retail convention.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dow = today.getDay(); // 0 Sun .. 6 Sat
+      const thisSunday = new Date(today);
+      thisSunday.setDate(today.getDate() - dow);
+      const weekStart = new Date(thisSunday);
+      weekStart.setDate(thisSunday.getDate() + weekState.offset * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      const byDate = {};
+      daily.forEach(d => { byDate[d.date] = d; });
+
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const tiles = [];
+      let total = 0, totalViews = 0, maxUsers = 0;
+      const todayIso = today.toISOString().slice(0, 10);
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        const iso = d.toISOString().slice(0, 10);
+        const row = byDate[iso] || { users: 0, views: 0 };
+        total += row.users;
+        totalViews += row.views;
+        if (row.users > maxUsers) maxUsers = row.users;
+        tiles.push({ iso, dow: i, name: dayNames[i],
+                     date: (d.getMonth() + 1) + '/' + d.getDate(),
+                     users: row.users, views: row.views,
+                     isToday: iso === todayIso, isFuture: d > today });
+      }
+
+      document.getElementById('week-grid').innerHTML = tiles.map(t => {
+        const pct = maxUsers ? Math.max(5, Math.round(t.users / maxUsers * 100)) : 0;
+        const cls = 'day-tile' + (t.isToday ? ' today' : '') + (t.isFuture ? ' future' : '');
+        return '<div class="' + cls + '">' +
+          '<div class="d-label">' + t.name + '</div>' +
+          '<div class="d-date">' + t.date + '</div>' +
+          '<div class="d-count">' + t.users.toLocaleString() + '</div>' +
+          '<div class="d-views">' + t.views + ' view' + (t.views === 1 ? '' : 's') + '</div>' +
+          '<div class="d-bar"><div class="d-bar-fill" style="width:' + pct + '%"></div></div>' +
+          '</div>';
+      }).join('');
+
+      // Range label
+      const fmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const sameYear = weekStart.getFullYear() === weekEnd.getFullYear();
+      const yr = sameYear ? '' : ', ' + weekStart.getFullYear();
+      const label = weekState.offset === 0  ? 'This week ·  ' + fmt(weekStart) + ' – ' + fmt(weekEnd)
+                  : weekState.offset === -1 ? 'Last week ·  ' + fmt(weekStart) + ' – ' + fmt(weekEnd)
+                  : fmt(weekStart) + ' – ' + fmt(weekEnd) + yr;
+      document.getElementById('week-range').textContent = label;
+
+      // Totals + vs previous week
+      let prevTotal = 0;
+      const prevStart = new Date(weekStart); prevStart.setDate(weekStart.getDate() - 7);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(prevStart); d.setDate(prevStart.getDate() + i);
+        const iso = d.toISOString().slice(0, 10);
+        if (byDate[iso]) prevTotal += byDate[iso].users;
+      }
+      const totalEl = document.getElementById('week-total');
+      totalEl.textContent = total.toLocaleString() + ' visitors · ' + totalViews.toLocaleString() + ' views';
+      const vsEl = document.getElementById('week-vs');
+      if (prevTotal > 0) {
+        const ch = Math.round((total - prevTotal) / prevTotal * 100);
+        vsEl.className = 'week-vs ' + (ch > 0 ? 'up' : ch < 0 ? 'down' : 'flat');
+        vsEl.textContent = (ch > 0 ? '+' : '') + ch + '% vs prev week';
+      } else {
+        vsEl.className = 'week-vs flat';
+        vsEl.textContent = '';
+      }
+
+      // Nav button enable/disable
+      const firstDate = daily[0] ? new Date(daily[0].date) : weekStart;
+      document.getElementById('week-prev').disabled = weekStart <= firstDate;
+      document.getElementById('week-next').disabled = weekState.offset >= 0;
+    }
+
+    document.getElementById('week-prev').addEventListener('click', () => {
+      weekState.offset -= 1; renderWeek();
+    });
+    document.getElementById('week-next').addEventListener('click', () => {
+      if (weekState.offset < 0) { weekState.offset += 1; renderWeek(); }
+    });
 
     // Period pill wiring
     document.querySelectorAll('#period-pills button').forEach(btn => {
