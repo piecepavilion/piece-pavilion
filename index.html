@@ -56,7 +56,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20261029a" />
+  <link rel="stylesheet" href="style.css?v=20261029b" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -84,7 +84,6 @@
       <li><a href="/parts/">Parts Database</a></li>
       <li><a href="#about">About Us</a></li>
       <li><a href="/blog/">Blog</a></li>
-      <li><a href="#instagram">Name This Quote</a></li>
       <li><a href="#sell">Sell or Consign</a></li>
       <li><a href="/spotlight/">Spotlight</a></li>
       <li><a href="#contact">Get in Touch</a></li>
@@ -983,60 +982,6 @@
     </div>
   </section>
 
-  <!-- ===== NAME THIS QUOTE =====
-       To change the quote: swap the three data attributes on #quote-card
-         data-quote    the quote itself
-         data-speaker  who said it
-         data-source   where it is from (movie / book / show / year)
-       and nothing else. The reveal button flips the card to show the answer. -->
-  <section class="quote-section section" id="instagram">
-    <div class="container">
-      <div class="section-header">
-        <h2>Name This Famous Quote! &#129521;</h2>
-        <p>We pick a famous line and you guess who said it &mdash; try before you reveal.</p>
-      </div>
-
-      <div class="quote-card" id="quote-card"
-           data-quote="With great power comes great responsibility."
-           data-speaker="Uncle Ben"
-           data-source="Spider-Man">
-        <div class="quote-face quote-front">
-          <div class="quote-marks">&ldquo;</div>
-          <blockquote class="quote-text" id="quote-text"></blockquote>
-          <button class="quote-reveal" id="quote-reveal" aria-controls="quote-card">
-            Reveal the answer &rarr;
-          </button>
-          <p class="quote-hint">Think you got it? Hit reveal.</p>
-        </div>
-        <div class="quote-face quote-back" aria-hidden="true">
-          <div class="quote-answer-label">The answer</div>
-          <div class="quote-answer-speaker" id="quote-speaker"></div>
-          <div class="quote-answer-source" id="quote-source"></div>
-          <button class="quote-flip-back" id="quote-flip-back">Flip back</button>
-        </div>
-      </div>
-
-      <div class="quote-footer">
-        <p>New quote posted weekly. Got one you want us to use? <a href="#contact">Send us a suggestion.</a></p>
-      </div>
-    </div>
-  </section>
-
-  <script>
-    (function () {
-      var card = document.getElementById('quote-card');
-      if (!card) return;
-      document.getElementById('quote-text').textContent    = card.dataset.quote || '';
-      document.getElementById('quote-speaker').textContent = card.dataset.speaker || '';
-      document.getElementById('quote-source').textContent  = card.dataset.source || '';
-      document.getElementById('quote-reveal').addEventListener('click', function () {
-        card.classList.add('is-flipped');
-      });
-      document.getElementById('quote-flip-back').addEventListener('click', function () {
-        card.classList.remove('is-flipped');
-      });
-    })();
-  </script>
 
   <!-- ===== SELL / CONSIGN ===== -->
   <section class="sell-section section" id="sell">
