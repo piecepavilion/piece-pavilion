@@ -296,9 +296,11 @@ img { display: block; max-width: 100%; }
 
 .header-shop { padding: 10px 22px; font-size: 0.92rem; white-space: nowrap; }
 
-/* Live total-viewers badge — sits right of Shop Now in the header on every page. */
+/* Live total-viewers badge — sits right of Shop Now in the header. Hidden
+   below 1200px because at narrower desktop widths the full nav + Shop Now +
+   this badge push the header past the viewport edge. */
 .viewer-badge {
-  display: inline-flex;
+  display: none;                              /* hidden by default */
   flex-direction: column;
   align-items: center;
   line-height: 1.05;
@@ -311,6 +313,10 @@ img { display: block; max-width: 100%; }
   min-width: 92px;
   text-align: center;
   user-select: none;
+  flex-shrink: 0;
+}
+@media (min-width: 1200px) {
+  .viewer-badge { display: inline-flex; }     /* shown only when there's room */
 }
 .viewer-badge .viewer-count {
   font-family: 'Fredoka', 'Nunito', sans-serif;
@@ -327,14 +333,6 @@ img { display: block; max-width: 100%; }
   color: rgba(255,255,255,.78);
   margin-top: 2px;
   white-space: nowrap;
-}
-@media (max-width: 980px) {
-  .viewer-badge { padding: 5px 10px; min-width: 78px; }
-  .viewer-badge .viewer-count { font-size: 1rem; }
-  .viewer-badge .viewer-label { font-size: 0.55rem; }
-}
-@media (max-width: 540px) {
-  .viewer-badge { display: none; }
 }
 
 /* Staff access link — subtle but always visible so the team can reach the

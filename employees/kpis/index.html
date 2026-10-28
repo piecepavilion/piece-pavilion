@@ -526,7 +526,7 @@
       const asofEl = document.getElementById('asof');
       if (state.kpis._needsFeed) {
         asofEl.innerHTML = '<span style="color:#92400e;font-weight:800;">⚠ Orders feed not wired yet — only live inventory + feedback are real below.</span> ' +
-          '<a href="#" id="feed-info" style="color:var(--red);font-weight:800;">How to wire it →</a>';
+          '<a href="javascript:void(0)" id="feed-info" style="color:var(--red);font-weight:800;">How to wire it →</a>';
         document.getElementById('feed-info').addEventListener('click', e => {
           e.preventDefault();
           alert('Have pp-ops publish /employees/kpis-data.json hourly with this shape:\n\n' +
@@ -969,28 +969,6 @@
       )).join('');
     }
 
-    function renderPageviewsChart() {
-      // Placeholder shape only. GA4 wire-up populates in future.
-      const labels = daysAgoLabels(30);
-      const blog = labels.map((_, i) => 20 + Math.round(Math.sin(i / 4) * 6 + Math.random() * 10 + i * 0.3));
-      const parts = labels.map((_, i) => 10 + Math.round(Math.cos(i / 5) * 4 + Math.random() * 6 + i * 0.5));
-      if (charts.pageviews) charts.pageviews.destroy();
-      charts.pageviews = new Chart(document.getElementById('chart-pageviews'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Blog views', data: blog, borderColor: COLORS.purple, backgroundColor: COLORS.purple + '22', tension: 0.35, fill: true, borderWidth: 2.4, pointRadius: 0 },
-            { label: '/parts/ views', data: parts, borderColor: COLORS.amber, backgroundColor: COLORS.amber + '22', tension: 0.35, fill: true, borderWidth: 2.4, pointRadius: 0 },
-          ],
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'bottom', labels: { usePointStyle:true } } },
-          scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 10 } }, y: { grid: { color: COLORS.grid } } },
-        },
-      });
-    }
 
     function renderAll() {
       renderKpiTiles();
@@ -1000,7 +978,6 @@
       renderMixChart();
       renderFeedback();
       renderStatesBars();
-      renderPageviewsChart();
       loadGaData();
     }
 
