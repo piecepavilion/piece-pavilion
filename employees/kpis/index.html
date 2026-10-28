@@ -201,6 +201,7 @@
         <button data-period="30" class="active">30 days</button>
         <button data-period="90">90 days</button>
         <button data-period="365">1 year</button>
+        <button data-period="all">All</button>
       </div>
     </div>
 
@@ -482,9 +483,17 @@
     // RENDER
     // ====================================================================
     function sliceDaily(period) {
-      const dO = (state.kpis.dailyOrders || []).slice(-period);
-      const dR = (state.kpis.dailyRevenue || []).slice(-period);
-      return { dO, dR };
+      const srcO = state.kpis.dailyOrders || [];
+      const srcR = state.kpis.dailyRevenue || [];
+      const n = (period === 'all' || !isFinite(period)) ? srcO.length : period;
+      return { dO: srcO.slice(-n), dR: srcR.slice(-n) };
+    }
+    function effectivePeriod() {
+      if (state.period === 'all') return (state.kpis.dailyOrders || []).length || 365;
+      return state.period;
+    }
+    function periodLabel() {
+      return state.period === 'all' ? 'all time' : state.period + 'd';
     }
 
     function renderKpiTiles() {
@@ -494,9 +503,11 @@
       const revenue = dR.reduce((s, x) => s + x.revenue, 0);
       const aov     = orders ? revenue / orders : 0;
 
-      // Period-over-period change (compare to prior equal window)
-      const dOprev = (state.kpis.dailyOrders  || []).slice(-state.period * 2, -state.period);
-      const dRprev = (state.kpis.dailyRevenue || []).slice(-state.period * 2, -state.period);
+      // Period-over-period change (compare to prior equal window; "all" skips it)
+      const p = effectivePeriod();
+      const canCompare = state.period !== 'all';
+      const dOprev = canCompare ? (state.kpis.dailyOrders  || []).slice(-p * 2, -p) : [];
+      const dRprev = canCompare ? (state.kpis.dailyRevenue || []).slice(-p * 2, -p) : [];
       const prevOrders  = dOprev.reduce((s, x) => s + x.orders, 0);
       const prevRevenue = dRprev.reduce((s, x) => s + x.revenue, 0);
       const prevAov     = prevOrders ? prevRevenue / prevOrders : 0;
@@ -527,7 +538,7 @@
         const setCh = (id, v) => {
           const el = document.getElementById(id);
           el.className = 'change ' + clsPct(v);
-          el.textContent = v == null ? 'vs prev' : fmtPct(v) + ' vs prev ' + state.period + 'd';
+          el.textContent = v == null ? (state.period === 'all' ? 'lifetime' : 'vs prev') : fmtPct(v) + ' vs prev ' + state.period + 'd';
         };
         setCh('kpi-orders-ch', chOrders);
         setCh('kpi-revenue-ch', chRevenue);
@@ -564,7 +575,13 @@
 
     function renderRevenueChart() {
       const { dO, dR } = sliceDaily(state.period);
-      const labels = daysAgoLabels(state.period);
+      // when "All" is active, label from actual dates so months align correctly
+      const labels = state.period === 'all'
+        ? dO.map(x => {
+            const d = new Date(x.date);
+            return d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+          })
+        : daysAgoLabels(dO.length);
       if (charts.revenue) charts.revenue.destroy();
       charts.revenue = new Chart(document.getElementById('chart-revenue'), {
         type: 'bar',
@@ -582,14 +599,12 @@
             {
               label: 'Orders',
               data: dO.map(x => x.orders),
-              borderColor: COLORS.ink || '#15151f',
               backgroundColor: '#15151f',
-              borderWidth: 2.5,
-              pointRadius: 2,
-              type: 'line',
+              borderRadius: 4,
               yAxisID: 'y1',
               order: 1,
-              tension: 0.3,
+              barPercentage: 0.55,
+              categoryPercentage: 0.9,
             },
           ],
         },
@@ -764,10 +779,11 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('#period-pills button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        state.period = parseInt(btn.dataset.period, 10);
+        const raw = btn.dataset.period;
+        state.period = (raw === 'all') ? 'all' : parseInt(raw, 10);
         renderKpiTiles();
         renderRevenueChart();
-        document.querySelector('#rev-meta').closest('.card-head').querySelector('.pill').textContent = state.period + 'd';
+        document.querySelector('#rev-meta').closest('.card-head').querySelector('.pill').textContent = periodLabel();
       });
     });
 
@@ -809,7 +825,7 @@
       const byDow = [0,0,0,0,0,0,0];
       dO.forEach(x => { const d = new Date(x.date); byDow[d.getDay()] += x.orders; });
       const html = `
-        <h4>Daily orders (last ${state.period} days)</h4>
+        <h4>Daily orders (${periodLabel()})</h4>
         <div class="chart-wrap"><canvas id="drillOrders"></canvas></div>
         <h4>Orders by day of week</h4>
         <div class="chart-wrap" style="height:220px;"><canvas id="drillOrdersDow"></canvas></div>
@@ -834,7 +850,7 @@
       dR.forEach(x => { const d = new Date(x.date); const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
         const k = monday.toISOString().slice(0,10); weeks[k] = (weeks[k] || 0) + x.revenue; });
       const html = `
-        <h4>Daily revenue (last ${state.period} days)</h4>
+        <h4>Daily revenue (${periodLabel()})</h4>
         <div class="chart-wrap"><canvas id="drillRevenue"></canvas></div>
         <h4>Weekly rollup</h4>
         <div class="chart-wrap" style="height:220px;"><canvas id="drillRevenueWk"></canvas></div>
@@ -856,13 +872,13 @@
       const { dO, dR } = sliceDaily(state.period);
       const data = dO.map((x, i) => (x.orders ? (dR[i].revenue / x.orders) : 0));
       const html = `
-        <h4>Avg Order Value trend (last ${state.period} days)</h4>
+        <h4>Avg Order Value trend (${periodLabel()})</h4>
         <div class="chart-wrap"><canvas id="drillAov"></canvas></div>
       `;
       openDrawer('Avg Order Value — Drill-down', html);
       charts.drillAov = new Chart(document.getElementById('drillAov'), {
-        type: 'line',
-        data: { labels: dO.map(x => x.date.slice(5)), datasets: [{ data, borderColor: COLORS.red, backgroundColor: COLORS.red + '22', tension: 0.35, fill: true, borderWidth: 2.4, pointRadius: 0 }] },
+        type: 'bar',
+        data: { labels: dO.map(x => x.date.slice(5)), datasets: [{ data, backgroundColor: COLORS.red, borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
       });
     }
