@@ -360,20 +360,40 @@
           if (!r.ok) throw new Error('no kpis-data');
           return r.json();
         });
-        if (k.orders7d != null)  document.getElementById('st-orders').textContent  = k.orders7d.toLocaleString();
-        if (k.revenue7d != null) document.getElementById('st-revenue').textContent = '$' + Number(k.revenue7d).toLocaleString(undefined, {minimumFractionDigits: 0});
-        if (k.feedback != null)  document.getElementById('st-feedback').textContent = k.feedback + '%';
+
+        // Compute 7-day totals from the daily series the dashboard already publishes
+        const dO = k.dailyOrders  || [];
+        const dR = k.dailyRevenue || [];
+        const sum = (arr, key) => arr.reduce((s, x) => s + (x[key] || 0), 0);
+        const orders7d       = sum(dO.slice(-7),       'orders');
+        const orders7dPrev   = sum(dO.slice(-14, -7),  'orders');
+        const revenue7d      = sum(dR.slice(-7),       'revenue');
+        const revenue7dPrev  = sum(dR.slice(-14, -7),  'revenue');
+        const pct = (now, prev) => prev ? Math.round((now - prev) / prev * 100) : null;
+        const orders7dChange  = pct(orders7d,  orders7dPrev);
+        const revenue7dChange = pct(revenue7d, revenue7dPrev);
+
+        document.getElementById('st-orders').textContent  = orders7d.toLocaleString();
+        document.getElementById('st-revenue').textContent = '$' + Math.round(revenue7d).toLocaleString();
+        if (k.feedbackPct != null) document.getElementById('st-feedback').textContent = Math.round(k.feedbackPct) + '%';
+
         const dir = (v) => v == null ? 'flat' : v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
         const sign = (v) => (v > 0 ? '+' : '') + v + '%';
-        if (k.orders7dChange  != null) { const el = document.getElementById('st-orders-ch');  el.className = 'change ' + dir(k.orders7dChange);  el.textContent = sign(k.orders7dChange) + ' vs prev 7d'; }
-        if (k.revenue7dChange != null) { const el = document.getElementById('st-revenue-ch'); el.className = 'change ' + dir(k.revenue7dChange); el.textContent = sign(k.revenue7dChange) + ' vs prev 7d'; }
+        const setCh = (id, v, label) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.className = 'change ' + dir(v);
+          el.textContent = (v == null)
+            ? (orders7dPrev === 0 && revenue7dPrev === 0 ? 'new vs prev 7d' : label)
+            : sign(v) + ' vs prev 7d';
+        };
+        setCh('st-orders-ch',  orders7dChange,  'vs prev 7d');
+        setCh('st-revenue-ch', revenue7dChange, 'vs prev 7d');
       } catch (e) {
-        // kpis-data.json isn't published yet — leave placeholders.
+        // kpis-data.json isn't published yet — swap "loading…" for "coming soon"
         ['st-orders', 'st-revenue'].forEach(id => {
-          const v = document.getElementById(id);
-          if (v && v.textContent === '—') v.textContent = '—';
           const ch = document.getElementById(id + '-ch');
-          if (ch) { ch.textContent = 'coming soon'; ch.className = 'change flat'; }
+          if (ch) { ch.textContent = 'feed pending'; ch.className = 'change flat'; }
         });
       }
     })();
