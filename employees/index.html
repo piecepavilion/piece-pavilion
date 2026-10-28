@@ -167,6 +167,25 @@
     }
     .tile.hidden { display:none; }
 
+    /* Hero KPI tile at the top of the staff landing — bigger, dark gradient, yellow accent */
+    .tile.kpi-hero {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+      color:#fff;
+      border:none;
+      padding:28px 32px;
+      box-shadow: 0 10px 32px rgba(20,22,29,.18);
+      position:relative;
+      overflow:hidden;
+    }
+    .tile.kpi-hero::after { content:none; }
+    .tile.kpi-hero::before { content:""; position:absolute; left:0; right:0; bottom:0; height:4px; background:var(--yellow); }
+    .tile.kpi-hero h3 { color:#fff; font-size:1.5rem; }
+    .tile.kpi-hero p  { color:rgba(255,255,255,.82); font-size:1rem; max-width:720px; }
+    .tile.kpi-hero .ico { background:rgba(255,206,0,.15); color:var(--yellow); }
+    .tile.kpi-hero .go  { color:var(--yellow); border-color:rgba(255,206,0,.5); }
+    .tile.kpi-hero:hover { transform:translateY(-3px); box-shadow:0 16px 44px rgba(20,22,29,.26); }
+
     .note { margin-top:36px; font-size:.82rem; color:var(--muted); text-align:center; }
     .note svg { vertical-align:-3px; }
   </style>
@@ -219,6 +238,22 @@
       <input type="search" id="tile-search" placeholder="&#128269; Jump to a tool (ticker, pick, kpi, bulk…)" aria-label="Search tiles">
       <span class="count" id="tile-count"></span>
     </div>
+
+    <!-- ===== BUSINESS OVERVIEW (promoted to top — the main thing we look at) ===== -->
+    <section class="section business">
+      <div class="section-head">
+        <h2><span class="dot"></span> Business Overview</h2>
+        <span class="section-sub">The main numbers &mdash; sales, inventory, customers, traffic</span>
+      </div>
+      <div class="grid">
+        <a class="tile featured kpi-hero" href="/employees/kpis/" data-tile="kpi dashboard analytics orders revenue drill-down charts business overview">
+          <div class="ico">&#128202;</div>
+          <h3>KPI Dashboard</h3>
+          <p>Live sales, inventory, customer and traffic KPIs with click-to-drill-down charts. Revenue, orders, AOV, year-over-year, feedback — all in one place.</p>
+          <span class="go">Open dashboard &rarr;</span>
+        </a>
+      </div>
+    </section>
 
     <!-- ===== CONTENT & SITE EDITING ===== -->
     <section class="section content">
@@ -295,12 +330,6 @@
         <span class="section-sub">Numbers behind the store</span>
       </div>
       <div class="grid">
-        <a class="tile featured" href="/employees/kpis/" data-tile="kpi dashboard analytics orders revenue drill-down charts">
-          <div class="ico">&#128202;</div>
-          <h3>KPI Dashboard</h3>
-          <p>Live sales, inventory, customer and traffic KPIs with click-to-drill-down charts. Replaces the old embedded Looker reports.</p>
-          <span class="go">Open dashboard &rarr;</span>
-        </a>
         <a class="tile" href="/employees/partout/" data-tile="partout part-out set profit tracking">
           <div class="ico">&#129513;</div>
           <h3>Part-Out Tracker</h3>
