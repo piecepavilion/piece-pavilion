@@ -256,8 +256,12 @@
       return "https://www.bricklink.com/v2/catalog/catalogitem.page?" + t + "=" +
         encodeURIComponent(it.item_no) + (t === "P" && it.color_id ? "&C=" + it.color_id : "");
     }
-    function storeUrl(it) {
-      return "https://store.bricklink.com/PiecePavilion?itemID=" + encodeURIComponent(it.lot_id);
+    // Seller-side edit page for this specific lot. Staff click thumbnails to go here,
+    // where they can adjust price/qty/condition/notes rather than see the public store.
+    function editUrl(it) {
+      return it.lot_id
+        ? "https://www.bricklink.com/inventory_detail.asp?invID=" + encodeURIComponent(it.lot_id)
+        : catalogUrl(it);
     }
 
     // ---------------- load ----------------
@@ -413,7 +417,7 @@
 
       rows.forEach(function (it) {
         html += '<tr class="' + (it.located ? "" : "noloc") + '">' +
-          '<td class="pic"><a href="' + esc(storeUrl(it)) + '" target="_blank" rel="noopener">' +
+          '<td class="pic"><a href="' + esc(editUrl(it)) + '" target="_blank" rel="noopener" title="Edit this lot on BrickLink">' +
             '<img loading="lazy" alt="" src="' + esc(imgPath(it)) + '" /></a></td>' +
           '<td data-l="Item" class="it"><div class="nm">' + esc(it.name || it.item_no) +
             (it.stockroom ? '<span class="tagx sr">stockroom</span>' : "") +
