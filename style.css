@@ -546,7 +546,7 @@ img { display: block; max-width: 100%; }
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.4);
-  z-index: 200;
+  z-index: 1500;
 }
 .sidebar-overlay.open { display: block; }
 
@@ -561,7 +561,7 @@ img { display: block; max-width: 100%; }
   border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  z-index: 250;
+  z-index: 1600;
   box-shadow: 4px 0 24px rgba(0,0,0,0.12);
   overflow-y: auto;
   transform: translateX(-100%);

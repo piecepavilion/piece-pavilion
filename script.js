@@ -9,12 +9,18 @@ function openSidebar() {
   sidebar.classList.add('open');
   sidebarOverlay.classList.add('open');
   if (sidebarTab) sidebarTab.classList.add('open');
+  // Lock body scroll so the user doesn't accidentally scroll the page
+  // under the sidebar on mobile.
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 }
 
 function closeSidebar() {
   sidebar.classList.remove('open');
   sidebarOverlay.classList.remove('open');
   if (sidebarTab) sidebarTab.classList.remove('open');
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 }
 
 function toggleSidebar() {
