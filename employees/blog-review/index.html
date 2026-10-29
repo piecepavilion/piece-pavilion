@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog Review | Piece Pavilion Staff</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --ink:#15151f;
+      --slate:#3a4150; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
+      --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec;
+      --blue:#2563eb; --blue-soft:#eff6ff;
+      --green:#16a34a; --green-soft:#ecfdf5;
+      --amber:#d97706; --amber-soft:#fef3c7;
+      --purple:#7c3aed; --purple-soft:#f5f3ff;
+      --radius:14px;
+      --shadow-sm: 0 2px 8px rgba(20,22,29,.05);
+      --shadow:    0 6px 18px rgba(20,22,29,.08);
+      --shadow-lg: 0 14px 40px rgba(20,22,29,.14);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Nunito',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+    h1,h2,h3,h4 { font-family:'Fredoka','Nunito',sans-serif; font-weight:700; letter-spacing:-.01em; }
+    a { color:var(--red); text-decoration:none; }
+
+    .topbar {
+      background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+      box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55);
+      color:#fff; padding:16px 24px; display:flex; align-items:center; gap:14px;
+    }
+    .topbar img { height:40px; border-radius:50%; }
+    .topbar .crumb { font-size:.85rem; color:rgba(255,255,255,.78); font-weight:700; margin-right:6px; }
+    .topbar h1 { font-size:1.2rem; color:#fff; display:inline; }
+    .topbar .spacer { flex:1; }
+    .topbar .back { color:#fff; text-decoration:none; font-weight:800; font-size:.86rem;
+      border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
+    .topbar .back:hover { background:rgba(255,255,255,.14); }
+
+    .wrap { max-width:1400px; margin:0 auto; padding:24px 24px 60px; }
+
+    .pill-row { display:flex; gap:4px; background:var(--surface); border:1px solid var(--line);
+      border-radius:999px; padding:3px; width:fit-content; margin-bottom:18px; box-shadow:var(--shadow-sm); }
+    .pill-row button {
+      font:inherit; font-weight:800; font-size:.84rem;
+      padding:8px 16px; border-radius:999px; border:0; background:transparent; cursor:pointer; color:var(--mid);
+      transition:background .15s, color .15s;
+    }
+    .pill-row button.active { background:var(--ink); color:#fff; }
+    .pill-row button:not(.active):hover { background:#f3f4f6; color:var(--ink); }
+    .pill-row .count { background:rgba(255,255,255,.22); color:inherit; font-weight:900;
+      border-radius:999px; font-size:.72rem; padding:1px 7px; margin-left:4px; }
+    .pill-row button:not(.active) .count { background:#f3f4f6; color:var(--mid); }
+
+    .split { display:grid; grid-template-columns:360px 1fr; gap:18px; align-items:start; }
+    @media (max-width:900px) { .split { grid-template-columns:1fr; } }
+
+    .draft-list {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow-sm); max-height:80vh; overflow-y:auto;
+    }
+    .draft-list .empty { padding:40px 20px; text-align:center; color:var(--muted); font-size:.9rem; font-style:italic; }
+    .draft-item {
+      padding:14px 18px; border-bottom:1px solid var(--line); cursor:pointer;
+      transition:background .12s;
+    }
+    .draft-item:last-child { border-bottom:none; }
+    .draft-item:hover { background:#fafbfd; }
+    .draft-item.selected { background:var(--cream); border-left:4px solid var(--yellow); padding-left:14px; }
+    .draft-item h3 { font-size:1.02rem; font-weight:700; margin-bottom:6px; line-height:1.25; color:var(--ink); }
+    .draft-item .meta { font-size:.75rem; color:var(--mid); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .cat-badge {
+      display:inline-block; font-size:.65rem; font-weight:900; letter-spacing:.08em;
+      text-transform:uppercase; padding:3px 8px; border-radius:999px;
+      background:var(--amber-soft); color:#92540b;
+    }
+    .cat-badge.sets    { background:var(--green-soft); color:var(--green); }
+    .cat-badge.minifig { background:var(--amber-soft); color:#92540b; }
+    .cat-badge.parts   { background:var(--blue-soft); color:var(--blue); }
+    .cat-badge.guide   { background:var(--purple-soft); color:var(--purple); }
+    .cat-badge.news    { background:#fef2f2; color:#991b1b; }
+
+    .preview {
+      background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow-sm); padding:28px 32px;
+      min-height:80vh;
+    }
+    .preview .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:1rem; font-style:italic; }
+    .preview h1.pv-title { font-size:1.8rem; line-height:1.18; color:var(--ink); margin-bottom:10px; }
+    .preview .pv-byline { color:var(--mid); font-size:.9rem; margin-bottom:4px; }
+    .preview .pv-sources { font-size:.78rem; color:var(--mid); margin-bottom:20px; }
+    .preview .pv-sources a { color:var(--blue); margin-right:10px; word-break:break-all; }
+    .preview .pv-slug { font-size:.78rem; font-family:'JetBrains Mono',monospace; color:var(--muted); margin-bottom:16px; }
+
+    .pv-body { line-height:1.65; color:var(--slate); }
+    .pv-body h2 { color:var(--ink); margin:28px 0 12px; font-size:1.4rem; }
+    .pv-body h3 { color:var(--ink); margin:18px 0 8px; font-size:1.1rem; }
+    .pv-body p  { margin:0 0 14px; }
+    .pv-body ul, .pv-body ol { margin:8px 0 14px 22px; }
+    .pv-body li { margin-bottom:4px; }
+    .pv-body strong { color:var(--ink); font-weight:800; }
+    .pv-body a { color:var(--red); text-decoration:underline; }
+
+    .faq-block { margin-top:28px; border-top:1px dashed var(--line); padding-top:20px; }
+    .faq-block h2 { font-size:1.2rem; margin-bottom:12px; }
+    .faq-item { padding:12px 0; border-bottom:1px solid var(--line); }
+    .faq-item:last-child { border-bottom:none; }
+    .faq-item h4 { font-size:.98rem; color:var(--ink); margin-bottom:4px; font-weight:800; }
+    .faq-item p  { font-size:.9rem; color:var(--slate); margin:0; }
+
+    .action-bar {
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-top:28px; padding-top:20px; border-top:2px solid var(--line);
+    }
+    .btn {
+      font:inherit; font-weight:800; padding:11px 20px; border-radius:12px; border:0;
+      cursor:pointer; font-size:.92rem; transition:transform .1s, box-shadow .15s;
+    }
+    .btn:hover { transform:translateY(-1px); }
+    .btn-primary  { background:var(--green); color:#fff; }
+    .btn-primary:hover  { box-shadow:0 6px 18px rgba(22,163,74,.3); }
+    .btn-secondary { background:var(--yellow); color:var(--ink); }
+    .btn-ghost    { background:#f3f4f6; color:var(--slate); }
+    .btn-danger   { background:#fef2f2; color:#991b1b; border:1.5px solid #fecaca; }
+    .btn-danger:hover { background:#fee2e2; }
+    .btn[disabled] { opacity:.5; cursor:wait; transform:none; }
+
+    .edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+    @media (max-width:720px) { .edit-grid { grid-template-columns:1fr; } }
+    .edit-field { display:flex; flex-direction:column; gap:4px; }
+    .edit-field.full { grid-column:1 / -1; }
+    .edit-field label { font-size:.74rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--mid); }
+    .edit-field input, .edit-field select, .edit-field textarea {
+      font:inherit; padding:10px 14px; border:1.5px solid var(--line); border-radius:10px; background:#fff;
+      color:var(--ink); font-size:.95rem;
+    }
+    .edit-field textarea { font-family:'JetBrains Mono', ui-monospace, monospace; font-size:.84rem; min-height:260px; resize:vertical; }
+    .edit-field input:focus, .edit-field textarea:focus, .edit-field select:focus {
+      outline:none; border-color:var(--red); box-shadow:0 0 0 3px rgba(227,0,11,.12);
+    }
+
+    .toast {
+      position:fixed; bottom:24px; right:24px; z-index:50;
+      padding:14px 22px; border-radius:12px; background:var(--ink); color:#fff;
+      font-weight:800; font-size:.92rem; box-shadow:var(--shadow-lg); max-width:420px;
+      opacity:0; transform:translateY(10px); transition:opacity .18s, transform .18s;
+    }
+    .toast.ok    { background:var(--green); }
+    .toast.err   { background:var(--red); }
+    .toast.show  { opacity:1; transform:translateY(0); }
+
+    .thumb-hint {
+      font-size:.82rem; color:var(--mid); background:var(--amber-soft); border-left:4px solid var(--amber);
+      padding:10px 14px; border-radius:8px; margin:16px 0;
+    }
+    .thumb-hint strong { color:#92540b; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/employees/" aria-label="Back to Staff Portal"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div><span class="crumb">Staff / </span><h1>Blog Review</h1></div>
+    <div class="spacer"></div>
+    <a class="back" href="/employees/">&larr; Back to portal</a>
+  </div>
+
+  <div class="wrap">
+
+    <div class="pill-row" id="pill-row">
+      <button data-tab="drafts" class="active">Drafts <span class="count" id="count-drafts">0</span></button>
+      <button data-tab="archived">Archived <span class="count" id="count-archived">0</span></button>
+      <button data-tab="published">Published <span class="count" id="count-published">0</span></button>
+    </div>
+
+    <div class="split">
+      <aside class="draft-list" id="list">
+        <div class="empty">Loading…</div>
+      </aside>
+      <section class="preview" id="preview">
+        <div class="empty">Select a draft from the list to review.</div>
+      </section>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API = '/employees/api/blog';
+    const state = { tab: 'drafts', items: [], selected: null, counts: {drafts:0, archived:0, published:0}, editing: false };
+
+    const $ = (id) => document.getElementById(id);
+    const escHtml = (s) => String(s == null ? '' : s)
+      .replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+    function toast(msg, kind) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + (kind || 'ok');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    async function api(method, path, body) {
+      const opts = { method, headers: { 'content-type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const r = await fetch(API + path, opts);
+      let data = null;
+      try { data = await r.json(); } catch (e) { data = null; }
+      if (!r.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
+      return data;
+    }
+
+    async function refreshCounts() {
+      // Fire all three list fetches in parallel to keep counts current.
+      const paths = { drafts: '/drafts', archived: '/archived', published: '/published' };
+      await Promise.all(Object.keys(paths).map(async (k) => {
+        try {
+          const r = await api('GET', paths[k]);
+          state.counts[k] = (r && r.count) || 0;
+          $('count-' + k).textContent = state.counts[k];
+        } catch (e) { /* leave as-is */ }
+      }));
+    }
+
+    async function loadList() {
+      $('list').innerHTML = '<div class="empty">Loading…</div>';
+      try {
+        const r = await api('GET', '/' + state.tab);
+        state.items = (r && r.items) || [];
+        state.counts[state.tab] = state.items.length;
+        $('count-' + state.tab).textContent = state.items.length;
+        renderList();
+      } catch (e) {
+        $('list').innerHTML = '<div class="empty">Could not load: ' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    function renderList() {
+      if (!state.items.length) {
+        const msg = state.tab === 'drafts'
+          ? "No drafts right now. The generator runs every 48h — or run it manually with: gh workflow run \"Blog draft\" -R piecepavilion/pp-ops"
+          : ("No " + state.tab + " posts yet.");
+        $('list').innerHTML = '<div class="empty">' + escHtml(msg) + '</div>';
+        return;
+      }
+      $('list').innerHTML = state.items.map((it) => {
+        const dt = it.generated_at ? new Date(it.generated_at).toLocaleString() : '';
+        const sel = state.selected === it.id ? ' selected' : '';
+        return (
+          '<div class="draft-item' + sel + '" data-id="' + escHtml(it.id) + '">' +
+            '<h3>' + escHtml(it.title || '(untitled)') + '</h3>' +
+            '<div class="meta">' +
+              '<span class="cat-badge ' + escHtml(it.category || '') + '">' + escHtml(it.category || 'news') + '</span>' +
+              '<span>' + escHtml(dt) + '</span>' +
+              (it.reading_time_min ? '<span>&middot; ' + it.reading_time_min + ' min read</span>' : '') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+      Array.from($('list').querySelectorAll('.draft-item')).forEach((el) => {
+        el.addEventListener('click', () => selectItem(el.dataset.id));
+      });
+    }
+
+    async function selectItem(id) {
+      state.selected = id;
+      state.editing = false;
+      Array.from($('list').querySelectorAll('.draft-item')).forEach((el) => {
+        el.classList.toggle('selected', el.dataset.id === id);
+      });
+      $('preview').innerHTML = '<div class="empty">Loading draft…</div>';
+      const bucketPath = state.tab === 'drafts' ? '/draft/' : (state.tab === 'archived' ? '/archived/' : '/published/');
+      try {
+        const d = await api('GET', bucketPath + encodeURIComponent(id));
+        renderPreview(d);
+      } catch (e) {
+        $('preview').innerHTML = '<div class="empty">Could not load: ' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    function renderPreview(d) {
+      const faqHtml = (Array.isArray(d.faq) && d.faq.length)
+        ? ('<section class="faq-block"><h2>FAQ</h2>' +
+            d.faq.map((f) => (
+              '<div class="faq-item"><h4>' + escHtml(f.q || '') + '</h4><p>' + escHtml(f.a || '') + '</p></div>'
+            )).join('') +
+          '</section>')
+        : '';
+      const sourcesHtml = (Array.isArray(d.context_sources) && d.context_sources.length)
+        ? ('<div class="pv-sources"><strong>Context sources:</strong> ' +
+           d.context_sources.map((u) => '<a href="' + escHtml(u) + '" target="_blank" rel="noopener">' + escHtml(u) + '</a>').join('') +
+          '</div>')
+        : '';
+      const thumbHint = d.thumb_hint
+        ? ('<div class="thumb-hint"><strong>Thumb hint:</strong> ' + escHtml(d.thumb_hint) + '</div>')
+        : '';
+      const canEdit = state.tab === 'drafts';
+      const canPublish = state.tab === 'drafts';
+      const canArchive = state.tab === 'drafts';
+      const canUnarchive = state.tab === 'archived';
+      const canDelete = state.tab !== 'published';
+
+      const actions = [];
+      if (canEdit)      actions.push('<button class="btn btn-secondary" id="btn-edit">Edit</button>');
+      if (canPublish)   actions.push('<button class="btn btn-primary" id="btn-publish">Publish to Site &rarr;</button>');
+      if (canArchive)   actions.push('<button class="btn btn-ghost" id="btn-archive">Archive</button>');
+      if (canUnarchive) actions.push('<button class="btn btn-ghost" id="btn-unarchive">Move back to drafts</button>');
+      if (canDelete)    actions.push('<button class="btn btn-danger" id="btn-delete">Delete</button>');
+      if (d.commit_sha) actions.push('<a class="btn btn-ghost" href="https://github.com/piecepavilion/piece-pavilion/commit/' +
+                                     encodeURIComponent(d.commit_sha) + '" target="_blank" rel="noopener">View commit</a>');
+      if (d.published_path) actions.push('<a class="btn btn-ghost" href="https://piecepavilion.com/' +
+                                     escHtml(d.published_path.replace(/\/index\.html$/, '/')) + '" target="_blank" rel="noopener">View live &rarr;</a>');
+
+      $('preview').innerHTML =
+        '<p class="pv-slug">/blog/' + escHtml(d.slug || '') + '/</p>' +
+        '<h1 class="pv-title">' + escHtml(d.title || '') + '</h1>' +
+        '<p class="pv-byline">Piece Pavilion &middot; ' + escHtml(d.date_display || '') + ' &middot; ' +
+          escHtml(String(d.reading_time_min || 4)) + ' min read &middot; ' +
+          '<span class="cat-badge ' + escHtml(d.category || '') + '">' + escHtml(d.category || 'news') + '</span></p>' +
+        sourcesHtml +
+        thumbHint +
+        '<div class="pv-body">' + (d.body_html || '') + '</div>' +
+        faqHtml +
+        '<div class="action-bar">' + actions.join('') + '</div>';
+
+      state.current = d;
+      wireActions();
+    }
+
+    function wireActions() {
+      const d = state.current;
+      if (!d) return;
+      const btnEdit = $('btn-edit');
+      if (btnEdit) btnEdit.addEventListener('click', () => startEditing(d));
+      const btnPublish = $('btn-publish');
+      if (btnPublish) btnPublish.addEventListener('click', () => doPublish(d));
+      const btnArchive = $('btn-archive');
+      if (btnArchive) btnArchive.addEventListener('click', () => doArchive(d));
+      const btnUnarchive = $('btn-unarchive');
+      if (btnUnarchive) btnUnarchive.addEventListener('click', () => doUnarchive(d));
+      const btnDelete = $('btn-delete');
+      if (btnDelete) btnDelete.addEventListener('click', () => doDelete(d));
+    }
+
+    function startEditing(d) {
+      state.editing = true;
+      $('preview').innerHTML =
+        '<p class="pv-slug">Editing: /blog/' + escHtml(d.slug || '') + '/</p>' +
+        '<div class="edit-grid">' +
+          '<div class="edit-field full"><label>Title</label><input type="text" id="ed-title" value="' + escHtml(d.title || '') + '" /></div>' +
+          '<div class="edit-field"><label>Slug</label><input type="text" id="ed-slug" value="' + escHtml(d.slug || '') + '" /></div>' +
+          '<div class="edit-field"><label>Category</label>' +
+            '<select id="ed-category">' +
+              ['minifig','sets','parts','guide','news'].map((c) =>
+                '<option value="' + c + '"' + (d.category === c ? ' selected' : '') + '>' + c + '</option>'
+              ).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="edit-field"><label>Date (display)</label><input type="text" id="ed-datedisp" value="' + escHtml(d.date_display || '') + '" /></div>' +
+          '<div class="edit-field"><label>Date (ISO)</label><input type="text" id="ed-dateiso" value="' + escHtml(d.date_iso || '') + '" /></div>' +
+          '<div class="edit-field"><label>Reading time (min)</label><input type="number" id="ed-rt" value="' + escHtml(String(d.reading_time_min || 4)) + '" min="1" max="60" /></div>' +
+          '<div class="edit-field"><label>Thumb hint</label><input type="text" id="ed-thumb" value="' + escHtml(d.thumb_hint || '') + '" /></div>' +
+          '<div class="edit-field full"><label>Meta description</label><input type="text" id="ed-desc" value="' + escHtml(d.description || '') + '" maxlength="200" /></div>' +
+          '<div class="edit-field full"><label>OG description</label><input type="text" id="ed-ogdesc" value="' + escHtml(d.og_description || '') + '" maxlength="200" /></div>' +
+          '<div class="edit-field full"><label>Body HTML</label><textarea id="ed-body">' + escHtml(d.body_html || '') + '</textarea></div>' +
+          '<div class="edit-field full"><label>FAQ (JSON array of {q,a})</label><textarea id="ed-faq">' + escHtml(JSON.stringify(d.faq || [], null, 2)) + '</textarea></div>' +
+          '<div class="edit-field full"><label>Review notes (internal, never published)</label><textarea id="ed-notes" style="min-height:60px;">' + escHtml(d.notes || '') + '</textarea></div>' +
+        '</div>' +
+        '<div class="action-bar">' +
+          '<button class="btn btn-primary" id="btn-save">Save edits</button>' +
+          '<button class="btn btn-ghost" id="btn-cancel">Cancel</button>' +
+        '</div>';
+      $('btn-save').addEventListener('click', () => saveEdits(d));
+      $('btn-cancel').addEventListener('click', () => renderPreview(d));
+    }
+
+    async function saveEdits(d) {
+      let faq;
+      try { faq = JSON.parse($('ed-faq').value || '[]'); }
+      catch (e) { toast('FAQ is not valid JSON — fix before saving.', 'err'); return; }
+      const payload = {
+        title: $('ed-title').value.trim(),
+        slug: $('ed-slug').value.trim(),
+        description: $('ed-desc').value.trim(),
+        og_description: $('ed-ogdesc').value.trim(),
+        category: $('ed-category').value,
+        date_display: $('ed-datedisp').value.trim(),
+        date_iso: $('ed-dateiso').value.trim(),
+        reading_time_min: parseInt($('ed-rt').value, 10) || 4,
+        thumb_hint: $('ed-thumb').value.trim(),
+        body_html: $('ed-body').value,
+        faq: faq,
+        notes: $('ed-notes').value,
+      };
+      $('btn-save').disabled = true;
+      try {
+        await api('PUT', '/draft/' + encodeURIComponent(d.id), payload);
+        toast('Draft saved.');
+        const fresh = await api('GET', '/draft/' + encodeURIComponent(d.id));
+        renderPreview(fresh);
+        loadList();
+      } catch (e) {
+        toast('Save failed: ' + e.message, 'err');
+      } finally {
+        $('btn-save').disabled = false;
+      }
+    }
+
+    async function doPublish(d) {
+      if (!confirm('Publish "' + d.title + '" to the live site?\n\nThis will commit blog/' + d.slug + '/index.html to GitHub and the post will be live within ~1 minute.')) return;
+      const btn = $('btn-publish');
+      btn.disabled = true; btn.textContent = 'Publishing…';
+      try {
+        const r = await api('POST', '/publish/' + encodeURIComponent(d.id));
+        toast('Published! ' + (r.url || ''));
+        await refreshCounts();
+        state.tab = 'published';
+        activateTab('published');
+        state.selected = d.id;
+        await loadList();
+        await selectItem(d.id);
+      } catch (e) {
+        toast('Publish failed: ' + e.message, 'err');
+        btn.disabled = false; btn.textContent = 'Publish to Site →';
+      }
+    }
+
+    async function doArchive(d) {
+      try {
+        await api('POST', '/archive/' + encodeURIComponent(d.id));
+        toast('Archived.');
+        await refreshCounts();
+        state.selected = null;
+        state.current = null;
+        $('preview').innerHTML = '<div class="empty">Select a draft from the list to review.</div>';
+        loadList();
+      } catch (e) { toast('Archive failed: ' + e.message, 'err'); }
+    }
+
+    async function doUnarchive(d) {
+      try {
+        await api('POST', '/unarchive/' + encodeURIComponent(d.id));
+        toast('Moved back to drafts.');
+        await refreshCounts();
+        state.selected = null;
+        state.current = null;
+        $('preview').innerHTML = '<div class="empty">Select a draft from the list to review.</div>';
+        loadList();
+      } catch (e) { toast('Unarchive failed: ' + e.message, 'err'); }
+    }
+
+    async function doDelete(d) {
+      if (!confirm('Permanently delete "' + d.title + '"?\n\nThis clears all KV traces of the draft. (A PUBLISHED post is only deleted from the live site in GitHub.)')) return;
+      try {
+        await api('DELETE', '/draft/' + encodeURIComponent(d.id));
+        toast('Deleted.');
+        await refreshCounts();
+        state.selected = null;
+        state.current = null;
+        $('preview').innerHTML = '<div class="empty">Select a draft from the list to review.</div>';
+        loadList();
+      } catch (e) { toast('Delete failed: ' + e.message, 'err'); }
+    }
+
+    function activateTab(tab) {
+      state.tab = tab;
+      Array.from($('pill-row').querySelectorAll('button')).forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === tab);
+      });
+    }
+
+    Array.from($('pill-row').querySelectorAll('button')).forEach((b) => {
+      b.addEventListener('click', () => {
+        if (state.editing && !confirm('Discard unsaved edits?')) return;
+        activateTab(b.dataset.tab);
+        state.selected = null;
+        $('preview').innerHTML = '<div class="empty">Select a draft from the list to review.</div>';
+        loadList();
+      });
+    });
+
+    (async function init() {
+      await refreshCounts();
+      await loadList();
+    })();
+  </script>
+</body>
+</html>
