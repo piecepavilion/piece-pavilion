@@ -56,11 +56,13 @@
 /* ===== BLOG SEARCH BAR ===== */
 .blog-search {
   max-width: 720px;
-  margin: -24px auto 0;
+  margin: 32px auto 0;
   padding: 0 24px;
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  z-index: 2;
 }
 .blog-search input {
   flex: 1;
@@ -92,7 +94,7 @@
 }
 .blog-card.is-filtered-out { display: none !important; }
 @media (max-width: 600px) {
-  .blog-search { flex-direction: column; align-items: stretch; margin-top: -16px; }
+  .blog-search { flex-direction: column; align-items: stretch; margin-top: 20px; }
   .blog-search-count { text-align: center; }
 }
 
