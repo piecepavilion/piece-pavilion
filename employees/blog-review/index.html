@@ -243,7 +243,7 @@
     function renderList() {
       if (!state.items.length) {
         const msg = state.tab === 'drafts'
-          ? "No drafts right now. The generator runs every 48h — or run it manually with: gh workflow run \"Blog draft\" -R piecepavilion/pp-ops"
+          ? "No drafts right now. A fresh one lands here daily at 5am ET (scheduled Claude routine)."
           : ("No " + state.tab + " posts yet.");
         $('list').innerHTML = '<div class="empty">' + escHtml(msg) + '</div>';
         return;
