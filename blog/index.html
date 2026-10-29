@@ -31,7 +31,7 @@
     gtag('config', 'G-X3DK777DPM');
   </script>
 
-  <link rel="stylesheet" href="../style.css?v=20261029h" />
+  <link rel="stylesheet" href="../style.css?v=20261029i" />
   <link rel="stylesheet" href="blog.css" />
   <!-- Favicon / tab identity -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -42,6 +42,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Blog is an ItemList — tells Google this is a curated collection of
+       articles. Rich results support ItemList now; snippet becomes a
+       carousel on mobile instead of a plain blue link. -->
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "Piece Pavilion Blog",
+  "description": "LEGO tips, buyer guides, retiring-set news, and minifigure deep-dives from the Piece Pavilion BrickLink store.",
+  "url": "https://piecepavilion.com/blog/",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Piece Pavilion",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://piecepavilion.com/logo-white.png"
+    }
+  }
+}
+  </script>
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -504,6 +525,92 @@
   </div><!-- end .main-content -->
 
   <script src="https://f.convertkit.com/ckjs/ck.5.js"></script>
-  <script src="../script.js?v=20261029h"></script>
+  <script src="../script.js?v=20261029i"></script>
+
+  <!-- ================================================================
+       Pizzazz enhancements for the blog listing. All additive — doesn't
+       touch the markup, just DECORATES each existing .blog-card with:
+         - "LATEST" badge on the newest card, "HOT" on anything < 10 days old
+         - Estimated reading time (based on description word count)
+         - A category tag inferred from the title keywords
+       ================================================================ -->
+  <script>
+  (function pizzazzBlogCards() {
+    const cards = Array.from(document.querySelectorAll('.blog-cards > .blog-card'));
+    if (!cards.length) return;
+
+    const CATEGORIES = [
+      { key: 'minifig', label: 'Minifigures',  patterns: /minifig|minifigure/i },
+      { key: 'sets',    label: 'Sets',         patterns: /\bset(s)?\b|advent|retiring|retired/i },
+      { key: 'parts',   label: 'Parts',        patterns: /part|piece|brick|part names|product finder/i },
+      { key: 'guide',   label: 'Guide',        patterns: /how to|guide|tips|tricks|collecting|collect/i },
+      { key: 'news',    label: 'News',         patterns: /now on|2026|2027|new|announced/i },
+    ];
+    const DEFAULT_CAT = { key: '', label: 'LEGO' };
+
+    const now = Date.now();
+
+    cards.forEach((card, i) => {
+      // 1. Latest / Hot badge
+      const dateText = (card.querySelector('.blog-card-date') || {}).textContent || '';
+      const t = Date.parse(dateText);
+      const ageDays = isFinite(t) ? (now - t) / 86_400_000 : Infinity;
+      if (i === 0) {
+        const thumb = card.querySelector('.blog-card-thumb');
+        if (thumb) {
+          const b = document.createElement('span');
+          b.className = 'blog-badge';
+          b.textContent = 'Latest';
+          thumb.appendChild(b);
+        }
+      } else if (ageDays < 10) {
+        const thumb = card.querySelector('.blog-card-thumb');
+        if (thumb) {
+          const b = document.createElement('span');
+          b.className = 'blog-badge hot';
+          b.textContent = 'Hot';
+          thumb.appendChild(b);
+        }
+      }
+
+      // 2. Reading time (very rough: ~220 words/min, min 1 min).
+      // The body paragraph is the summary — we approximate reading time off
+      // the title + summary which stands in for the real post length.
+      const body = card.querySelector('.blog-card-body');
+      if (!body) return;
+      const title = (card.querySelector('h2') || {}).textContent || '';
+      const summary = (card.querySelector('p') || {}).textContent || '';
+      const words = (title + ' ' + summary).trim().split(/\s+/).length;
+      // Full-article estimate: assume summary is ~8% of article length
+      const estWords = Math.max(words * 12, 400);
+      const minutes = Math.max(2, Math.round(estWords / 220));
+
+      // 3. Category inferred from title + summary
+      const text = title + ' ' + summary;
+      let cat = DEFAULT_CAT;
+      for (const c of CATEGORIES) {
+        if (c.patterns.test(text)) { cat = c; break; }
+      }
+
+      // 4. Inject meta row (reading time + category) above the title.
+      const date = card.querySelector('.blog-card-date');
+      if (!date) return;
+      const meta = document.createElement('div');
+      meta.className = 'blog-meta-row';
+      if (cat.key) {
+        const catEl = document.createElement('span');
+        catEl.className = 'blog-cat ' + cat.key;
+        catEl.textContent = cat.label;
+        meta.appendChild(catEl);
+      }
+      const rt = document.createElement('span');
+      rt.className = 'blog-reading-time';
+      rt.textContent = minutes + ' min read';
+      meta.appendChild(rt);
+      // Insert BEFORE the date (not replacing it)
+      date.parentNode.insertBefore(meta, date);
+    });
+  })();
+  </script>
 </body>
 </html>

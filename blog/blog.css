@@ -412,3 +412,150 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================================================
+   PIZZAZZ LAYER — purely additive styling for the blog listing.
+   Doesn't touch structural selectors; just builds on top of what's there.
+   ================================================================ */
+
+/* Floating LEGO brick decorations behind the blog header title.
+   Pure CSS, no extra DOM — delivered via ::before / ::after on blog-header. */
+.blog-header {
+  overflow: hidden;
+}
+.blog-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    /* 2x2 brick top-left */
+    radial-gradient(circle at 10% 25%, #ffce00 0 10px, transparent 11px),
+    radial-gradient(circle at 10% 25%, rgba(255,206,0,0.14) 0 60px, transparent 61px),
+    /* red brick bottom-right */
+    radial-gradient(circle at 92% 85%, #e3000b 0 8px, transparent 9px),
+    radial-gradient(circle at 92% 85%, rgba(227,0,11,0.12) 0 50px, transparent 51px),
+    /* yellow highlight top-right */
+    radial-gradient(circle at 85% 15%, rgba(255,206,0,0.08) 0 80px, transparent 81px);
+  pointer-events: none;
+  z-index: 0;
+}
+.blog-header h1,
+.blog-header p { z-index: 1; }
+.blog-header h1 {
+  background: linear-gradient(90deg, #ffffff 0%, #ffce00 50%, #ffffff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+  animation: blogHeaderShine 7s ease-in-out infinite;
+  letter-spacing: -0.01em;
+}
+@keyframes blogHeaderShine {
+  0%, 100% { background-position: 0% center; }
+  50%      { background-position: 100% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blog-header h1 { animation: none; }
+}
+
+/* Blog cards: more playful hover — image zoom, title turns LEGO red, card
+   lifts with a stronger shadow and gains a faint LEGO yellow accent bar. */
+.blog-card {
+  position: relative;
+  border: 1px solid transparent;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(21,21,31,0.05);
+}
+.blog-card::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ffce00 0%, #e3000b 100%);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+  z-index: 2;
+}
+.blog-card:hover::before { transform: scaleX(1); }
+.blog-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(227,0,11,0.15);
+  box-shadow: 0 18px 42px rgba(21,21,31,0.14);
+}
+.blog-card-thumb {
+  background: linear-gradient(135deg, #fff8ec 0%, #fff 100%);
+  position: relative;
+}
+.blog-card-thumb img {
+  transition: transform 0.5s ease;
+}
+.blog-card:hover .blog-card-thumb img {
+  transform: scale(1.08);
+}
+.blog-card-body h2 {
+  transition: color 0.2s ease;
+}
+.blog-card:hover .blog-card-body h2 {
+  color: var(--red);
+}
+
+/* Programmatically-injected badges (see blog/index.html <script> block).
+   Styling here so the markup stays in one place. */
+.blog-badge {
+  display: inline-block;
+  position: absolute;
+  top: 12px; left: 12px;
+  z-index: 3;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 11px;
+  border-radius: 50px;
+  color: #15151f;
+  background: #ffce00;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+.blog-badge.hot {
+  background: #e3000b;
+  color: #fff;
+}
+
+.blog-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 2px 0 10px;
+}
+.blog-reading-time {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+.blog-reading-time::before {
+  content: '⏱';
+  margin-right: 5px;
+  color: var(--red);
+  font-size: 0.9em;
+}
+.blog-cat {
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 9px;
+  border-radius: 50px;
+  background: #fff8ec;
+  color: #8a5a00;
+  border: 1px solid rgba(255,206,0,0.4);
+}
+.blog-cat.minifig { background: #fef3c7; color: #92540b; border-color: rgba(217,119,6,0.3); }
+.blog-cat.sets    { background: #ecfdf5; color: #166534; border-color: rgba(22,163,74,0.3); }
+.blog-cat.parts   { background: #eff6ff; color: #1e40af; border-color: rgba(37,99,235,0.3); }
+.blog-cat.guide   { background: #f5f3ff; color: #6b21a8; border-color: rgba(124,58,237,0.3); }
+.blog-cat.news    { background: #fef2f2; color: #991b1b; border-color: rgba(227,0,11,0.3); }
