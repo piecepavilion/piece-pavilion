@@ -115,10 +115,9 @@ def _fit_font(draw, text, path, max_width, target_size, min_size=24):
 
 def generate_thumb_png(title, slug, out_path):
     """Render a 1200x600 PNG thumbnail matching the hand-made PNG style:
-    red-wine gradient background, big Title Case phrase in Fredoka Bold,
-    circular pavilion seal pasted from logo-white.png in the top-right."""
+    red diagonal gradient, small 'PIECE PAVILION' label centered above a
+    big Title Case phrase in Fredoka Bold, small seal logo in top-right."""
     W, H = 1200, 600
-    img = Image.new("RGB", (W, H), (155, 0, 8))
 
     # Diagonal gradient from dark red (top-left) to bright red (bottom-right).
     base = Image.new("RGB", (W, H))
@@ -131,29 +130,34 @@ def generate_thumb_png(title, slug, out_path):
             b = int(8   + (34  - 8)   * t)
             px[x, y] = (r, g, b)
     img = base
-
     draw = ImageDraw.Draw(img)
 
-    # Seal logo in top-right. Resize to 320x320 so it dominates the corner
-    # the way the hand-made PNGs do.
+    # Seal logo in top-right, same visual size as the hand-made thumbs
+    # (~140px on a 1200x600 canvas).
     try:
         seal = Image.open(LOGO).convert("RGBA")
-        seal_sz = 320
+        seal_sz = 140
         seal = seal.resize((seal_sz, seal_sz), Image.LANCZOS)
-        img.paste(seal, (W - seal_sz - 40, 40), seal)
+        img.paste(seal, (W - seal_sz - 50, 50), seal)
     except Exception as e:
         print("  WARN: logo paste failed: %s" % e)
 
-    # Big phrase in Fredoka Bold, centered horizontally in the LEFT area
-    # (not the whole width — leave the seal space on the right).
+    # 'PIECE PAVILION' small label centered horizontally above the title.
+    label = "PIECE PAVILION"
+    label_font = ImageFont.truetype(FONT_SEMI, 36)
+    lb = draw.textbbox((0, 0), label, font=label_font)
+    lw = lb[2] - lb[0]
+    draw.text(((W - lw) // 2, 180), label, font=label_font,
+              fill=(255, 255, 255, 230))
+
+    # Big phrase in Fredoka Bold, centered horizontally.
     phrase = thumb_phrase(title)
-    left_area_width = W - 320 - 100  # minus seal + padding
-    font = _fit_font(draw, phrase, FONT_BOLD, left_area_width, 180, min_size=60)
+    font = _fit_font(draw, phrase, FONT_BOLD, W - 120, 180, min_size=72)
     bbox = draw.textbbox((0, 0), phrase, font=font)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
-    x = (left_area_width - text_w) // 2 + 40
-    y = (H - text_h) // 2 - 30
+    x = (W - text_w) // 2
+    y = (H - text_h) // 2 + 20
     # Soft drop shadow for depth.
     draw.text((x + 3, y + 4), phrase, font=font, fill=(0, 0, 0, 120))
     draw.text((x, y), phrase, font=font, fill=(255, 255, 255))
