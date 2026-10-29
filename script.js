@@ -334,6 +334,28 @@ renderTicker();
 // ===== HOMEPAGE "FROM THE BLOG" — auto-fill the 3 newest posts from /blog/ =====
 // Reads the blog index (newest-first) and rebuilds the preview grid, so the
 // homepage never shows stale posts. Falls back to the hardcoded cards on error.
+/* ---------- Blog nav "fresh" indicator ----------
+ * If the newest blog post was published within the N-hour window declared
+ * on the Blog nav link (data-fresh-window-hours, default 6), add .is-fresh
+ * so the dot pulses and the link reads "New Blog". Reads /blog/latest.json
+ * which build_blog_latest.py writes with each pp-ops run.
+ */
+(function markBlogFreshness() {
+  const nav = document.getElementById('nav-blog');
+  if (!nav) return;
+  const windowHours = parseFloat(nav.dataset.freshWindowHours) || 6;
+  fetch('/blog/latest.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data || !data.published) return;
+      const t = Date.parse(data.published);
+      if (!isFinite(t)) return;
+      const ageHours = (Date.now() - t) / 3_600_000;
+      if (ageHours < windowHours) nav.classList.add('is-fresh');
+    })
+    .catch(() => {});
+})();
+
 (function loadBlogPreview() {
   const grid = document.querySelector('.blog-preview-grid');
   if (!grid) return;
