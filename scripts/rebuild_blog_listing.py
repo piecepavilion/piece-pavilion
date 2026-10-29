@@ -20,6 +20,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
@@ -321,6 +322,37 @@ def main():
             with open(target, "w", encoding="utf-8") as f:
                 f.write(t2)
             print("Refreshed banner in %s" % os.path.relpath(target, ROOT))
+
+    # Write blog/latest.json so the homepage nav's "New Blog" indicator
+    # knows whether to blink. Use the newest post's actual git commit
+    # time (not just its date-only datePublished) so the 6-hour freshness
+    # window measures from when the post was really published, not from
+    # midnight of its date. This file is deliberately NOT pinned
+    # (source=auto) so each Worker publish updates it; delete to disable.
+    if newest:
+        write_latest_json(newest["slug"])
+
+
+def write_latest_json(slug):
+    out_path = os.path.join(BLOG_DIR, "latest.json")
+    rel = "blog/" + slug + "/index.html"
+    try:
+        ts = subprocess.check_output(
+            ["git", "log", "-1", "--format=%aI", "--", rel],
+            cwd=ROOT, text=True,
+        ).strip()
+    except Exception as e:
+        print("  WARN: git log for %s failed: %s" % (rel, e))
+        ts = ""
+    if not ts:
+        # Repo may be a shallow clone with no history for this file yet
+        # (fresh Worker commit before fetch deepens). Fall back to "now".
+        import datetime as _dt
+        ts = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
+    data = {"published": ts, "slug": slug, "source": "auto"}
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, separators=(",", ":"))
+    print("Wrote blog/latest.json: %s" % data)
 
 
 if __name__ == "__main__":

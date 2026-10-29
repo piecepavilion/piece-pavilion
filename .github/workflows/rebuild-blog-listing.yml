@@ -26,6 +26,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Need full history so `git log -1 --format=%aI -- blog/<slug>/index.html`
+          # can find the post's actual publish commit time (shallow clone
+          # wouldn't carry it, and latest.json would fall back to "now"
+          # which is fine but less accurate on rebuilds).
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -41,6 +46,6 @@ jobs:
             echo "No changes."
             exit 0
           fi
-          git add blog/index.html index.html thumb/
+          git add blog/index.html blog/latest.json index.html thumb/
           git commit -m "blog listing: auto-refresh cards + banner + thumbs [skip ci]"
           git push
