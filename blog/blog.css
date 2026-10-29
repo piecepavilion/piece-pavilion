@@ -739,3 +739,31 @@ article .blog-hero {
   /* Breadcrumbs tighter on phone */
   .breadcrumbs { padding: 12px 16px; font-size: 0.78rem; }
 }
+
+/* ================================================================
+   LOGO REMOVAL + SOLID COVER (requested)
+   ================================================================ */
+/* Hide every image inside blog-card thumbnails on the listing — those
+   pre-baked PNGs include the Piece Pavilion logo on top of each theme.
+   The underlying .blog-card-thumb is already solid LEGO red so the whole
+   card cover shows that one color only. */
+.blog-card-thumb img { display: none !important; }
+.blog-card-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e3000b !important;
+}
+/* Latest card is a redder-red (still solid, no white). */
+.blog-cards .blog-card:first-child .blog-card-thumb {
+  background: #c80008 !important;
+}
+
+/* On individual post pages, also hide any hero/cover image at the top
+   that bakes in a logo overlay. */
+article img.blog-hero,
+article picture.blog-hero,
+.blog-article img.blog-hero,
+.blog-article .blog-hero {
+  display: none !important;
+}

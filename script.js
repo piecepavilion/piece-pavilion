@@ -674,7 +674,7 @@ if (usMap) {
     const y = now.getFullYear();
     let start, end;
     if (y === 2026) {
-      start = new Date(2026, 9, 28, 21, 20, 0); // Oct 28 2026 21:20 local (bats go!)
+      start = new Date(2026, 9, 28, 0, 0, 0);   // Oct 28 2026 00:00 local -- bats all day today
       end   = new Date(2026, 10, 1, 0, 0, 0);   // Nov 1  2026 00:00 local
     } else {
       start = new Date(y, 9, 20, 0, 0, 0);      // Oct 20 YY   00:00 local
@@ -697,7 +697,12 @@ if (usMap) {
   else           runConfetti(ctx, cv, dpr);
 
   function runConfetti(ctx, cv, dpr) {
-    const COLORS = ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
+    // Halloween colors (orange + black + purple) inside the Halloween window
+    // so even if the bats fail for some reason, the fallback still feels festive.
+    const insideHalloween = halloween || isHalloweenWindow(new Date());
+    const COLORS = insideHalloween
+      ? ['#ff6600', '#000000', '#7c3aed', '#ff8c1a', '#1a1a1a', '#ffce00']
+      : ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
     const parts = [];
     for (let i = 0; i < 180; i++) {
       parts.push({
@@ -740,19 +745,19 @@ if (usMap) {
     // screen, flapping their wings. Spookier than confetti but not harsh —
     // dark grey/black on a light background, no screen-wide flash.
     const bats = [];
-    const N = 28;    // more bats, as requested
+    const N = 36;    // lots of bats, higher density + bigger silhouettes
     for (let i = 0; i < N; i++) {
       const dir = Math.random() < 0.5 ? 1 : -1;   // flying left-to-right or right-to-left
       bats.push({
-        x: dir === 1 ? -40 * dpr - Math.random() * cv.width : cv.width + Math.random() * cv.width * 0.5,
-        y: (0.08 + Math.random() * 0.55) * cv.height,
-        vx: (1.2 + Math.random() * 1.8) * dpr * dir,
-        vy: (Math.random() - 0.5) * 0.4 * dpr,
-        size: (18 + Math.random() * 18) * dpr,
+        x: dir === 1 ? -60 * dpr - Math.random() * cv.width : cv.width + Math.random() * cv.width * 0.5,
+        y: (0.05 + Math.random() * 0.7) * cv.height,         // spread across more of the viewport
+        vx: (1.4 + Math.random() * 2.2) * dpr * dir,
+        vy: (Math.random() - 0.5) * 0.5 * dpr,
+        size: (26 + Math.random() * 28) * dpr,               // bigger silhouettes
         flap: Math.random() * Math.PI * 2,
         flapSpeed: 0.18 + Math.random() * 0.08,
         wobble: Math.random() * 100,
-        shade: 20 + Math.floor(Math.random() * 40),  // greyscale
+        shade: 12 + Math.floor(Math.random() * 24),          // darker so they pop
       });
     }
 
@@ -808,12 +813,12 @@ if (usMap) {
     }
 
     const t0 = performance.now();
-    const DURATION = 7000;
+    const DURATION = 10000;    // longer so staff see the swarm properly
     (function frame(t) {
       const now = t || performance.now();
       const elapsed = now - t0;
       ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.globalAlpha = elapsed > DURATION - 1200 ? Math.max(0, (DURATION - elapsed) / 1200) : 1;
+      ctx.globalAlpha = elapsed > DURATION - 1500 ? Math.max(0, (DURATION - elapsed) / 1500) : 1;
       for (const b of bats) {
         b.wobble += 0.03;
         b.x += b.vx;
