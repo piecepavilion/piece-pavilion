@@ -10,20 +10,29 @@ Each blog post's own index.html is the source of truth:
   - <meta name="description">    -> card body paragraph
   - JSON-LD "datePublished"      -> card date
   - folder name                  -> slug + url
-  - /thumb/<slug>.png if present -> thumb img, else an inline-SVG fallback
+  - /thumb/<slug>.png if present -> card thumb; otherwise one is generated
+    with Pillow + the committed Fredoka TTF so the auto-published posts
+    match the hand-made thumbnails pixel-for-pixel on brand.
 """
 
 import html
+import io
 import json
 import os
 import re
 import sys
+
+from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BLOG_DIR = os.path.join(ROOT, "blog")
 LISTING = os.path.join(BLOG_DIR, "index.html")
 HOMEPAGE = os.path.join(ROOT, "index.html")
+THUMB_DIR = os.path.join(ROOT, "thumb")
+FONT_BOLD = os.path.join(ROOT, "scripts", "fonts", "Fredoka-Bold.ttf")
+FONT_SEMI = os.path.join(ROOT, "scripts", "fonts", "Fredoka-SemiBold.ttf")
+LOGO = os.path.join(ROOT, "logo-white.png")
 
 # Skip these — they are not real posts.
 SKIP = {"index.html", "_template.html", "blog.css"}
@@ -92,6 +101,66 @@ STOPWORDS = {"a", "an", "the", "to", "of", "and", "or", "in", "on", "for",
              "that", "than", "then", "but", "its", "it's"}
 
 
+def _fit_font(draw, text, path, max_width, target_size, min_size=24):
+    """Pick the largest Fredoka Bold size that fits text within max_width."""
+    size = target_size
+    while size > min_size:
+        f = ImageFont.truetype(path, size)
+        w = draw.textbbox((0, 0), text, font=f)[2]
+        if w <= max_width:
+            return f
+        size -= 2
+    return ImageFont.truetype(path, min_size)
+
+
+def generate_thumb_png(title, slug, out_path):
+    """Render a 1200x600 PNG thumbnail matching the hand-made PNG style:
+    red-wine gradient background, big Title Case phrase in Fredoka Bold,
+    circular pavilion seal pasted from logo-white.png in the top-right."""
+    W, H = 1200, 600
+    img = Image.new("RGB", (W, H), (155, 0, 8))
+
+    # Diagonal gradient from dark red (top-left) to bright red (bottom-right).
+    base = Image.new("RGB", (W, H))
+    px = base.load()
+    for y in range(H):
+        for x in range(W):
+            t = (x + y) / (W + H)
+            r = int(155 + (255 - 155) * t)
+            g = int(0   + (34  - 0)   * t)
+            b = int(8   + (34  - 8)   * t)
+            px[x, y] = (r, g, b)
+    img = base
+
+    draw = ImageDraw.Draw(img)
+
+    # Seal logo in top-right. Resize to 320x320 so it dominates the corner
+    # the way the hand-made PNGs do.
+    try:
+        seal = Image.open(LOGO).convert("RGBA")
+        seal_sz = 320
+        seal = seal.resize((seal_sz, seal_sz), Image.LANCZOS)
+        img.paste(seal, (W - seal_sz - 40, 40), seal)
+    except Exception as e:
+        print("  WARN: logo paste failed: %s" % e)
+
+    # Big phrase in Fredoka Bold, centered horizontally in the LEFT area
+    # (not the whole width — leave the seal space on the right).
+    phrase = thumb_phrase(title)
+    left_area_width = W - 320 - 100  # minus seal + padding
+    font = _fit_font(draw, phrase, FONT_BOLD, left_area_width, 180, min_size=60)
+    bbox = draw.textbbox((0, 0), phrase, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    x = (left_area_width - text_w) // 2 + 40
+    y = (H - text_h) // 2 - 30
+    # Soft drop shadow for depth.
+    draw.text((x + 3, y + 4), phrase, font=font, fill=(0, 0, 0, 120))
+    draw.text((x, y), phrase, font=font, fill=(255, 255, 255))
+
+    img.save(out_path, "PNG", optimize=True)
+
+
 def thumb_phrase(title):
     """Pick a 1-3 word punchy phrase in Title Case for the SVG placeholder.
     Models the hand-made thumbs ('Advent 2026', 'Halloween Guide',
@@ -122,88 +191,16 @@ def thumb_phrase(title):
     return phrase
 
 
-# The pavilion seal — 'PIECE PAVILION' curved at top of a 100-radius circle,
-# 'WHERE EVERY PIECE FINDS ITS PLACE' curved at bottom, and a colorful LEGO
-# pavilion in the center (red roof, yellow columns, blue+green base blocks).
-# This is a vector approximation of logo-white.png so it works inside a
-# data: URI SVG (external images are blocked in that context).
-_SEAL_GROUP = (
-    # Outer ring (circle border)
-    '<circle cx="100" cy="100" r="95" fill="#ffffff" stroke="#15151f" stroke-width="3"/>'
-    '<circle cx="100" cy="100" r="88" fill="none" stroke="#15151f" stroke-width="1.2"/>'
-    # Curved text ring
-    '<defs>'
-    '<path id="seal-top" d="M 25 100 A 75 75 0 0 1 175 100" fill="none"/>'
-    '<path id="seal-bot" d="M 25 100 A 75 75 0 0 0 175 100" fill="none"/>'
-    '</defs>'
-    '<text font-family="Fredoka,Nunito,sans-serif" font-weight="700" '
-    'font-size="18" fill="#15151f" letter-spacing="2">'
-    '<textPath href="#seal-top" startOffset="50%" text-anchor="middle">PIECE PAVILION</textPath>'
-    '</text>'
-    '<text font-family="Fredoka,Nunito,sans-serif" font-weight="600" '
-    'font-size="9" fill="#15151f" letter-spacing="1.2">'
-    '<textPath href="#seal-bot" startOffset="50%" text-anchor="middle">WHERE EVERY PIECE FINDS ITS PLACE</textPath>'
-    '</text>'
-    # Side dots
-    '<circle cx="20" cy="100" r="2" fill="#15151f"/>'
-    '<circle cx="180" cy="100" r="2" fill="#15151f"/>'
-    # LEGO pavilion in the middle
-    # Red tiled roof
-    '<path d="M 60 76 L 100 48 L 140 76 Z" fill="#e3000b" stroke="#15151f" stroke-width="2.2"/>'
-    '<line x1="76" y1="66" x2="76" y2="76" stroke="#15151f" stroke-width="1"/>'
-    '<line x1="92" y1="55" x2="92" y2="76" stroke="#15151f" stroke-width="1"/>'
-    '<line x1="108" y1="55" x2="108" y2="76" stroke="#15151f" stroke-width="1"/>'
-    '<line x1="124" y1="66" x2="124" y2="76" stroke="#15151f" stroke-width="1"/>'
-    # Yellow architrave + columns
-    '<rect x="56" y="76" width="88" height="10" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
-    '<rect x="64" y="86" width="12" height="40" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
-    '<rect x="124" y="86" width="12" height="40" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
-    # Yellow door in middle
-    '<path d="M 88 94 L 112 94 L 112 126 L 100 134 L 88 126 Z" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
-    # Base blocks: blue, red, green
-    '<rect x="56" y="126" width="30" height="12" fill="#0057a8" stroke="#15151f" stroke-width="2"/>'
-    '<rect x="86" y="126" width="28" height="12" fill="#e3000b" stroke="#15151f" stroke-width="2"/>'
-    '<rect x="114" y="126" width="30" height="12" fill="#16a34a" stroke="#15151f" stroke-width="2"/>'
-    # Base platform
-    '<rect x="52" y="138" width="96" height="8" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
-)
-
-
-def thumb_svg(title, slug):
-    """Match the hand-made thumbs: dark gradient background, big Title Case
-    phrase centered in Fredoka, and a prominent Piece Pavilion seal badge
-    in the top-right. No top-left label (matches hand-made PNGs)."""
-    phrase = html.escape(thumb_phrase(title))
-    big_size = 68 if len(phrase) <= 10 else (54 if len(phrase) <= 14 else 44)
-    svg = (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">'
-        '<defs><linearGradient id="g-{slug}" x1="0" y1="0" x2="1" y2="1">'
-        '<stop offset="0" stop-color="#9b0008"/>'
-        '<stop offset="0.6" stop-color="#e3000b"/>'
-        '<stop offset="1" stop-color="#ff2222"/>'
-        '</linearGradient></defs>'
-        '<rect width="400" height="250" fill="url(#g-{slug})"/>'
-        # Big phrase line in Title Case, centered horizontally in the frame
-        '<text x="200" y="150" fill="#ffffff" text-anchor="middle" '
-        'font-family="Fredoka,Nunito,cursive" font-weight="700" font-size="{sz}" '
-        'letter-spacing="0.5">{phrase}</text>'
-        # Seal badge in top-right, enlarged (0.55x of 200x200 = 110px)
-        '<g transform="translate(275 10) scale(0.55)">{seal}</g>'
-        '</svg>'
-    ).format(slug=slug, phrase=phrase, sz=big_size, seal=_SEAL_GROUP)
-    import urllib.parse
-    return "data:image/svg+xml;utf8," + urllib.parse.quote(svg)
 
 
 def render_cards(posts):
-    """Build the inner HTML of <div class="blog-cards">."""
+    """Build the inner HTML of <div class="blog-cards">. Every post has a
+    real PNG thumb at /thumb/<slug>.png — either hand-made or auto-generated
+    by generate_thumb_png() during main()."""
     lines = ["\n"]
     for p in posts:
         href = "/blog/%s/" % p["slug"]
-        if p["has_thumb"]:
-            thumb = '<img src="/thumb/%s.png" alt="" loading="lazy" />' % p["slug"]
-        else:
-            thumb = '<img src="%s" alt="" loading="lazy" />' % thumb_svg(p["title"], p["slug"])
+        thumb = '<img src="/thumb/%s.png" alt="" loading="lazy" />' % p["slug"]
         card = (
             '      <a href="{href}" class="blog-card">\n'
             '        <div class="blog-card-thumb">{thumb}</div>\n'
@@ -280,6 +277,23 @@ def main():
 
     posts.sort(key=lambda p: p["date_iso"], reverse=True)
     print("Found %d posts, newest = %s" % (len(posts), posts[0]["slug"] if posts else "(none)"))
+
+    # Generate thumbnails for any post without a hand-made /thumb/<slug>.png.
+    os.makedirs(THUMB_DIR, exist_ok=True)
+    generated = 0
+    for p in posts:
+        if p["has_thumb"]:
+            continue
+        out = os.path.join(THUMB_DIR, p["slug"] + ".png")
+        try:
+            generate_thumb_png(p["title"], p["slug"], out)
+            p["has_thumb"] = True
+            generated += 1
+            print("  gen thumb for %s" % p["slug"])
+        except Exception as e:
+            print("  SKIP thumb for %s: %s" % (p["slug"], e))
+    if generated:
+        print("Generated %d thumbnails" % generated)
 
     # Rebuild blog/index.html card section.
     with open(LISTING, "r", encoding="utf-8") as f:
