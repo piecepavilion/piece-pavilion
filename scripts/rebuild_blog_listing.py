@@ -88,17 +88,17 @@ def format_date(iso):
 
 
 STOPWORDS = {"a", "an", "the", "to", "of", "and", "or", "in", "on", "for",
-             "by", "at", "is", "with", "from", "as"}
+             "by", "at", "is", "with", "from", "as", "how", "what", "which",
+             "that", "than", "then", "but", "its", "it's"}
 
 
 def thumb_phrase(title):
-    """Pick a 1-3 word punchy phrase from the title, uppercase, for the
-    SVG placeholder. Models the hand-made thumbs ('Advent 2026',
-    'Halloween Guide', 'Minifig Values')."""
+    """Pick a 1-3 word punchy phrase in Title Case for the SVG placeholder.
+    Models the hand-made thumbs ('Advent 2026', 'Halloween Guide',
+    'Minifig Values')."""
     if not title:
-        return "NEW POST"
+        return "New Post"
     words = re.sub(r"[:,.\!\?]", " ", title).split()
-    # Prefer the first 2-3 content words (skip "LEGO" prefix + stopwords).
     picked = []
     for w in words:
         wl = w.lower()
@@ -106,53 +106,95 @@ def thumb_phrase(title):
         if wl == "lego" and not picked: continue
         picked.append(w)
         if len(picked) == 3: break
-        # Stop at punctuation-looking word (number followed by comma was already
-        # stripped above, so a stray short token means we have enough).
     if not picked:
         picked = words[:3]
-    phrase = " ".join(picked).upper()
-    # Keep it tight — 20 chars max for the big line.
-    if len(phrase) > 20:
-        phrase = " ".join(picked[:2]).upper()
-    if len(phrase) > 20:
-        phrase = picked[0].upper()
+    # Title Case so it matches the hand-made PNGs ('Advent 2026'
+    # not 'ADVENT 2026').
+    def cap(w):
+        if w.isdigit() or (len(w) >= 2 and w[0].isdigit()):
+            return w  # keep year/number as-is
+        return w[:1].upper() + w[1:].lower() if w else w
+    phrase = " ".join(cap(w) for w in picked)
+    if len(phrase) > 18:
+        phrase = " ".join(cap(w) for w in picked[:2])
+    if len(phrase) > 18:
+        phrase = cap(picked[0])
     return phrase
 
 
+# The pavilion seal — 'PIECE PAVILION' curved at top of a 100-radius circle,
+# 'WHERE EVERY PIECE FINDS ITS PLACE' curved at bottom, and a colorful LEGO
+# pavilion in the center (red roof, yellow columns, blue+green base blocks).
+# This is a vector approximation of logo-white.png so it works inside a
+# data: URI SVG (external images are blocked in that context).
+_SEAL_GROUP = (
+    # Outer ring (circle border)
+    '<circle cx="100" cy="100" r="95" fill="#ffffff" stroke="#15151f" stroke-width="3"/>'
+    '<circle cx="100" cy="100" r="88" fill="none" stroke="#15151f" stroke-width="1.2"/>'
+    # Curved text ring
+    '<defs>'
+    '<path id="seal-top" d="M 25 100 A 75 75 0 0 1 175 100" fill="none"/>'
+    '<path id="seal-bot" d="M 25 100 A 75 75 0 0 0 175 100" fill="none"/>'
+    '</defs>'
+    '<text font-family="Fredoka,Nunito,sans-serif" font-weight="700" '
+    'font-size="18" fill="#15151f" letter-spacing="2">'
+    '<textPath href="#seal-top" startOffset="50%" text-anchor="middle">PIECE PAVILION</textPath>'
+    '</text>'
+    '<text font-family="Fredoka,Nunito,sans-serif" font-weight="600" '
+    'font-size="9" fill="#15151f" letter-spacing="1.2">'
+    '<textPath href="#seal-bot" startOffset="50%" text-anchor="middle">WHERE EVERY PIECE FINDS ITS PLACE</textPath>'
+    '</text>'
+    # Side dots
+    '<circle cx="20" cy="100" r="2" fill="#15151f"/>'
+    '<circle cx="180" cy="100" r="2" fill="#15151f"/>'
+    # LEGO pavilion in the middle
+    # Red tiled roof
+    '<path d="M 60 76 L 100 48 L 140 76 Z" fill="#e3000b" stroke="#15151f" stroke-width="2.2"/>'
+    '<line x1="76" y1="66" x2="76" y2="76" stroke="#15151f" stroke-width="1"/>'
+    '<line x1="92" y1="55" x2="92" y2="76" stroke="#15151f" stroke-width="1"/>'
+    '<line x1="108" y1="55" x2="108" y2="76" stroke="#15151f" stroke-width="1"/>'
+    '<line x1="124" y1="66" x2="124" y2="76" stroke="#15151f" stroke-width="1"/>'
+    # Yellow architrave + columns
+    '<rect x="56" y="76" width="88" height="10" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
+    '<rect x="64" y="86" width="12" height="40" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
+    '<rect x="124" y="86" width="12" height="40" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
+    # Yellow door in middle
+    '<path d="M 88 94 L 112 94 L 112 126 L 100 134 L 88 126 Z" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
+    # Base blocks: blue, red, green
+    '<rect x="56" y="126" width="30" height="12" fill="#0057a8" stroke="#15151f" stroke-width="2"/>'
+    '<rect x="86" y="126" width="28" height="12" fill="#e3000b" stroke="#15151f" stroke-width="2"/>'
+    '<rect x="114" y="126" width="30" height="12" fill="#16a34a" stroke="#15151f" stroke-width="2"/>'
+    # Base platform
+    '<rect x="52" y="138" width="96" height="8" fill="#ffce00" stroke="#15151f" stroke-width="2"/>'
+)
+
+
 def thumb_svg(title, slug):
-    """Yellow -> red gradient placeholder matching the hand-made thumbs:
-    small 'PIECE PAVILION' label, big 1-3 word phrase in LEGO colors,
-    and a white circular badge with the pavilion house glyph in the
-    top-right corner (same icon as /favicon.svg)."""
+    """Match the hand-made thumbs: dark gradient background, big Title Case
+    phrase in Fredoka, and the full Piece Pavilion seal logo in the top-right.
+    """
     phrase = html.escape(thumb_phrase(title))
-    big_size = 52 if len(phrase) <= 10 else (42 if len(phrase) <= 15 else 32)
-    # Pavilion house glyph scaled from the 32x32 favicon viewBox. We draw it
-    # at (330, 20) as a 60x60 badge: white circle backing + red pavilion.
+    big_size = 56 if len(phrase) <= 10 else (46 if len(phrase) <= 14 else 36)
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">'
         '<defs><linearGradient id="g-{slug}" x1="0" y1="0" x2="1" y2="1">'
-        '<stop offset="0" stop-color="#ffce00"/>'
-        '<stop offset="1" stop-color="#e3000b"/>'
+        '<stop offset="0" stop-color="#9b0008"/>'
+        '<stop offset="0.6" stop-color="#e3000b"/>'
+        '<stop offset="1" stop-color="#ff2222"/>'
         '</linearGradient></defs>'
         '<rect width="400" height="250" fill="url(#g-{slug})"/>'
-        '<text x="30" y="42" fill="#15151f" text-anchor="start" '
-        'font-family="Fredoka,Nunito,sans-serif" font-weight="600" font-size="13" '
-        'letter-spacing="3" opacity="0.75">PIECE PAVILION</text>'
-        '<text x="200" y="160" fill="#15151f" text-anchor="middle" '
-        'font-family="Fredoka,Nunito,sans-serif" font-weight="800" font-size="{sz}" '
-        'letter-spacing="1">{phrase}</text>'
-        '<g transform="translate(330 20)">'
-        '<circle cx="30" cy="30" r="30" fill="#ffffff"/>'
-        '<g transform="translate(7.5 7.5) scale(1.406)" fill="#e3000b">'
-        '<path d="M16 5 L5.5 13.5 L26.5 13.5 Z"/>'
-        '<rect x="6" y="14" width="20" height="2.6" rx="0.7"/>'
-        '<rect x="8" y="17.4" width="2.8" height="7.2" rx="0.6"/>'
-        '<rect x="14.6" y="17.4" width="2.8" height="7.2" rx="0.6"/>'
-        '<rect x="21.2" y="17.4" width="2.8" height="7.2" rx="0.6"/>'
-        '<rect x="6" y="25" width="20" height="2.6" rx="0.7"/>'
-        '</g></g>'
+        # PIECE PAVILION small label at top
+        '<text x="20" y="36" fill="#ffffff" text-anchor="start" '
+        'font-family="Fredoka,Nunito,sans-serif" font-weight="500" font-size="12" '
+        'letter-spacing="3" opacity="0.85">PIECE PAVILION</text>'
+        # Big phrase line in Title Case
+        '<text x="20" y="160" fill="#ffffff" text-anchor="start" '
+        'font-family="Fredoka,Nunito,cursive" font-weight="700" font-size="{sz}" '
+        'letter-spacing="0.5">{phrase}</text>'
+        # Seal badge in top-right (scaled to 70x70 from the 200x200 seal viewbox)
+        '<g transform="translate(315 15) scale(0.35)">{seal}</g>'
         '</svg>'
-    ).format(slug=slug, phrase=phrase, sz=big_size)
+    ).format(slug=slug, phrase=phrase, sz=big_size, seal=_SEAL_GROUP)
     import urllib.parse
     return "data:image/svg+xml;utf8," + urllib.parse.quote(svg)
 
