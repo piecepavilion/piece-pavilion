@@ -610,12 +610,7 @@
   animation: rainbowSpin 10s linear infinite;
 }
 .blog-card:hover {
-  background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    conic-gradient(from var(--rainbow-angle, 0deg),
-      #ff0040, #ff7a00, #ffce00, #16a34a, #0057a8, #7c3aed, #ff0040) border-box;
   border-width: 3px;
-  animation-duration: 0.65s, 4s;
 }
 /* Keyframe-driven custom property gives the conic gradient a continuous spin. */
 @property --rainbow-angle {
