@@ -171,10 +171,10 @@ _SEAL_GROUP = (
 
 def thumb_svg(title, slug):
     """Match the hand-made thumbs: dark gradient background, big Title Case
-    phrase in Fredoka, and the full Piece Pavilion seal logo in the top-right.
-    """
+    phrase centered in Fredoka, and a prominent Piece Pavilion seal badge
+    in the top-right. No top-left label (matches hand-made PNGs)."""
     phrase = html.escape(thumb_phrase(title))
-    big_size = 56 if len(phrase) <= 10 else (46 if len(phrase) <= 14 else 36)
+    big_size = 68 if len(phrase) <= 10 else (54 if len(phrase) <= 14 else 44)
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">'
         '<defs><linearGradient id="g-{slug}" x1="0" y1="0" x2="1" y2="1">'
@@ -183,16 +183,12 @@ def thumb_svg(title, slug):
         '<stop offset="1" stop-color="#ff2222"/>'
         '</linearGradient></defs>'
         '<rect width="400" height="250" fill="url(#g-{slug})"/>'
-        # PIECE PAVILION small label at top
-        '<text x="20" y="36" fill="#ffffff" text-anchor="start" '
-        'font-family="Fredoka,Nunito,sans-serif" font-weight="500" font-size="12" '
-        'letter-spacing="3" opacity="0.85">PIECE PAVILION</text>'
-        # Big phrase line in Title Case
-        '<text x="20" y="160" fill="#ffffff" text-anchor="start" '
+        # Big phrase line in Title Case, centered horizontally in the frame
+        '<text x="200" y="150" fill="#ffffff" text-anchor="middle" '
         'font-family="Fredoka,Nunito,cursive" font-weight="700" font-size="{sz}" '
         'letter-spacing="0.5">{phrase}</text>'
-        # Seal badge in top-right (scaled to 70x70 from the 200x200 seal viewbox)
-        '<g transform="translate(315 15) scale(0.35)">{seal}</g>'
+        # Seal badge in top-right, enlarged (0.55x of 200x200 = 110px)
+        '<g transform="translate(275 10) scale(0.55)">{seal}</g>'
         '</svg>'
     ).format(slug=slug, phrase=phrase, sz=big_size, seal=_SEAL_GROUP)
     import urllib.parse
