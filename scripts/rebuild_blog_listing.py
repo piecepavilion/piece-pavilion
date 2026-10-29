@@ -87,10 +87,44 @@ def format_date(iso):
     return "%s %d, %s" % (months[int(m) - 1], int(d), y)
 
 
+STOPWORDS = {"a", "an", "the", "to", "of", "and", "or", "in", "on", "for",
+             "by", "at", "is", "with", "from", "as"}
+
+
+def thumb_phrase(title):
+    """Pick a 1-3 word punchy phrase from the title, uppercase, for the
+    SVG placeholder. Models the hand-made thumbs ('Advent 2026',
+    'Halloween Guide', 'Minifig Values')."""
+    if not title:
+        return "NEW POST"
+    words = re.sub(r"[:,.\!\?]", " ", title).split()
+    # Prefer the first 2-3 content words (skip "LEGO" prefix + stopwords).
+    picked = []
+    for w in words:
+        wl = w.lower()
+        if wl in STOPWORDS: continue
+        if wl == "lego" and not picked: continue
+        picked.append(w)
+        if len(picked) == 3: break
+        # Stop at punctuation-looking word (number followed by comma was already
+        # stripped above, so a stray short token means we have enough).
+    if not picked:
+        picked = words[:3]
+    phrase = " ".join(picked).upper()
+    # Keep it tight — 20 chars max for the big line.
+    if len(phrase) > 20:
+        phrase = " ".join(picked[:2]).upper()
+    if len(phrase) > 20:
+        phrase = picked[0].upper()
+    return phrase
+
+
 def thumb_svg(title, slug):
-    """Yellow -> red diagonal LEGO-colored placeholder with a title overlay.
-    Lives inline so the auto-published post renders well even without a PNG."""
-    safe = html.escape((title or "")[:60])
+    """Yellow -> red gradient placeholder matching the hand-made thumbs:
+    a 1-3 word punchy phrase, 'PIECE PAVILION' subtitle, LEGO colors."""
+    phrase = html.escape(thumb_phrase(title))
+    # Font sizes scale with phrase length so a 20-char phrase still fits.
+    big_size = 52 if len(phrase) <= 10 else (42 if len(phrase) <= 15 else 32)
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">'
         '<defs><linearGradient id="g-{slug}" x1="0" y1="0" x2="1" y2="1">'
@@ -98,11 +132,14 @@ def thumb_svg(title, slug):
         '<stop offset="1" stop-color="#e3000b"/>'
         '</linearGradient></defs>'
         '<rect width="400" height="250" fill="url(#g-{slug})"/>'
-        '<text x="200" y="135" fill="#15151f" text-anchor="middle" '
-        'font-family="Fredoka,Nunito,sans-serif" font-weight="800" font-size="22" '
-        'letter-spacing="0.5">{title}</text>'
+        '<text x="200" y="90" fill="#15151f" text-anchor="middle" '
+        'font-family="Fredoka,Nunito,sans-serif" font-weight="600" font-size="13" '
+        'letter-spacing="3" opacity="0.75">PIECE PAVILION</text>'
+        '<text x="200" y="160" fill="#15151f" text-anchor="middle" '
+        'font-family="Fredoka,Nunito,sans-serif" font-weight="800" font-size="{sz}" '
+        'letter-spacing="1">{phrase}</text>'
         '</svg>'
-    ).format(slug=slug, title=safe)
+    ).format(slug=slug, phrase=phrase, sz=big_size)
     import urllib.parse
     return "data:image/svg+xml;utf8," + urllib.parse.quote(svg)
 
