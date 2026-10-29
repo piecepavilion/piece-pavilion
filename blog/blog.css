@@ -895,3 +895,119 @@ article picture.blog-hero,
   .scroll-top-btn { right: 14px; bottom: 14px; width: 52px; height: 52px; }
 }
 
+
+/* ================================================================
+   REQUESTED ADD-ON: hero image back + Piece Pavilion logo in design
+   ================================================================ */
+
+/* Show the pre-rendered cover image at the top of each post again, but
+   nicely styled: rounded, shadowed, with the colored title cover sliding
+   up to overlap the bottom edge like a book-jacket flap. */
+article img.blog-hero,
+article picture.blog-hero,
+.blog-article img.blog-hero,
+.blog-article .blog-hero {
+  display: block !important;
+  width: calc(100% + 56px) !important;
+  margin: -16px -28px 0 !important;
+  height: auto;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 10px 30px rgba(21,21,31,0.14);
+}
+
+/* Title band — pull it up to tuck under the hero image's lower edge. */
+.blog-article > h1 {
+  margin-top: -40px !important;    /* overlap the hero bottom */
+  border-radius: 0 0 18px 18px !important;
+  position: relative;
+  z-index: 2;
+  padding-top: 56px !important;    /* room for the logo badge above */
+  padding-right: 28px !important;
+}
+
+/* The Piece Pavilion logo appears as a circular badge sitting on the
+   boundary between the hero image and the colored title band. Delivered
+   via ::before so no HTML change is needed. */
+.blog-article > h1::after {
+  content: '';
+  position: absolute;
+  top: -34px;
+  left: 24px;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background:
+    url('/logo-white.png') center/42px no-repeat,
+    #15151f;
+  border: 3px solid #ffce00;
+  box-shadow: 0 6px 18px rgba(21,21,31,0.3);
+  z-index: 3;
+}
+
+/* Byline sits tight under the title, now that we're using the full title
+   band as the cover block. */
+.blog-article > .blog-byline {
+  margin-top: -4px !important;
+  padding-top: 0 !important;
+}
+
+/* Mobile: hero image is wider than the article, so clip overflow and
+   keep padding sensible. Logo badge gets slightly smaller. */
+@media (max-width: 540px) {
+  article img.blog-hero,
+  .blog-article img.blog-hero {
+    width: calc(100% + 36px) !important;
+    margin: -8px -18px 0 !important;
+    border-radius: 12px 12px 0 0;
+  }
+  .blog-article > h1 {
+    padding-top: 46px !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    padding-bottom: 24px !important;
+    margin-left: -18px !important;
+    margin-right: -18px !important;
+    border-radius: 0 0 12px 12px !important;
+  }
+  .blog-article > h1::after {
+    width: 52px;
+    height: 52px;
+    top: -26px;
+    left: 16px;
+    background-size: 32px;
+    border-width: 2.5px;
+  }
+  .blog-article > .blog-byline {
+    margin-left: -18px !important;
+    margin-right: -18px !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+
+/* The small Piece Pavilion mark also lives in the top-right corner of
+   each listing card thumb so the brand ties the blog grid together. */
+.blog-card-thumb {
+  position: relative;
+}
+.blog-card-thumb::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background:
+    url('/logo-white.png') center/18px no-repeat,
+    rgba(0, 0, 0, 0.22);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  z-index: 2;
+}
+/* On the yellow card the badge has a dark background so the logo pops */
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb::before {
+  background:
+    url('/logo-white.png') center/18px no-repeat,
+    #15151f;
+  border-color: rgba(255,255,255,0.9);
+}
