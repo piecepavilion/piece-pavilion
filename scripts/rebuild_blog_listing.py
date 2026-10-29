@@ -121,10 +121,13 @@ def thumb_phrase(title):
 
 def thumb_svg(title, slug):
     """Yellow -> red gradient placeholder matching the hand-made thumbs:
-    a 1-3 word punchy phrase, 'PIECE PAVILION' subtitle, LEGO colors."""
+    small 'PIECE PAVILION' label, big 1-3 word phrase in LEGO colors,
+    and a white circular badge with the pavilion house glyph in the
+    top-right corner (same icon as /favicon.svg)."""
     phrase = html.escape(thumb_phrase(title))
-    # Font sizes scale with phrase length so a 20-char phrase still fits.
     big_size = 52 if len(phrase) <= 10 else (42 if len(phrase) <= 15 else 32)
+    # Pavilion house glyph scaled from the 32x32 favicon viewBox. We draw it
+    # at (330, 20) as a 60x60 badge: white circle backing + red pavilion.
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">'
         '<defs><linearGradient id="g-{slug}" x1="0" y1="0" x2="1" y2="1">'
@@ -132,12 +135,22 @@ def thumb_svg(title, slug):
         '<stop offset="1" stop-color="#e3000b"/>'
         '</linearGradient></defs>'
         '<rect width="400" height="250" fill="url(#g-{slug})"/>'
-        '<text x="200" y="90" fill="#15151f" text-anchor="middle" '
+        '<text x="30" y="42" fill="#15151f" text-anchor="start" '
         'font-family="Fredoka,Nunito,sans-serif" font-weight="600" font-size="13" '
         'letter-spacing="3" opacity="0.75">PIECE PAVILION</text>'
         '<text x="200" y="160" fill="#15151f" text-anchor="middle" '
         'font-family="Fredoka,Nunito,sans-serif" font-weight="800" font-size="{sz}" '
         'letter-spacing="1">{phrase}</text>'
+        '<g transform="translate(330 20)">'
+        '<circle cx="30" cy="30" r="30" fill="#ffffff"/>'
+        '<g transform="translate(7.5 7.5) scale(1.406)" fill="#e3000b">'
+        '<path d="M16 5 L5.5 13.5 L26.5 13.5 Z"/>'
+        '<rect x="6" y="14" width="20" height="2.6" rx="0.7"/>'
+        '<rect x="8" y="17.4" width="2.8" height="7.2" rx="0.6"/>'
+        '<rect x="14.6" y="17.4" width="2.8" height="7.2" rx="0.6"/>'
+        '<rect x="21.2" y="17.4" width="2.8" height="7.2" rx="0.6"/>'
+        '<rect x="6" y="25" width="20" height="2.6" rx="0.7"/>'
+        '</g></g>'
         '</svg>'
     ).format(slug=slug, phrase=phrase, sz=big_size)
     import urllib.parse
