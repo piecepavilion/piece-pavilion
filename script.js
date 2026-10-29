@@ -235,15 +235,24 @@ function renderTicker() {
   const singleRun = items.join(sep) + sep;
   const trackInner = singleRun + singleRun;
 
-  banner.innerHTML =
+  // Skip the DOM swap if the ticker contents haven't changed since the
+  // last render — otherwise innerHTML replacement restarts the CSS
+  // ticker-scroll animation at translateX(0), producing a visible jump
+  // when a late-arriving fetch (latest-blog, sheet config) resolves
+  // after the banner has already been revealed.
+  const newInner =
     '<div class="ticker-viewport"><div class="ticker-track">' + trackInner + '</div></div>' +
     '<button class="announcement-close" aria-label="Dismiss">&times;</button>';
+  if (banner.getAttribute('data-ticker-sig') !== newInner) {
+    banner.innerHTML = newInner;
+    banner.setAttribute('data-ticker-sig', newInner);
+  }
   banner.classList.add('ticker');
   banner.classList.remove('hidden');
-  // Reveal the banner only after the real ticker content is in place.
-  // Hiding it until now prevents a visible transition from the hardcoded
-  // single-item fallback to the full marquee on page open.
-  requestAnimationFrame(() => banner.classList.add('is-ready'));
+  // DO NOT reveal here. The boot sequence below reveals the banner only
+  // after the latest-blog fetch has settled, so visitors never see the
+  // hardcoded single-item fallback flash centered before the marquee
+  // takes over.
 
   // Dismiss (sessionStorage so it comes back on next visit).
   const closeBtn = banner.querySelector('.announcement-close');
@@ -276,7 +285,16 @@ tickerState.hardcodedAnnouncement = readHardcodedAnnouncement();
 tickerState.justAdded = readJustAdded();
 renderTicker();
 
-// Fetch latest blog (ticker enriches once this resolves).
+// Fetch latest blog (ticker enriches once this resolves). Reveal the
+// banner only AFTER this settles so the first visible frame already
+// contains the enriched marquee — no "latest blog centered then
+// snaps left and scrolls" flash on page open.
+const revealBanner = () => {
+  const b = tickerBanner();
+  if (b && !b.classList.contains('hidden')) {
+    requestAnimationFrame(() => b.classList.add('is-ready'));
+  }
+};
 (function loadLatestBlog() {
   fetch('/blog/?_=' + Date.now())
     .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
@@ -289,7 +307,8 @@ renderTicker();
       tickerState.latestBlog = { title: title.trim(), href };
       renderTicker();
     })
-    .catch(() => {});
+    .catch(() => {})
+    .finally(revealBanner);
 })();
 
 (function loadBannerConfig() {
