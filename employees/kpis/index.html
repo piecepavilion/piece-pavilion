@@ -10,6 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <!-- D3 + topojson + world-atlas for the visitor-map choropleth.
+       d3@7 is ~250KB gz'd and we only use geoPath + geoNaturalEarth1.
+       world-atlas 110m is ~100KB — plenty of detail for a dashboard tile. -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
   <style>
     :root {
       --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --ink:#15151f;
@@ -331,7 +336,7 @@
         <div class="live-windows" id="live-windows">
           <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#16a34a"></span>Last 10 min</div><div class="win-users" id="w10-users">—</div><div class="win-sub" id="w10-sub">visitors</div><ul class="win-pages" id="w10-pages"></ul></div>
           <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#d97706"></span>Last 1 hour</div><div class="win-users" id="w1h-users">—</div><div class="win-sub" id="w1h-sub">visitors</div><ul class="win-pages" id="w1h-pages"></ul></div>
-          <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#2563eb"></span>Last 6 hours</div><div class="win-users" id="w6h-users">—</div><div class="win-sub" id="w6h-sub">visitors</div><ul class="win-pages" id="w6h-pages"></ul></div>
+          <div class="live-win"><div class="win-head"><span class="win-dot" style="background:#2563eb"></span>Last 48 hours</div><div class="win-users" id="w48h-users">—</div><div class="win-sub" id="w48h-sub">visitors</div><ul class="win-pages" id="w48h-pages"></ul></div>
         </div>
       </div>
       <div class="card" style="grid-column:1 / -1;">
@@ -351,7 +356,7 @@
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Where traffic comes from</h3><span class="meta">Last 6 hours</span></div>
+        <div class="card-head"><h3>Where traffic comes from</h3><span class="meta">Last 48 hours</span></div>
         <table class="data-table" id="ga-sources"><thead>
           <tr><th>Source</th><th class="num">Visitors</th></tr>
         </thead><tbody><tr><td colspan="2" style="padding:20px;color:var(--mid)">Loading…</td></tr></tbody></table>
@@ -359,6 +364,24 @@
         <table class="data-table" id="ga-countries"><thead>
           <tr><th>Country</th><th class="num">Visitors</th></tr>
         </thead><tbody><tr><td colspan="2" style="padding:12px;color:var(--mid)">—</td></tr></tbody></table>
+      </div>
+
+      <!-- World map: choropleth of 48h visitors by country. Lives on its own
+           row so the full width is available for the globe. -->
+      <div class="card" style="grid-column:1 / -1;">
+        <div class="card-head">
+          <h3>Visitor map</h3>
+          <span class="meta">Last 48 hours</span>
+        </div>
+        <div id="ga-map-wrap" style="position:relative; width:100%; max-width:1100px; margin:4px auto 0;">
+          <svg id="ga-map" viewBox="0 0 980 520" style="width:100%; height:auto; display:block;"></svg>
+          <div id="ga-map-tooltip" style="position:absolute; pointer-events:none; background:#15151f; color:#fff; font-size:.78rem; font-weight:800; padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .12s; white-space:nowrap; z-index:5;"></div>
+          <div id="ga-map-legend" style="display:flex; align-items:center; gap:8px; justify-content:center; margin-top:10px; font-size:.74rem; font-weight:800; color:var(--muted); letter-spacing:.06em; text-transform:uppercase;">
+            <span>Fewer</span>
+            <span style="display:inline-block; width:140px; height:10px; border-radius:5px; background:linear-gradient(90deg, #fef3c7 0%, #ffce00 35%, #e3000b 100%);"></span>
+            <span>More visitors</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1022,28 +1045,28 @@
         }).join('');
       };
 
-      fill('w10', g.windows ? g.windows['10m'] : null);
-      fill('w1h', g.windows ? g.windows['1h']  : null);
-      fill('w6h', g.windows ? g.windows['6h']  : null);
+      fill('w10',  g.windows ? g.windows['10m'] : null);
+      fill('w1h',  g.windows ? g.windows['1h']  : null);
+      fill('w48h', g.windows ? g.windows['48h'] : null);
 
       // Daily visitors by week
       weekState.daily = g.daily || [];
       weekState.offset = 0;
       renderWeek();
 
-      // Sources table (6h)
-      const w6 = g.windows ? g.windows['6h'] : null;
-      const srcs = (w6 && w6.topSources) || [];
+      // Sources table (48h) + country list + world-map choropleth.
+      const w48 = g.windows ? g.windows['48h'] : null;
+      const srcs = (w48 && w48.topSources) || [];
       const srcTable = document.getElementById('ga-sources').querySelector('tbody');
       if (srcs.length) {
         srcTable.innerHTML = srcs.map(s =>
           '<tr><td>' + escapeHtml(s.name) + '</td><td class="num">' + s.users + '</td></tr>'
         ).join('');
       } else {
-        srcTable.innerHTML = '<tr><td colspan="2" style="padding:12px;color:var(--muted);font-style:italic;">No traffic in the last 6 hours (standard reports lag ~15 min)</td></tr>';
+        srcTable.innerHTML = '<tr><td colspan="2" style="padding:12px;color:var(--muted);font-style:italic;">No traffic in the last 48 hours (standard reports lag ~15 min)</td></tr>';
       }
 
-      const countries = (w6 && w6.topCountries) || [];
+      const countries = (w48 && w48.topCountries) || [];
       const ctryTable = document.getElementById('ga-countries').querySelector('tbody');
       if (countries.length) {
         ctryTable.innerHTML = countries.map(c =>
@@ -1052,11 +1075,130 @@
       } else {
         ctryTable.innerHTML = '<tr><td colspan="2" style="padding:12px;color:var(--muted);">—</td></tr>';
       }
+
+      // Draw the world map choropleth. Uses full country roll if available,
+      // falls back to the top-15 slice if the backend hasn't been redeployed.
+      const mapData = (w48 && (w48.allCountries || w48.topCountries)) || [];
+      renderWorldMap(mapData);
     }
 
     function escapeHtml(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
         ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    }
+
+    // ---- World-map choropleth of 48h visitors by country. Lazy-loads
+    //      the world-atlas topojson on first call; reuses it after.
+    // GA returns country names ("United States", "United Kingdom", …) while
+    // the world-atlas uses the same display names, so a direct name match
+    // works for the overwhelming majority of countries. The small set that
+    // differs (e.g. GA's "Czechia" vs atlas's "Czech Rep.") gets patched
+    // through the NAME_ALIAS map.
+    const NAME_ALIAS = {
+      'United States': 'United States of America',
+      'Czechia': 'Czech Rep.',
+      'South Korea': 'Korea',
+      'North Korea': 'Dem. Rep. Korea',
+      'Russia': 'Russia',
+      'Ivory Coast': "Côte d'Ivoire",
+      "Cote d'Ivoire": "Côte d'Ivoire",
+      'Democratic Republic of the Congo': 'Dem. Rep. Congo',
+      'Republic of the Congo': 'Congo',
+      'Myanmar (Burma)': 'Myanmar',
+      'Dominican Republic': 'Dominican Rep.',
+      'Central African Republic': 'Central African Rep.',
+      'Equatorial Guinea': 'Eq. Guinea',
+      'South Sudan': 'S. Sudan',
+      'Bosnia & Herzegovina': 'Bosnia and Herz.',
+      'Bosnia and Herzegovina': 'Bosnia and Herz.',
+      'Palestine': 'Palestine',
+      'Taiwan': 'Taiwan',
+      'Hong Kong': 'Hong Kong',
+      'Macao': 'Macao',
+      'Macau': 'Macao',
+    };
+    let _worldTopology = null;
+    let _worldLoading = null;
+    async function loadWorld() {
+      if (_worldTopology) return _worldTopology;
+      if (_worldLoading) return _worldLoading;
+      _worldLoading = fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json')
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('world-atlas ' + r.status)))
+        .then(topo => { _worldTopology = topo; return topo; });
+      return _worldLoading;
+    }
+    function colorForCount(n, maxN) {
+      // Three-stop interpolation on log scale: cream -> LEGO yellow -> LEGO red.
+      // Log keeps the US (which usually dwarfs everything) from flattening the
+      // rest of the world to one shade.
+      if (!n || n <= 0) return '#f3f4f6';
+      const t = Math.log1p(n) / Math.log1p(Math.max(maxN, 1));
+      // Interpolate cream -> yellow (0..0.5) -> red (0.5..1).
+      const lerp = (a, b, k) => Math.round(a + (b - a) * k);
+      const stops = [
+        [254, 243, 199], // #fef3c7 cream
+        [255, 206,   0], // #ffce00 yellow
+        [227,   0,  11], // #e3000b red
+      ];
+      let a, b, k;
+      if (t < 0.5) { a = stops[0]; b = stops[1]; k = t / 0.5; }
+      else         { a = stops[1]; b = stops[2]; k = (t - 0.5) / 0.5; }
+      return 'rgb(' + lerp(a[0], b[0], k) + ',' + lerp(a[1], b[1], k) + ',' + lerp(a[2], b[2], k) + ')';
+    }
+    async function renderWorldMap(countryData) {
+      const svg = document.getElementById('ga-map');
+      const tip = document.getElementById('ga-map-tooltip');
+      if (!svg || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+      try {
+        const topo = await loadWorld();
+        const land = topojson.feature(topo, topo.objects.countries);
+
+        // Build name -> users index from GA data.
+        const byName = {};
+        let maxN = 0;
+        for (const row of countryData) {
+          const raw = row.name;
+          const canon = NAME_ALIAS[raw] || raw;
+          byName[canon] = (byName[canon] || 0) + (row.users || 0);
+          if (byName[canon] > maxN) maxN = byName[canon];
+        }
+
+        const w = 980, h = 520;
+        const projection = d3.geoNaturalEarth1().fitSize([w, h], land);
+        const path = d3.geoPath(projection);
+
+        // Clear previous paint, then draw countries.
+        svg.innerHTML = '';
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        svg.appendChild(g);
+
+        land.features.forEach(f => {
+          const name = (f.properties && (f.properties.name || f.properties.NAME)) || '';
+          const n = byName[name] || 0;
+          const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          el.setAttribute('d', path(f));
+          el.setAttribute('fill', colorForCount(n, maxN));
+          el.setAttribute('stroke', '#ffffff');
+          el.setAttribute('stroke-width', '0.4');
+          el.setAttribute('data-name', name);
+          el.setAttribute('data-count', n);
+          el.style.cursor = n > 0 ? 'pointer' : 'default';
+          el.addEventListener('mousemove', (e) => {
+            const rect = document.getElementById('ga-map-wrap').getBoundingClientRect();
+            tip.textContent = name + ' — ' + n + (n === 1 ? ' visitor' : ' visitors');
+            tip.style.left = (e.clientX - rect.left + 12) + 'px';
+            tip.style.top  = (e.clientY - rect.top  - 8) + 'px';
+            tip.style.opacity = '1';
+          });
+          el.addEventListener('mouseleave', () => { tip.style.opacity = '0'; });
+          g.appendChild(el);
+        });
+      } catch (e) {
+        // Soft-fail: hide the map wrap, don't break the dashboard.
+        const wrap = document.getElementById('ga-map-wrap');
+        if (wrap) wrap.innerHTML =
+          '<div style="padding:28px;text-align:center;color:var(--muted);font-size:.85rem;font-weight:700;">Map data unavailable right now.</div>';
+      }
     }
 
     // ---- weekly navigator: shows one Sun–Sat week at a time, lets staff
