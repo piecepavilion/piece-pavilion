@@ -56,7 +56,7 @@
   </script>
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
-  <link rel="stylesheet" href="style.css?v=20261029e" />
+  <link rel="stylesheet" href="style.css?v=20261029f" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -127,8 +127,16 @@
       </a>
       <nav class="header-nav">
         <div class="nav-dropdown">
-          <a href="#shop" class="nav-dropdown-toggle">
-            <span class="nav-brick" aria-hidden="true"></span>Shop <span class="caret">&#9662;</span>
+          <a href="#shop" class="nav-dropdown-toggle" aria-haspopup="true">
+            <span class="nav-brick-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 20" width="22" height="14" fill="currentColor">
+                <rect x="0" y="4" width="32" height="16" rx="2"/>
+                <rect x="4" y="0" width="6" height="6" rx="1"/>
+                <rect x="13" y="0" width="6" height="6" rx="1"/>
+                <rect x="22" y="0" width="6" height="6" rx="1"/>
+              </svg>
+            </span>
+            <span>Shop</span>
           </a>
           <div class="nav-dropdown-menu">
             <a href="/lego-minifigures/">LEGO Minifigures</a>
@@ -142,8 +150,7 @@
         <a href="/parts/">Parts</a>
         <a href="#about">About</a>
         <a href="/blog/" id="nav-blog" class="nav-blog" data-fresh-window-hours="6">
-          <span class="nav-blog-text">Blog</span>
-          <span class="nav-blog-dot" aria-hidden="true"></span>
+          <span class="nav-blog-new">New</span><span>&nbsp;Blog</span>
         </a>
         <a href="#sell">Sell</a>
         <a href="/spotlight/">Spotlight</a>
@@ -1082,6 +1089,6 @@
   </div><!-- end .main-content -->
 
   <script src="https://f.convertkit.com/ckjs/ck.5.js"></script>
-  <script src="script.js?v=20261029e"></script>
+  <script src="script.js?v=20261029f"></script>
 </body>
 </html>

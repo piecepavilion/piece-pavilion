@@ -61,6 +61,19 @@ def parse_date_header(path):
 
 
 def main():
+    # Respect an existing "promoted" latest.json. Lets the user hand-pin a
+    # blog post to flash in the nav for longer than the auto-detected 6h
+    # (e.g. to advertise a seasonal post). Delete blog/latest.json to clear.
+    if os.path.exists(OUT_PATH):
+        try:
+            with open(OUT_PATH, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            if existing.get("source") == "promoted":
+                print("latest.json is pinned (source=promoted); leaving it.")
+                return
+        except Exception:
+            pass
+
     posts = [p for p in glob(os.path.join(BLOG_DIR, "*", "index.html"))]
     if not posts:
         print("No blog posts found.")

@@ -190,60 +190,45 @@ img { display: block; max-width: 100%; }
 
 .header-nav { display: flex; align-items: center; gap: 28px; margin-left: 8px; }
 
-/* LEGO brick icon in the Shop nav link */
-.nav-brick {
-  display: inline-block;
-  width: 16px; height: 11px;
-  margin-right: 7px;
-  vertical-align: -1px;
-  background: var(--red);
-  border-radius: 2px;
-  position: relative;
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.12);
-  transition: background 0.2s;
+/* Shop link: SVG brick icon sits inline with the word, properly baseline-aligned.
+   No arrow — the brick is the only decoration, and clicking either icon or
+   word opens the dropdown. */
+.nav-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--red) !important;
 }
-.nav-brick::before,
-.nav-brick::after {
-  content: '';
-  position: absolute;
-  top: -3px;
-  width: 4px; height: 4px;
-  background: inherit;
-  border-radius: 50%;
-  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.15);
+.nav-brick-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--red);
+  transition: color 0.2s, transform 0.2s;
 }
-.nav-brick::before { left: 2px; }
-.nav-brick::after  { right: 2px; }
-.nav-dropdown-toggle:hover .nav-brick { background: var(--red-dark, var(--red)); }
+.nav-brick-icon svg { display: block; }
+.nav-dropdown-toggle:hover .nav-brick-icon,
+.nav-dropdown.open .nav-brick-icon { color: var(--red-dark); transform: translateY(-1px); }
 
-/* Blog nav link with a steady red dot indicator — pulses gently when the
-   newest post is less than data-fresh-window-hours old. Easy on the eyes:
-   full opacity to 30%, 2.4s cycle. Dot disappears entirely when not fresh. */
-.nav-blog { display: inline-flex; align-items: center; gap: 6px; }
-.nav-blog-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 0 2px rgba(227, 0, 11, 0.18);
-  display: none;
-  flex-shrink: 0;
-}
-.nav-blog.is-fresh .nav-blog-dot {
-  display: inline-block;
-  animation: navBlogPulse 2.4s ease-in-out infinite;
-}
-.nav-blog.is-fresh .nav-blog-text::before {
-  content: 'New ';
+/* Blog nav: always reads "New Blog" so the user can always get there without
+   decoration shifting around. When data says the newest post is < 6 hours old,
+   the red "New" word blinks slowly (2s cycle, 100% -> 15% opacity -> 100%).
+   Easy on the eyes — not a strobe. */
+.nav-blog { display: inline-flex; align-items: baseline; }
+.nav-blog-new {
   color: var(--red);
   font-weight: 900;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
-@keyframes navBlogPulse {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 2px rgba(227, 0, 11, 0.18); }
-  50%      { opacity: 0.35; transform: scale(0.9); box-shadow: 0 0 0 6px rgba(227, 0, 11, 0.05); }
+.nav-blog.is-fresh .nav-blog-new {
+  animation: navBlogBlink 2s ease-in-out infinite;
+}
+@keyframes navBlogBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.15; }
 }
 /* Respect "I don't want motion" OS setting */
 @media (prefers-reduced-motion: reduce) {
-  .nav-blog.is-fresh .nav-blog-dot { animation: none; }
+  .nav-blog.is-fresh .nav-blog-new { animation: none; }
 }
 
 .header-nav a {
