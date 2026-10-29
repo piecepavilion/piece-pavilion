@@ -571,7 +571,9 @@
 .blog-header p  { animation-delay: 0.25s; }
 
 .blog-cards .blog-card {
-  animation: fallInFromTop 0.65s cubic-bezier(.2,.9,.3,1.1) both;
+  animation:
+    fallInFromTop 0.65s cubic-bezier(.2,.9,.3,1.1) both,
+    rainbowSpin 10s linear infinite;
 }
 .blog-cards .blog-card:nth-child(1)  { animation-delay: 0.35s; }
 .blog-cards .blog-card:nth-child(2)  { animation-delay: 0.42s; }
@@ -613,7 +615,7 @@
     conic-gradient(from var(--rainbow-angle, 0deg),
       #ff0040, #ff7a00, #ffce00, #16a34a, #0057a8, #7c3aed, #ff0040) border-box;
   border-width: 3px;
-  animation: rainbowSpin 4s linear infinite;
+  animation-duration: 0.65s, 4s;
 }
 /* Keyframe-driven custom property gives the conic gradient a continuous spin. */
 @property --rainbow-angle {
