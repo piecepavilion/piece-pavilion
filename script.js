@@ -235,17 +235,20 @@ function renderTicker() {
   const singleRun = items.join(sep) + sep;
   const trackInner = singleRun + singleRun;
 
-  // Skip the DOM swap if the ticker contents haven't changed since the
-  // last render — otherwise innerHTML replacement restarts the CSS
-  // ticker-scroll animation at translateX(0), producing a visible jump
-  // when a late-arriving fetch (latest-blog, sheet config) resolves
-  // after the banner has already been revealed.
+  // If the banner is already visible and we were about to re-render with
+  // different content (e.g. the Google Sheet config fetch resolved
+  // AFTER the reveal timeout), skip the swap. innerHTML replacement
+  // restarts the CSS ticker-scroll animation at translateX(0), which
+  // the user sees as the marquee jumping back mid-scroll — reported as
+  // "banner is shaking really fast". The late content will appear on
+  // the next page load; HTTP caching makes that near-free.
   const newInner =
     '<div class="ticker-viewport"><div class="ticker-track">' + trackInner + '</div></div>' +
     '<button class="announcement-close" aria-label="Dismiss">&times;</button>';
-  if (banner.getAttribute('data-ticker-sig') !== newInner) {
+  if (banner.classList.contains('is-ready') && banner.firstChild) {
+    // Already rendered + revealed — leave it alone.
+  } else {
     banner.innerHTML = newInner;
-    banner.setAttribute('data-ticker-sig', newInner);
   }
   banner.classList.add('ticker');
   banner.classList.remove('hidden');
@@ -400,12 +403,15 @@ const loadBannerConfig = () => {
 };
 
 // Kick off both fetches in parallel. Reveal the banner only once BOTH
-// have settled (or 1200ms has elapsed, whichever comes first) so the
+// have settled (or 2500ms has elapsed, whichever comes first) so the
 // ticker's final content is already in place when it first becomes
 // visible — no mid-render innerHTML swap jumping the animation back
-// to translateX(0) while the user is watching.
+// to translateX(0) while the user is watching. Google Sheets GViz
+// commonly takes 1-2s, so 2500ms gives it a real chance to land in
+// the first render. If it misses, renderTicker() leaves the already-
+// visible banner alone (see the is-ready guard in renderTicker).
 const bothLoaded = Promise.allSettled([loadLatestBlog(), loadBannerConfig()]);
-const timeout = new Promise((resolve) => setTimeout(resolve, 1200));
+const timeout = new Promise((resolve) => setTimeout(resolve, 2500));
 Promise.race([bothLoaded, timeout]).then(revealBanner);
 
 // ===== HOMEPAGE "FROM THE BLOG" — auto-fill the 3 newest posts from /blog/ =====
