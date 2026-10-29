@@ -1011,3 +1011,47 @@ article picture.blog-hero,
     #15151f;
   border-color: rgba(255,255,255,0.9);
 }
+
+/* ================================================================
+   MATCH HOMEPAGE "FROM THE BLOG" STYLE — show the real thumbnail
+   images on /blog/ card thumbs (what the homepage already does) and
+   stop the solid color overlays from hiding them. Keep the logo badge
+   floating in the corner so brand identity stays.
+   ================================================================ */
+
+/* 1. Show the thumbnail IMG */
+.blog-card-thumb img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* 2. Remove the solid color backgrounds that were covering the images */
+.blog-card-thumb,
+.blog-cards .blog-card:first-child .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+1) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+3) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+4) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+5) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+6) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n)   .blog-card-thumb {
+  background: #f6f7fa !important;    /* soft fallback behind transparent PNGs */
+  overflow: hidden;
+}
+
+/* 3. Drop the "piece pavilion" wordmark overlay — the actual images
+   already have the branding baked in, so the extra wordmark is noise. */
+.blog-card-thumb::after { content: none !important; }
+
+/* 4. Keep the small Piece Pavilion logo badge in the top-right corner
+   of the thumb, but make it readable on top of any photo (stronger
+   contrast ring + darker inner background). */
+.blog-card-thumb::before {
+  background:
+    url('/logo-white.png') center/18px no-repeat,
+    rgba(21, 21, 31, 0.72) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
