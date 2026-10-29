@@ -286,34 +286,36 @@ tickerState.justAdded = readJustAdded();
 renderTicker();
 
 // Fetch latest blog (ticker enriches once this resolves). Reveal the
-// banner only AFTER this settles so the first visible frame already
-// contains the enriched marquee — no "latest blog centered then
-// snaps left and scrolls" flash on page open.
+// banner only AFTER BOTH the latest-blog AND sheet-config fetches have
+// settled, so the first visible frame already contains the final
+// enriched marquee — no second render replacing innerHTML (and
+// restarting the CSS ticker-scroll animation at translateX(0)) while
+// the user is watching.
+let bannerRevealed = false;
 const revealBanner = () => {
+  if (bannerRevealed) return;
+  bannerRevealed = true;
   const b = tickerBanner();
   if (b && !b.classList.contains('hidden')) {
     requestAnimationFrame(() => b.classList.add('is-ready'));
   }
 };
-(function loadLatestBlog() {
-  fetch('/blog/?_=' + Date.now())
-    .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
-    .then((html) => {
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const card = doc.querySelector('a.blog-card');
-      if (!card) return;
-      const title = (card.querySelector('h2') || {}).textContent || 'Read our latest post';
-      const href = card.getAttribute('href') || '/blog/';
-      tickerState.latestBlog = { title: title.trim(), href };
-      renderTicker();
-    })
-    .catch(() => {})
-    .finally(revealBanner);
-})();
+const loadLatestBlog = () => fetch('/blog/?_=' + Date.now())
+  .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
+  .then((html) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const card = doc.querySelector('a.blog-card');
+    if (!card) return;
+    const title = (card.querySelector('h2') || {}).textContent || 'Read our latest post';
+    const href = card.getAttribute('href') || '/blog/';
+    tickerState.latestBlog = { title: title.trim(), href };
+    renderTicker();
+  })
+  .catch(() => {});
 
-(function loadBannerConfig() {
+const loadBannerConfig = () => {
   const banner = tickerBanner();
-  if (!banner) return;
+  if (!banner) return Promise.resolve();
 
   // Primary source: the staff "PiecePavilion Site Banner" Google Sheet
   // (edited from /employees — same Google login). Fallback: /banner.txt.
@@ -387,7 +389,7 @@ const revealBanner = () => {
   };
 
   // cache-busting query so edits appear in ~1 min
-  fetch(SHEET_CSV + '&_=' + Date.now())
+  return fetch(SHEET_CSV + '&_=' + Date.now())
     .then((r) => { if (!r.ok) throw new Error('sheet unavailable'); return r.text(); })
     .then(parseSheetCsv)
     .catch(() => fetch('/banner.txt?_=' + Date.now())
@@ -395,7 +397,16 @@ const revealBanner = () => {
       .then(parseTxt))
     .then(apply)
     .catch(() => { /* both failed — keep the hardcoded fallback banner */ });
-})();
+};
+
+// Kick off both fetches in parallel. Reveal the banner only once BOTH
+// have settled (or 1200ms has elapsed, whichever comes first) so the
+// ticker's final content is already in place when it first becomes
+// visible — no mid-render innerHTML swap jumping the animation back
+// to translateX(0) while the user is watching.
+const bothLoaded = Promise.allSettled([loadLatestBlog(), loadBannerConfig()]);
+const timeout = new Promise((resolve) => setTimeout(resolve, 1200));
+Promise.race([bothLoaded, timeout]).then(revealBanner);
 
 // ===== HOMEPAGE "FROM THE BLOG" — auto-fill the 3 newest posts from /blog/ =====
 // Reads the blog index (newest-first) and rebuilds the preview grid, so the
