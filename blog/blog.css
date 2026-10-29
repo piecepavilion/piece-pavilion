@@ -894,3 +894,77 @@ article picture.blog-hero,
 @media (max-width: 540px) {
   .scroll-top-btn { right: 14px; bottom: 14px; width: 52px; height: 52px; }
 }
+
+/* ================================================================
+   REVERT TO ORIGINAL COLORS + BRING TEXT BACK
+   Overrides the pizzazz color/cover changes. Keeps:
+     - Top header styling + animated "Piece Pavilion Blog" fall-in
+     - Scroll-to-top button
+     - Mobile phone fixes
+   Reverts:
+     - Solid-color card thumbnails -> bring the original images back
+       with the baked-in titles/text visible again
+     - Rainbow spinning border on cards -> back to the quiet shadow
+     - Per-post colored title cover -> plain h1 like before
+     - Hidden hero image on individual posts -> visible again with
+       their title/text baked in
+   ================================================================ */
+.blog-card-thumb img { display: block !important; }
+.blog-card-thumb {
+  background: linear-gradient(135deg, #fff8ec 0%, #fff 100%) !important;
+  display: block !important;
+}
+.blog-card-thumb::after { content: none !important; }
+
+/* Every nth-child color override we added gets stripped: */
+.blog-cards .blog-card:nth-child(7n+1) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+3) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+4) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+5) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n+6) .blog-card-thumb,
+.blog-cards .blog-card:nth-child(7n)   .blog-card-thumb,
+.blog-cards .blog-card:first-child .blog-card-thumb {
+  background: linear-gradient(135deg, #fff8ec 0%, #fff 100%) !important;
+}
+
+/* Card border back to quiet (no rainbow spin) */
+.blog-card {
+  background: #fff !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  animation: none !important;
+}
+.blog-card:hover {
+  background: #fff !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+  border-width: 1px !important;
+  animation: none !important;
+}
+
+/* Hero image on individual posts: show it again (its baked-in title/text) */
+article img.blog-hero,
+article picture.blog-hero,
+.blog-article img.blog-hero,
+.blog-article .blog-hero {
+  display: block !important;
+}
+
+/* Blog post <h1> back to plain -- no colored cover band */
+.blog-article > h1 {
+  background: none !important;
+  color: var(--dark) !important;
+  padding: 0 !important;
+  margin: 0 0 16px 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.blog-article > h1::before { content: none !important; }
+.blog-article > .blog-byline {
+  background: none !important;
+  color: var(--muted) !important;
+  margin: 0 0 24px 0 !important;
+  padding: 0 0 16px 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--line, #e5e7eb) !important;
+}
