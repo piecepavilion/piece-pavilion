@@ -161,21 +161,23 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   gap: 24px;
-  transition: height 0.25s;
+  /* Snap height on scrolled-toggle instead of transitioning: a 0.25s
+     height transition continuously changes the sticky-head's total
+     height, which pushes the ticker-track's GPU composite layer around
+     and shows up as banner shake while the header shrinks. */
 }
 .site-header.scrolled .header-inner { height: 60px; }
 
 .header-logo { display: flex; align-items: center; flex-shrink: 0; }
 .header-logo img {
   height: 42px; width: auto; object-fit: contain; border-radius: 8px;
-  transition: height 0.25s;
 }
 .site-header.scrolled .header-logo img { height: 36px; }
 
 /* brand lockup: recreated pavilion mark + wordmark */
 .header-brand { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
 .brand-mark { display: flex; }
-.brand-mark svg, .brand-mark img { height: 42px; width: auto; transition: height 0.25s; display: block; }
+.brand-mark svg, .brand-mark img { height: 42px; width: auto; display: block; }
 .site-header.scrolled .brand-mark svg, .site-header.scrolled .brand-mark img { height: 36px; }
 .brand-word {
   font-family: var(--font-display);
