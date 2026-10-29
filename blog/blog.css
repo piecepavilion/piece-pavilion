@@ -566,13 +566,12 @@
 
 /* Fall-in from above: title drops in then each card tumbles down after it. */
 .blog-header h1,
-.blog-header p { opacity: 0; animation: fallInFromTop 0.7s cubic-bezier(.2,.9,.3,1.1) forwards; }
+.blog-header p { animation: fallInFromTop 0.7s cubic-bezier(.2,.9,.3,1.1) both; }
 .blog-header h1 { animation-delay: 0.05s; }
 .blog-header p  { animation-delay: 0.25s; }
 
 .blog-cards .blog-card {
-  opacity: 0;
-  animation: fallInFromTop 0.65s cubic-bezier(.2,.9,.3,1.1) forwards;
+  animation: fallInFromTop 0.65s cubic-bezier(.2,.9,.3,1.1) both;
 }
 .blog-cards .blog-card:nth-child(1)  { animation-delay: 0.35s; }
 .blog-cards .blog-card:nth-child(2)  { animation-delay: 0.42s; }

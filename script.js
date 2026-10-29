@@ -225,8 +225,15 @@ function renderTicker() {
   }
 
   // Duplicate list so the translateX(-50%) marquee loops seamlessly.
+  // Pattern must be [items+sep] REPEATED EXACTLY — i.e. the two halves
+  // must be byte-identical in width, including a trailing separator on
+  // each half. The old pattern (items+sep+items) left ONE sep in the
+  // middle only, so at -50% translation the left edge landed mid-sep
+  // instead of on item1, producing a visible half-separator jump each
+  // loop (user-reported "banner glitches after first full scroll").
   const sep = '<span class="ticker-sep" aria-hidden="true">•</span>';
-  const trackInner = items.join(sep) + sep + items.join(sep);
+  const singleRun = items.join(sep) + sep;
+  const trackInner = singleRun + singleRun;
 
   banner.innerHTML =
     '<div class="ticker-viewport"><div class="ticker-track">' + trackInner + '</div></div>' +

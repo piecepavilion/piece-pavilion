@@ -425,7 +425,7 @@
     // KPI DASHBOARD — single-file static page.
     // Reads:
     //   /finder-data.json           (live, present) — current inventory
-    //   /employees/kpis-data.json   (new, pp-ops writes it hourly)
+    //   /employees/api/kpis/data   (new, pp-ops writes it hourly)
     // Falls back to sample data for metrics that need the pp-ops feed.
     // ====================================================================
 
@@ -475,7 +475,7 @@
       return out;
     }
 
-    // Empty-shell data used until pp-ops publishes real /employees/kpis-data.json.
+    // Empty-shell data used until pp-ops publishes real /employees/api/kpis/data.
     // Every value is intentionally zero so no fake $$$$ ever shows up on the
     // dashboard — the UI shows a visible "feed not wired yet" banner instead.
     function emptyKpis() {
@@ -511,7 +511,7 @@
       } catch (e) {}
 
       try {
-        const r = await fetch('/employees/kpis-data.json?t=' + Date.now());
+        const r = await fetch('/employees/api/kpis/data?t=' + Date.now());
         if (r.ok) {
           state.kpis = await r.json();
           state.kpis._needsFeed = false;
@@ -529,7 +529,7 @@
           '<a href="javascript:void(0)" id="feed-info" style="color:var(--red);font-weight:800;">How to wire it →</a>';
         document.getElementById('feed-info').addEventListener('click', e => {
           e.preventDefault();
-          alert('Have pp-ops publish /employees/kpis-data.json hourly with this shape:\n\n' +
+          alert('Have pp-ops publish /employees/api/kpis/data hourly with this shape:\n\n' +
             '{\n' +
             '  "asof": "ISO datetime",\n' +
             '  "feedbackPct": 100,\n' +
@@ -986,7 +986,7 @@
     // ====================================================================
     async function loadGaData() {
       try {
-        const r = await fetch('/employees/ga-data.json?t=' + Date.now());
+        const r = await fetch('/employees/api/ga/data?t=' + Date.now());
         if (!r.ok) throw new Error('no ga-data');
         const g = await r.json();
         renderGaWindows(g);

@@ -373,7 +373,7 @@
       el.textContent = g;
     })();
 
-    // Live stats bar — reads /employees/kpis-data.json (new, pp-ops writes it)
+    // Live stats bar — reads /employees/api/kpis/data (new, pp-ops writes it)
     // or falls back to /finder-data.json for inventory count. Graceful if missing.
     (async function liveStats() {
       try {
@@ -385,7 +385,7 @@
       } catch (e) {}
 
       try {
-        const k = await fetch('/employees/kpis-data.json?t=' + Date.now()).then(r => {
+        const k = await fetch('/employees/api/kpis/data?t=' + Date.now()).then(r => {
           if (!r.ok) throw new Error('no kpis-data');
           return r.json();
         });
