@@ -1055,3 +1055,17 @@ article picture.blog-hero,
   border: 1.5px solid rgba(255, 255, 255, 0.95) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
+
+/* ================================================================
+   REMOVE DUPLICATE LOGO
+   The thumbnail images already have a Piece Pavilion logo baked in,
+   so the overlaid badge was double-branding ("logo on top of a logo").
+   Strip the badge; the real image carries the brand on its own.
+   ================================================================ */
+.blog-card-thumb::before,
+.blog-card-thumb::after,
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb::before,
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb::after {
+  content: none !important;
+  display: none !important;
+}
