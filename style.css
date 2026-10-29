@@ -221,11 +221,11 @@ img { display: block; max-width: 100%; }
   letter-spacing: 0.01em;
 }
 .nav-blog.is-fresh .nav-blog-new {
-  animation: navBlogBlink 1.2s steps(2, jump-none) infinite;
+  animation: navBlogBlink 2.6s ease-in-out infinite;
 }
 @keyframes navBlogBlink {
-  0%, 49.9%   { opacity: 1; }
-  50%, 100%   { opacity: 0.15; }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
 }
 /* Respect "I don't want motion" OS setting */
 @media (prefers-reduced-motion: reduce) {
