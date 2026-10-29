@@ -559,3 +559,81 @@
 .blog-cat.parts   { background: #eff6ff; color: #1e40af; border-color: rgba(37,99,235,0.3); }
 .blog-cat.guide   { background: #f5f3ff; color: #6b21a8; border-color: rgba(124,58,237,0.3); }
 .blog-cat.news    { background: #fef2f2; color: #991b1b; border-color: rgba(227,0,11,0.3); }
+
+/* ================================================================
+   FALL-IN + RAINBOW LAYER (requested extras)
+   ================================================================ */
+
+/* Fall-in from above: title drops in then each card tumbles down after it. */
+.blog-header h1,
+.blog-header p { opacity: 0; animation: fallInFromTop 0.7s cubic-bezier(.2,.9,.3,1.1) forwards; }
+.blog-header h1 { animation-delay: 0.05s; }
+.blog-header p  { animation-delay: 0.25s; }
+
+.blog-cards .blog-card {
+  opacity: 0;
+  animation: fallInFromTop 0.65s cubic-bezier(.2,.9,.3,1.1) forwards;
+}
+.blog-cards .blog-card:nth-child(1)  { animation-delay: 0.35s; }
+.blog-cards .blog-card:nth-child(2)  { animation-delay: 0.42s; }
+.blog-cards .blog-card:nth-child(3)  { animation-delay: 0.49s; }
+.blog-cards .blog-card:nth-child(4)  { animation-delay: 0.56s; }
+.blog-cards .blog-card:nth-child(5)  { animation-delay: 0.63s; }
+.blog-cards .blog-card:nth-child(6)  { animation-delay: 0.70s; }
+.blog-cards .blog-card:nth-child(7)  { animation-delay: 0.77s; }
+.blog-cards .blog-card:nth-child(8)  { animation-delay: 0.84s; }
+.blog-cards .blog-card:nth-child(9)  { animation-delay: 0.91s; }
+.blog-cards .blog-card:nth-child(n+10) { animation-delay: 0.98s; }
+
+@keyframes fallInFromTop {
+  0%   { opacity: 0; transform: translateY(-80px); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blog-header h1,
+  .blog-header p,
+  .blog-cards .blog-card { opacity: 1; animation: none; transform: none; }
+}
+
+/* Rainbow outline on every blog card — a thin animated conic-gradient border
+   that stays subtle at rest and intensifies on hover. Built with the
+   background-clip padding-box / border-box trick so the inner background
+   stays white. */
+.blog-card {
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    conic-gradient(from var(--rainbow-angle, 0deg),
+      #ff0040, #ff7a00, #ffce00, #16a34a, #0057a8, #7c3aed, #ff0040) border-box;
+  border: 2px solid transparent;
+  animation: rainbowSpin 10s linear infinite;
+}
+.blog-card:hover {
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    conic-gradient(from var(--rainbow-angle, 0deg),
+      #ff0040, #ff7a00, #ffce00, #16a34a, #0057a8, #7c3aed, #ff0040) border-box;
+  border-width: 3px;
+  animation: rainbowSpin 4s linear infinite;
+}
+/* Keyframe-driven custom property gives the conic gradient a continuous spin. */
+@property --rainbow-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes rainbowSpin {
+  to { --rainbow-angle: 360deg; }
+}
+/* Safari/older browsers that don't support @property fall back to a static
+   rainbow border — still looks cool, just doesn't spin. */
+@supports not (background: conic-gradient(from 0deg, red, blue)) {
+  .blog-card {
+    background: #fff;
+    border: 2px solid transparent;
+    border-image: linear-gradient(90deg, #ff0040, #ff7a00, #ffce00, #16a34a, #0057a8, #7c3aed) 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blog-card { animation: none; }
+}

@@ -654,61 +654,180 @@ if (usMap) {
   }).catch(() => { /* map is decorative — fail quietly */ });
 }
 
-// ===== CONFETTI BURST (homepage, once per browser session) =====
+// ===== HOMEPAGE WELCOME EFFECT =====
+// Normally fires once per browser session as a confetti burst.
+// Switches to flying bats during Halloween week — rules:
+//   - 2026 only:  Oct 29 through Nov 1 at 00:00 local
+//   - 2027+:      Oct 20 through Nov 1 at 06:00 local
+// Any other date → confetti.
 (function () {
   if (!document.getElementById('hero')) return;                 // homepage only
-  const forced = location.search.indexOf('confetti') !== -1;    // ?confetti = always fire (for testing/demos)
-  if (!forced && sessionStorage.getItem('pp-confetti')) return; // once per session
+  const forced     = /[?&](confetti|bats)/.test(location.search);
+  const forceBats  = /[?&]bats/.test(location.search);
+  const forceConfetti = /[?&]confetti/.test(location.search) && !forceBats;
+  const key = 'pp-welcome-' + new Date().toDateString();
+  if (!forced && sessionStorage.getItem(key)) return;
   if (!forced && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  sessionStorage.setItem('pp-confetti', '1');
+  sessionStorage.setItem(key, '1');
+
+  function isHalloweenWindow(now) {
+    const y = now.getFullYear();
+    let start, end;
+    if (y === 2026) {
+      start = new Date(2026, 9, 29, 0, 0, 0);   // Oct 29 2026 00:00 local
+      end   = new Date(2026, 10, 1, 0, 0, 0);   // Nov 1  2026 00:00 local
+    } else {
+      start = new Date(y, 9, 20, 0, 0, 0);      // Oct 20 YY   00:00 local
+      end   = new Date(y, 10, 1, 6, 0, 0);      // Nov 1  YY   06:00 local
+    }
+    return now >= start && now < end;
+  }
+
+  const halloween = forceBats || (!forceConfetti && isHalloweenWindow(new Date()));
 
   const cv = document.createElement('canvas');
   cv.className = 'confetti-canvas';
   document.body.appendChild(cv);
   const ctx = cv.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  cv.width = window.innerWidth * dpr;
+  cv.width  = window.innerWidth  * dpr;
   cv.height = window.innerHeight * dpr;
 
-  const COLORS = ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
-  // burst from the top edge: pieces explode outward/down across the full width
-  const parts = [];
-  for (let i = 0; i < 180; i++) {
-    parts.push({
-      x: Math.random() * cv.width,
-      y: -(Math.random() * 0.25 + 0.02) * cv.height,   // staggered above the top edge
-      vx: (Math.random() - 0.5) * 5 * dpr,
-      vy: (4 + Math.random() * 6) * dpr,               // downward burst
-      w: (5 + Math.random() * 6) * dpr,
-      h: (8 + Math.random() * 10) * dpr,
-      rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.25,
-      color: COLORS[(Math.random() * COLORS.length) | 0]
-    });
+  if (halloween) runBats(ctx, cv, dpr);
+  else           runConfetti(ctx, cv, dpr);
+
+  function runConfetti(ctx, cv, dpr) {
+    const COLORS = ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
+    const parts = [];
+    for (let i = 0; i < 180; i++) {
+      parts.push({
+        x: Math.random() * cv.width,
+        y: -(Math.random() * 0.25 + 0.02) * cv.height,
+        vx: (Math.random() - 0.5) * 5 * dpr,
+        vy: (4 + Math.random() * 6) * dpr,
+        w: (5 + Math.random() * 6) * dpr,
+        h: (8 + Math.random() * 10) * dpr,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.25,
+        color: COLORS[(Math.random() * COLORS.length) | 0],
+      });
+    }
+    const t0 = performance.now() + 350;
+    const DURATION = 3800;
+    (function frame(t) {
+      const elapsed = (t || performance.now()) - t0;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.globalAlpha = elapsed > DURATION - 700 ? Math.max(0, (DURATION - elapsed) / 700) : 1;
+      for (const p of parts) {
+        p.x += p.vx;  p.y += p.vy;
+        p.vy += 0.06 * dpr;
+        p.vx *= 0.995;
+        p.rot += p.vr;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+      if (elapsed < DURATION) requestAnimationFrame(frame);
+      else cv.remove();
+    })(t0);
   }
 
-  const t0 = performance.now() + 350;   // let the page paint first
-  const DURATION = 3800;
-  (function frame(t) {
-    const elapsed = (t || performance.now()) - t0;
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    ctx.globalAlpha = elapsed > DURATION - 700 ? Math.max(0, (DURATION - elapsed) / 700) : 1;
-    for (const p of parts) {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.06 * dpr;          // light gravity — graceful fall
-      p.vx *= 0.995;               // drag
-      p.rot += p.vr;
+  function runBats(ctx, cv, dpr) {
+    // Little SVG-ish bat silhouettes flying across the top portion of the
+    // screen, flapping their wings. Spookier than confetti but not harsh —
+    // dark grey/black on a light background, no screen-wide flash.
+    const bats = [];
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const dir = Math.random() < 0.5 ? 1 : -1;   // flying left-to-right or right-to-left
+      bats.push({
+        x: dir === 1 ? -40 * dpr - Math.random() * cv.width : cv.width + Math.random() * cv.width * 0.5,
+        y: (0.08 + Math.random() * 0.55) * cv.height,
+        vx: (1.2 + Math.random() * 1.8) * dpr * dir,
+        vy: (Math.random() - 0.5) * 0.4 * dpr,
+        size: (18 + Math.random() * 18) * dpr,
+        flap: Math.random() * Math.PI * 2,
+        flapSpeed: 0.18 + Math.random() * 0.08,
+        wobble: Math.random() * 100,
+        shade: 20 + Math.floor(Math.random() * 40),  // greyscale
+      });
+    }
+
+    function drawBat(ctx, b) {
+      const s = b.size;
+      const flap = Math.sin(b.flap);           // -1 .. 1
+      const wingLift = flap * s * 0.35;        // wings up/down
       ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.translate(b.x, b.y);
+      ctx.scale(b.vx > 0 ? 1 : -1, 1);         // flip for direction
+      ctx.fillStyle = 'rgba(' + b.shade + ',' + b.shade + ',' + (b.shade + 10) + ',0.92)';
+      // body — small ellipse
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.14, s * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // head
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.22, s * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      // pointy ears
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.09, -s * 0.3);
+      ctx.lineTo(-s * 0.12, -s * 0.44);
+      ctx.lineTo(-s * 0.04, -s * 0.34);
+      ctx.closePath();
+      ctx.moveTo(s * 0.09, -s * 0.3);
+      ctx.lineTo(s * 0.12, -s * 0.44);
+      ctx.lineTo(s * 0.04, -s * 0.34);
+      ctx.closePath();
+      ctx.fill();
+      // wings — scalloped shapes that extend out from the body, with flap
+      // We draw each wing as a 3-scallop bezier curve
+      const wy = -s * 0.08;
+      // left wing
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.1, wy);
+      ctx.quadraticCurveTo(-s * 0.45, wy - wingLift, -s * 0.9, wy + s * 0.1 - wingLift * 0.6);
+      ctx.quadraticCurveTo(-s * 0.65, wy + s * 0.25, -s * 0.5, wy + s * 0.15);
+      ctx.quadraticCurveTo(-s * 0.35, wy + s * 0.3, -s * 0.22, wy + s * 0.14);
+      ctx.quadraticCurveTo(-s * 0.14, wy + s * 0.22, -s * 0.1, wy + s * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      // right wing (mirror)
+      ctx.beginPath();
+      ctx.moveTo(s * 0.1, wy);
+      ctx.quadraticCurveTo(s * 0.45, wy - wingLift, s * 0.9, wy + s * 0.1 - wingLift * 0.6);
+      ctx.quadraticCurveTo(s * 0.65, wy + s * 0.25, s * 0.5, wy + s * 0.15);
+      ctx.quadraticCurveTo(s * 0.35, wy + s * 0.3, s * 0.22, wy + s * 0.14);
+      ctx.quadraticCurveTo(s * 0.14, wy + s * 0.22, s * 0.1, wy + s * 0.08);
+      ctx.closePath();
+      ctx.fill();
       ctx.restore();
     }
-    if (elapsed < DURATION) requestAnimationFrame(frame);
-    else cv.remove();
-  })(t0);
+
+    const t0 = performance.now();
+    const DURATION = 7000;
+    (function frame(t) {
+      const now = t || performance.now();
+      const elapsed = now - t0;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.globalAlpha = elapsed > DURATION - 1200 ? Math.max(0, (DURATION - elapsed) / 1200) : 1;
+      for (const b of bats) {
+        b.wobble += 0.03;
+        b.x += b.vx;
+        b.y += b.vy + Math.sin(b.wobble) * 0.6 * dpr;
+        b.flap += b.flapSpeed;
+        drawBat(ctx, b);
+        // wrap around horizontally so bats keep crossing until fade
+        if (b.vx > 0 && b.x > cv.width + 60 * dpr) b.x = -60 * dpr;
+        if (b.vx < 0 && b.x < -60 * dpr) b.x = cv.width + 60 * dpr;
+      }
+      if (elapsed < DURATION) requestAnimationFrame(frame);
+      else cv.remove();
+    })(t0);
+  }
 })();
 
 // ===== HERO PRODUCT CAROUSEL (sliding, arrows, dots, swipe, 5s auto) =====
