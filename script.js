@@ -207,6 +207,10 @@ function renderTicker() {
     '<button class="announcement-close" aria-label="Dismiss">&times;</button>';
   banner.classList.add('ticker');
   banner.classList.remove('hidden');
+  // Reveal the banner only after the real ticker content is in place.
+  // Hiding it until now prevents a visible transition from the hardcoded
+  // single-item fallback to the full marquee on page open.
+  requestAnimationFrame(() => banner.classList.add('is-ready'));
 
   // Dismiss (sessionStorage so it comes back on next visit).
   const closeBtn = banner.querySelector('.announcement-close');
@@ -218,6 +222,13 @@ function renderTicker() {
     });
   }
 }
+
+// Safety: if renderTicker never runs (script error, bad network), reveal the
+// banner anyway after 1.5s so visitors still see the hardcoded fallback.
+setTimeout(() => {
+  document.querySelectorAll('.announcement-banner:not(.hidden):not(.is-ready)')
+    .forEach(b => b.classList.add('is-ready'));
+}, 1500);
 
 // --- Boot sequence ---
 

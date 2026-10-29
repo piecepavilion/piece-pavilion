@@ -643,7 +643,17 @@ img { display: block; max-width: 100%; }
   padding: 10px 48px 10px 16px;
   position: relative;
   overflow: hidden;
+  /* Hidden until renderTicker() finishes building the full marquee.
+     Prevents the hardcoded single-item fallback from flashing on page open
+     before JS replaces it with the live Just Added / Latest Blog items. */
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
+.announcement-banner.is-ready { opacity: 1; }
+/* A sticky-head wrapper doesn't reserve the yellow stripe until the banner
+   is shown. Pre-reserve the space so the page doesn't jump when the ticker
+   fades in. 42px matches .announcement-banner's effective height. */
+.sticky-head .announcement-banner { min-height: 42px; }
 
 /* Header + ticker stack together as one sticky unit, so both stay locked
    to the top of the viewport on scroll. Added as a wrapper by script.js
