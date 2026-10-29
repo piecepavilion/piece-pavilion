@@ -691,8 +691,18 @@ img { display: block; max-width: 100%; }
   padding: 10px 36px;
   animation: ticker-scroll 55s linear infinite;
   white-space: nowrap;
-  will-change: transform;
+  /* NOTE: no will-change here. Promoting the ticker to its own GPU
+     composite layer causes it to cross-interact with the sticky-head
+     wrapper's own layer when sticky kicks in on scroll — Chrome
+     intermittently pauses the ticker ("frozen on top") and shows
+     sub-pixel shake when the parent re-rasterizes. Browsers animate
+     plain transform fine without the explicit hint. */
 }
+/* Isolate the banner so neither its own repaint nor its parent's
+   layout changes bleed into each other. Prevents the ticker from
+   visibly shaking when the sticky header shrinks or the sticky
+   anchor crosses the viewport. */
+.announcement-banner { contain: layout paint; }
 .announcement-banner.ticker:hover .ticker-track { animation-play-state: paused; }
 @keyframes ticker-scroll {
   from { transform: translateX(0); }

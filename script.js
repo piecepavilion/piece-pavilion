@@ -60,9 +60,18 @@ if (sidebar) {
 }
 
 // ===== STICKY HEADER SHRINK ON SCROLL =====
+// Hysteresis: turn ON above 60, OFF below 20. Prevents the class
+// from flapping every frame of a slow scroll near a single threshold,
+// which otherwise causes the sticky-head to resize repeatedly and
+// the ticker inside to visibly shake.
 const siteHeader = document.getElementById('site-header');
 if (siteHeader) {
-  const onScroll = () => siteHeader.classList.toggle('scrolled', window.scrollY > 40);
+  let scrolledClass = false;
+  const onScroll = () => {
+    const y = window.scrollY;
+    if (!scrolledClass && y > 60) { siteHeader.classList.add('scrolled'); scrolledClass = true; }
+    else if (scrolledClass && y < 20) { siteHeader.classList.remove('scrolled'); scrolledClass = false; }
+  };
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 }
