@@ -644,12 +644,12 @@ img { display: block; max-width: 100%; }
   position: relative;
   overflow: hidden;
   /* Hidden until renderTicker() finishes building the full marquee.
-     Prevents the hardcoded single-item fallback from flashing on page open
-     before JS replaces it with the live Just Added / Latest Blog items. */
-  opacity: 0;
-  transition: opacity 0.2s ease;
+     visibility:hidden (not opacity:0) means NO fade transition — the ticker
+     just appears instantly in its final state once the content is ready,
+     with no yellow flicker or color blink while loading. */
+  visibility: hidden;
 }
-.announcement-banner.is-ready { opacity: 1; }
+.announcement-banner.is-ready { visibility: visible; }
 /* A sticky-head wrapper doesn't reserve the yellow stripe until the banner
    is shown. Pre-reserve the space so the page doesn't jump when the ticker
    fades in. 42px matches .announcement-banner's effective height. */

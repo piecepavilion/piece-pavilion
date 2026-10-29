@@ -674,7 +674,7 @@ if (usMap) {
     const y = now.getFullYear();
     let start, end;
     if (y === 2026) {
-      start = new Date(2026, 9, 29, 0, 0, 0);   // Oct 29 2026 00:00 local
+      start = new Date(2026, 9, 28, 0, 0, 0);   // Oct 28 2026 00:00 local (today)
       end   = new Date(2026, 10, 1, 0, 0, 0);   // Nov 1  2026 00:00 local
     } else {
       start = new Date(y, 9, 20, 0, 0, 0);      // Oct 20 YY   00:00 local
