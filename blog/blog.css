@@ -637,3 +637,105 @@
 @media (prefers-reduced-motion: reduce) {
   .blog-card { animation: none; }
 }
+
+/* ================================================================
+   REQUESTED FIXES ROUND 2
+   - Bigger, more dramatic title drop from the sky
+   - Hide the pre-rendered cover image on individual blog posts (it bakes
+     in a logo the user wants gone)
+   - Solid-color card thumbs instead of white-fading gradients
+   - Phone layout tightened up
+   ================================================================ */
+
+/* 1) Dramatic fall from the sky for the "Piece Pavilion Blog" title.
+   Override the earlier fallInFromTop with a bigger drop distance and
+   a visible bounce. */
+.blog-header h1 {
+  animation: blogTitleDrop 1.1s cubic-bezier(.17, .67, .3, 1.3) forwards !important;
+  animation-delay: 0.1s !important;
+}
+.blog-header p {
+  animation: blogTitleDrop 0.9s cubic-bezier(.17, .67, .3, 1.2) forwards !important;
+  animation-delay: 0.45s !important;
+}
+@keyframes blogTitleDrop {
+  0%   { opacity: 0; transform: translateY(-220px) rotate(-2deg); }
+  60%  { opacity: 1; transform: translateY(14px) rotate(0.5deg); }
+  80%  {              transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 2) Hide the pre-rendered OG cover image on every individual blog post
+   (it has the Piece Pavilion logo baked in — the user doesn't want it). */
+.blog-article .blog-hero,
+article .blog-hero {
+  display: none !important;
+}
+
+/* 3) Replace the cream-to-white fade on card thumbs with a solid LEGO red
+   backdrop. Any card where the thumbnail PNG has transparency now shows
+   a bold red frame instead of fading to white. */
+.blog-card-thumb {
+  background: #e3000b !important;
+}
+/* Latest-badge visual: the first card (the newest post) gets a solid-red
+   thumb area so the LATEST label sits on red, not on a cream gradient. */
+.blog-cards .blog-card:first-child .blog-card-thumb {
+  background: linear-gradient(135deg, #9b0008 0%, #e3000b 60%, #ff2222 100%) !important;
+}
+
+/* 4) MOBILE polish — fits the layout to a 375px phone cleanly.
+   Blog listing: single-column cards with full-bleed images, tighter padding.
+   Blog articles: smaller margins, slightly smaller body text. */
+@media (max-width: 540px) {
+  .blog-header {
+    padding: 50px 18px 36px;
+  }
+  .blog-header h1 { font-size: 1.7rem; line-height: 1.15; }
+  .blog-header p  { font-size: 0.95rem; }
+
+  .blog-cards {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 0 16px;
+  }
+  .blog-listing { padding: 36px 0; }
+
+  .blog-card-thumb {
+    height: 180px;    /* a bit taller so the image is more prominent */
+  }
+  .blog-card-body {
+    padding: 18px 18px 20px;
+  }
+  .blog-card-body h2 {
+    font-size: 1.1rem;
+  }
+  .blog-card-body p {
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .blog-badge {
+    font-size: 0.6rem;
+    padding: 4px 9px;
+    top: 10px; left: 10px;
+  }
+  .blog-meta-row {
+    gap: 6px;
+  }
+  .blog-reading-time { font-size: 0.68rem; }
+  .blog-cat { font-size: 0.6rem; padding: 2px 7px; }
+
+  /* Blog article pages (individual posts) */
+  .blog-article {
+    padding: 28px 18px 56px;
+  }
+  .blog-article h1 { font-size: 1.5rem; line-height: 1.18; }
+  .blog-article h2 { font-size: 1.2rem; }
+  .blog-article h3 { font-size: 1.02rem; }
+  .blog-article p, .blog-article li { font-size: 1rem; line-height: 1.65; }
+  .blog-article img { border-radius: 10px; margin: 16px 0; }
+  .blog-byline { font-size: 0.8rem; }
+
+  /* Breadcrumbs tighter on phone */
+  .breadcrumbs { padding: 12px 16px; font-size: 0.78rem; }
+}

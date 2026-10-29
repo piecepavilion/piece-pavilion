@@ -2327,3 +2327,63 @@ img { display: block; max-width: 100%; }
   .hero-actions { flex-direction: column; align-items: center; }
   .btn-primary, .btn-ghost { width: 100%; text-align: center; }
 }
+
+/* ================================================================
+   MOBILE POLISH (phone widths)
+   Tightens padding, scales type, keeps everything readable at 320-540px.
+   Loaded last so it overrides earlier breakpoints where needed.
+   ================================================================ */
+@media (max-width: 540px) {
+  /* Header */
+  .site-header .header-inner { padding: 10px 14px; }
+  .header-brand .brand-word  { font-size: 1.05rem; }
+  .header-rating             { display: none; }
+  .header-cart svg           { width: 22px; height: 22px; }
+  .header-shop               { padding: 7px 13px; font-size: 0.78rem; }
+
+  /* Hero */
+  .hero                 { padding: 36px 16px 44px; }
+  .hero h1              { font-size: clamp(1.6rem, 7vw, 2.1rem); line-height: 1.12; }
+  .hero-sub             { font-size: 0.95rem; line-height: 1.5; }
+  .hero-cta             { flex-direction: column; gap: 10px; }
+  .hero-cta .btn-primary,
+  .hero-cta .btn-secondary { width: 100%; justify-content: center; }
+  .hero-search          { flex-direction: column; }
+
+  /* Section headers */
+  .section-header h2 { font-size: 1.4rem; line-height: 1.2; }
+  .section-header p  { font-size: 0.92rem; }
+
+  /* Any .container padding wasted on phones */
+  .container { padding-left: 16px; padding-right: 16px; }
+
+  /* Sell / consign + sections */
+  .section { padding-top: 36px; padding-bottom: 36px; }
+
+  /* Testimonials: 1 column at phone */
+  .testimonial-grid { grid-template-columns: 1fr !important; gap: 14px; }
+  .testimonial-card { padding: 20px; }
+  .testimonial-quote { font-size: 1rem; line-height: 1.5; }
+
+  /* Featured + hero carousel: let items fill width */
+  .featured-grid, .featured-items { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .featured-item h4 { font-size: 0.82rem; }
+  .featured-price   { font-size: 0.9rem; }
+
+  /* Announcement/ticker banner — slightly smaller type on phone */
+  .announcement-banner.ticker { font-size: 0.86rem; }
+
+  /* Footer */
+  .footer-inner { padding: 28px 16px 22px; gap: 18px; text-align: center; }
+  .footer-nav   { justify-content: center; gap: 14px; flex-wrap: wrap; }
+
+  /* Any big display headlines */
+  h1 { font-size: clamp(1.5rem, 7vw, 2rem); }
+  h2 { font-size: clamp(1.25rem, 5vw, 1.6rem); }
+}
+
+/* Even tighter at phone portrait extreme */
+@media (max-width: 380px) {
+  .hero h1 { font-size: 1.5rem; }
+  .featured-grid, .featured-items { grid-template-columns: 1fr; }
+}

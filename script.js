@@ -740,7 +740,7 @@ if (usMap) {
     // screen, flapping their wings. Spookier than confetti but not harsh —
     // dark grey/black on a light background, no screen-wide flash.
     const bats = [];
-    const N = 12;
+    const N = 28;    // more bats, as requested
     for (let i = 0; i < N; i++) {
       const dir = Math.random() < 0.5 ? 1 : -1;   // flying left-to-right or right-to-left
       bats.push({
