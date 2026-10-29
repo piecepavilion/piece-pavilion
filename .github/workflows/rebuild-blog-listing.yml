@@ -1,0 +1,44 @@
+name: Rebuild blog listing
+
+# Triggered when any blog post lands or changes: rebuild blog/index.html
+# card list from blog/*/index.html on disk, refresh the "New on the Blog"
+# banner on the homepage and the listing page.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'blog/**/index.html'
+      - 'scripts/rebuild_blog_listing.py'
+      - '!blog/index.html'
+      - '!blog/_template.html'
+  workflow_dispatch:
+
+concurrency:
+  group: rebuild-blog-listing
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Rebuild cards + banner
+        run: python scripts/rebuild_blog_listing.py
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git add blog/index.html index.html
+          git commit -m "blog listing: auto-refresh cards + banner [skip ci]"
+          git push
