@@ -15,7 +15,7 @@
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-X3DK777DPM"></script>
   <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-X3DK777DPM');</script>
 
-  <link rel="stylesheet" href="../style.css?v=20261029e" />
+  <link rel="stylesheet" href="../style.css?v=20261029g" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -110,11 +110,8 @@
   </nav>
 
   <div class="main-content">
-  <div class="announcement-banner">
-    <a class="announcement-text" href="/blog/"><strong>&#128276; New on the Blog</strong><span>Read the latest &rarr;</span></a>
-    <button class="announcement-close" aria-label="Dismiss">&times;</button>
-  </div>
-
+  <!-- Header + ticker pre-wrapped so there's no layout jump when the ticker JS runs. -->
+  <div class="sticky-head">
   <header class="site-header" id="site-header">
     <div class="header-inner">
       <a href="/" class="header-brand" aria-label="Piece Pavilion home">
@@ -137,6 +134,11 @@
       </div>
     </div>
   </header>
+  <div class="announcement-banner">
+    <a class="announcement-text" href="/blog/"><strong>&#128276; New on the Blog</strong><span>Read the latest &rarr;</span></a>
+    <button class="announcement-close" aria-label="Dismiss">&times;</button>
+  </div>
+  </div> <!-- /.sticky-head -->
 
   <div class="breadcrumbs"><nav><a href="/">Home</a><span class="sep">&rsaquo;</span>Parts Database</nav></div>
 

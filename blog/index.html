@@ -31,7 +31,7 @@
     gtag('config', 'G-X3DK777DPM');
   </script>
 
-  <link rel="stylesheet" href="../style.css?v=20261029e" />
+  <link rel="stylesheet" href="../style.css?v=20261029g" />
   <link rel="stylesheet" href="blog.css" />
   <!-- Favicon / tab identity -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -104,19 +104,13 @@
   <!-- ===== MAIN CONTENT ===== -->
   <div class="main-content">
 
-  <!-- ===== ANNOUNCEMENT BANNER ===== -->
-  <div class="announcement-banner">
-    <a class="announcement-text" href="/blog/lego-advent-calendars-2026/">
-      <strong>&#127876; New on the Blog: LEGO Advent Calendars 2026, Ranked</strong>
-      <span>Read the latest &rarr;</span>
-    </a>
-    <button class="announcement-close" aria-label="Dismiss">&times;</button>
-  </div>
   <div class="lightbox" id="flyer-lightbox">
     <button class="lightbox-close" aria-label="Close">&times;</button>
     <img alt="Sale Flyer" class="lightbox-img" />
   </div>
 
+  <!-- Header + ticker pre-wrapped so there's no layout jump when the ticker JS runs. -->
+  <div class="sticky-head">
   <!-- ===== STICKY HEADER ===== -->
   <header class="site-header" id="site-header">
     <div class="header-inner">
@@ -158,6 +152,14 @@
       </div>
     </div>
   </header>
+  <div class="announcement-banner">
+    <a class="announcement-text" href="/blog/lego-advent-calendars-2026/">
+      <strong>&#127876; New on the Blog: LEGO Advent Calendars 2026, Ranked</strong>
+      <span>Read the latest &rarr;</span>
+    </a>
+    <button class="announcement-close" aria-label="Dismiss">&times;</button>
+  </div>
+  </div> <!-- /.sticky-head -->
 
   <!-- ===== BLOG HEADER ===== -->
   <div class="blog-header">
