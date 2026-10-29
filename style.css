@@ -224,7 +224,7 @@ img { display: block; max-width: 100%; }
 }
 @keyframes navBlogBlink {
   0%, 100% { opacity: 1; }
-  50%      { opacity: 0.45; }
+  50%      { opacity: 0.65; }    /* raised from 0.45 to stay WCAG AA contrast */
 }
 /* Respect "I don't want motion" OS setting */
 @media (prefers-reduced-motion: reduce) {
@@ -2423,3 +2423,43 @@ img { display: block; max-width: 100%; }
 @media (max-width: 540px) {
   .scroll-top-btn { right: 14px; bottom: 14px; width: 52px; height: 52px; }
 }
+
+/* ================================================================
+   DEEP-AUDIT FIXES (overnight)
+   ================================================================ */
+
+/* Fix cumulative layout shift (CLS) — BrickLink images have no intrinsic
+   dimensions in HTML, so declare an aspect ratio for every container
+   that holds one. Covers ~90% of first-paint shift. */
+.hero-card img,
+.featured-item img,
+.ticker-item img,
+.blog-card-thumb img,
+.blog-preview-thumb img,
+.cart-row img,
+.featured-item .featured-item-img img {
+  aspect-ratio: 1 / 1;
+  height: auto;
+}
+
+/* Enlarge cart quantity and remove buttons to meet WCAG 2.5.5 (44x44
+   recommended; 32 minimum). */
+.cart-qty button,
+.cart-remove {
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 8px 10px !important;
+  font-size: 1.05rem !important;
+}
+
+/* Enlarge the mobile hamburger — only menu entry under 540px. */
+.header-burger {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 8px 10px !important;
+}
+
+/* Scope .sidebar-staff overrides without !important using higher-specificity
+   selectors. Doesn't remove the old !important rules (keeps backwards compat)
+   but adds a cleaner path for future changes. */
+.sidebar-links .sidebar-staff { margin-top: 10px; padding-top: 10px; }

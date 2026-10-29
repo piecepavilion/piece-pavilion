@@ -5,7 +5,9 @@ const sidebar        = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const sidebarClose   = document.getElementById('sidebar-close');
 
+let lastFocusBeforeSidebar = null;
 function openSidebar() {
+  lastFocusBeforeSidebar = document.activeElement;
   sidebar.classList.add('open');
   sidebarOverlay.classList.add('open');
   if (sidebarTab) sidebarTab.classList.add('open');
@@ -13,6 +15,14 @@ function openSidebar() {
   // under the sidebar on mobile.
   document.body.style.overflow = 'hidden';
   document.documentElement.style.overflow = 'hidden';
+  // ARIA dialog semantics for screen readers
+  sidebar.setAttribute('role', 'dialog');
+  sidebar.setAttribute('aria-modal', 'true');
+  sidebar.setAttribute('aria-label', 'Site navigation');
+  if (headerBurger) headerBurger.setAttribute('aria-expanded', 'true');
+  const main = document.querySelector('.main-content');
+  if (main) main.setAttribute('aria-hidden', 'true');
+  if (sidebarClose) setTimeout(() => sidebarClose.focus(), 100);
 }
 
 function closeSidebar() {
@@ -21,7 +31,17 @@ function closeSidebar() {
   if (sidebarTab) sidebarTab.classList.remove('open');
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
+  if (headerBurger) headerBurger.setAttribute('aria-expanded', 'false');
+  const main = document.querySelector('.main-content');
+  if (main) main.removeAttribute('aria-hidden');
+  // Return focus to the burger that opened the sidebar
+  if (lastFocusBeforeSidebar && lastFocusBeforeSidebar.focus) lastFocusBeforeSidebar.focus();
 }
+
+// Escape closes the sidebar
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && sidebar && sidebar.classList.contains('open')) closeSidebar();
+});
 
 function toggleSidebar() {
   sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
@@ -300,9 +320,12 @@ renderTicker();
 
   const resolveLink = (link) => {
     if (!link) return '/blog/';
-    const t = link.trim().toUpperCase();
-    if (t === 'LATEST') return tickerState.latestBlog ? tickerState.latestBlog.href : '/blog/';
-    return link.trim();
+    const t = link.trim();
+    if (t.toUpperCase() === 'LATEST') return tickerState.latestBlog ? tickerState.latestBlog.href : '/blog/';
+    // Scheme whitelist — a compromised banner-sheet editor could otherwise
+    // slip a javascript: URL into every pageview's href.
+    if (!/^(https?:|\/|#|mailto:)/i.test(t)) return '/blog/';
+    return t;
   };
 
   const apply = (cfg) => {
@@ -542,14 +565,14 @@ if (cartRoot) {
     const total = items.reduce((s, i) => s + i.price * i.qty, 0);
     const rows = items.map((i, idx) =>
       '<div class="cart-row">' +
-        '<img src="' + i.img + '" alt="" loading="lazy" />' +
-        '<div class="cart-row-info"><h4>' + i.name + '</h4>' +
-        '<span class="cart-row-id">' + i.no + '</span></div>' +
+        '<img src="' + esc(i.img) + '" alt="" loading="lazy" />' +
+        '<div class="cart-row-info"><h4>' + esc(i.name) + '</h4>' +
+        '<span class="cart-row-id">' + esc(i.no) + '</span></div>' +
         '<span class="cart-qty"><button data-q="-1" data-i="' + idx + '" aria-label="Less">&minus;</button>' +
         i.qty +
         '<button data-q="1" data-i="' + idx + '" aria-label="More">+</button></span>' +
         '<span class="cart-row-price">' + money(i.price * i.qty) + '</span>' +
-        '<a class="cart-bl-link" href="' + STORE_URL + '?itemID=' + i.lot + '" target="_blank" rel="noopener">Add on BrickLink ↗</a>' +
+        '<a class="cart-bl-link" href="' + STORE_URL + '?itemID=' + encodeURIComponent(i.lot) + '" target="_blank" rel="noopener">Add on BrickLink ↗</a>' +
         '<button class="cart-remove" data-rm="' + idx + '" aria-label="Remove">&times;</button>' +
       '</div>').join('');
 
@@ -968,6 +991,7 @@ if (navDropdown) {
 })();
 
 (function scrollTopButton() {
+  if (document.querySelector('.scroll-top-btn')) return;
   const btn = document.createElement('button');
   btn.className = 'scroll-top-btn';
   btn.setAttribute('aria-label', 'Back to top');

@@ -902,9 +902,9 @@
       tbody.innerHTML = ranked.map((it, i) => (
         '<tr>' +
           '<td><strong>' + (i + 1) + '</strong></td>' +
-          '<td><img src="' + img(it) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
-            '<strong>' + (it.name || it.no) + '</strong>' +
-            '<div style="font-size:.78rem; color:var(--muted);">' + (it.color || '') + ' · ' + (it.cond || '') + '</div>' +
+          '<td><img src="' + escapeHtml(img(it)) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+            '<strong>' + escapeHtml(it.name || it.no) + '</strong>' +
+            '<div style="font-size:.78rem; color:var(--muted);">' + escapeHtml(it.color || '') + ' · ' + escapeHtml(it.cond || '') + '</div>' +
           '</td>' +
           '<td class="num">' + (it.qty || 0).toLocaleString() + '</td>' +
           '<td class="num">' + fmt$(it.price) + '</td>' +
@@ -1231,6 +1231,7 @@
         data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => b.orders), backgroundColor: COLORS.red, borderRadius: 4, maxBarThickness: 48 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false } }, scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 14, autoSkip: true } }, y: { grid: { color: COLORS.grid }, ticks: { precision: 0 } } } },
       });
+      if (charts.drillOrdersDow) charts.drillOrdersDow.destroy();
       charts.drillOrdersDow = new Chart(document.getElementById('drillOrdersDow'), {
         type: 'bar',
         data: { labels: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], datasets: [{ data: byDow, backgroundColor: COLORS.blue, borderRadius: 4 }] },
@@ -1260,6 +1261,7 @@
         data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => b.revenue), backgroundColor: COLORS.red, borderRadius: 4, maxBarThickness: 48 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.parsed.y) } } }, scales: { x: { grid: { display:false }, ticks: { maxTicksLimit: 14, autoSkip: true } }, y: { grid: { color: COLORS.grid }, ticks: { callback: v => '$' + v } } } },
       });
+      if (charts.drillRevenueWk) charts.drillRevenueWk.destroy();
       charts.drillRevenueWk = new Chart(document.getElementById('drillRevenueWk'), {
         type: 'bar',
         data: { labels: second.map(b => b.label), datasets: [{ data: second.map(b => b.revenue), backgroundColor: COLORS.amber, borderRadius: 4, maxBarThickness: 56 }] },
