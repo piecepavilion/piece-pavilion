@@ -2387,3 +2387,39 @@ img { display: block; max-width: 100%; }
   .hero h1 { font-size: 1.5rem; }
   .featured-grid, .featured-items { grid-template-columns: 1fr; }
 }
+
+/* ================================================================
+   FLOATING BACK-TO-TOP BUTTON (site-wide)
+   Added by script.js on every page. Fades in after scrolling 400px.
+   Styled here so staff pages, parts pages etc. get it too.
+   ================================================================ */
+.scroll-top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e3000b;
+  color: #fff;
+  border: 2px solid #ffce00;
+  box-shadow: 0 8px 22px rgba(227,0,11,0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 900;
+  font-size: 1.4rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.scroll-top-btn.visible { opacity: 1; pointer-events: auto; }
+.scroll-top-btn:hover,
+.scroll-top-btn:focus { transform: translateY(-3px); outline: none; }
+.scroll-top-btn:active { transform: translateY(0); }
+@media (max-width: 540px) {
+  .scroll-top-btn { right: 14px; bottom: 14px; width: 52px; height: 52px; }
+}

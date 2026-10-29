@@ -944,3 +944,41 @@ if (navDropdown) {
     // Offline or counter service down — leave the cached number in place.
   }
 })();
+
+/* ---------- Blog post per-post color + scroll-to-top button ----------
+   On any page that has a .blog-article, hash the URL slug into a hue so
+   each blog post picks its own color-coded cover band for the title.
+   Also inject a floating "scroll to top" button that fades in after 400px.
+*/
+(function blogPostCover() {
+  const article = document.querySelector('.blog-article');
+  if (!article) return;
+  // simple hash: sum char codes, mod 360
+  const slug = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'home');
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  article.style.setProperty('--post-hue', String(hue));
+})();
+
+(function scrollTopButton() {
+  const btn = document.createElement('button');
+  btn.className = 'scroll-top-btn';
+  btn.setAttribute('aria-label', 'Back to top');
+  btn.innerHTML = '&uarr;';
+  document.body.appendChild(btn);
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      btn.classList.toggle('visible', window.scrollY > 400);
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();

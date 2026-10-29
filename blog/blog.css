@@ -767,3 +767,130 @@ article picture.blog-hero,
 .blog-article .blog-hero {
   display: none !important;
 }
+
+/* ================================================================
+   REQUESTED ROUND 3
+   - Each blog listing card gets a UNIQUE color (no more all-red).
+   - Individual blog post pages: title sits ON a colored cover block,
+     different color per post (set via --post-color via a small JS
+     block in each post's inline style, OR via :nth-child-like fallback).
+   - Floating "back to top" button that works great on phones.
+   ================================================================ */
+
+/* 1) Blog listing: colored thumb per card, cycle through brand palette.
+   Also overlay a decorative title band on top of the thumb so the cover
+   has text (as requested). */
+.blog-cards .blog-card:nth-child(7n+1) .blog-card-thumb { background: #e3000b !important; } /* LEGO red */
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb { background: #ffce00 !important; } /* yellow */
+.blog-cards .blog-card:nth-child(7n+3) .blog-card-thumb { background: #0057a8 !important; } /* blue */
+.blog-cards .blog-card:nth-child(7n+4) .blog-card-thumb { background: #1a8a3c !important; } /* green */
+.blog-cards .blog-card:nth-child(7n+5) .blog-card-thumb { background: #ff6600 !important; } /* orange */
+.blog-cards .blog-card:nth-child(7n+6) .blog-card-thumb { background: #7c3aed !important; } /* purple */
+.blog-cards .blog-card:nth-child(7n)   .blog-card-thumb { background: #e91e63 !important; } /* pink */
+
+/* Yellow card needs black Hot/Latest badge for contrast */
+.blog-cards .blog-card:nth-child(7n+2) .blog-badge { background: #15151f; color: #ffce00; }
+
+/* Decorative cover text — subtle "Piece Pavilion" wordmark on each thumb
+   so the cover isn't a bare colored rectangle. Blended into the color so
+   it reads as texture, not a logo. */
+.blog-card-thumb {
+  position: relative;
+  overflow: hidden;
+}
+.blog-card-thumb::after {
+  content: 'piece pavilion';
+  position: absolute;
+  bottom: -4px;
+  right: 8px;
+  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.blog-cards .blog-card:nth-child(7n+2) .blog-card-thumb::after {
+  color: rgba(21, 21, 31, 0.15);
+}
+
+/* 2) Individual blog post pages: colorful cover band behind the title.
+   Each post picks a color via its <article>'s --post-hue variable set by
+   script.js (hashed from the URL slug). CSS fallback uses the brand red
+   if the variable isn't set. */
+.blog-article {
+  --post-hue: 357; /* default to brand red */
+}
+.blog-article > h1 {
+  position: relative;
+  padding: 44px 28px 32px;
+  margin: -48px -28px 32px;     /* bleed out to the edges of .blog-article */
+  background: linear-gradient(135deg,
+    hsl(var(--post-hue), 78%, 42%) 0%,
+    hsl(var(--post-hue), 68%, 54%) 100%);
+  color: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(21,21,31,0.14);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+}
+.blog-article > h1::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(255,255,255,0.14) 0 20px, transparent 21px),
+    radial-gradient(circle at 10% 80%, rgba(0,0,0,0.08) 0 24px, transparent 25px);
+  border-radius: 18px;
+  pointer-events: none;
+}
+.blog-article > .blog-byline {
+  color: rgba(255, 255, 255, 0.85);
+  position: relative;
+  margin-top: -22px;
+  margin-bottom: 32px;
+  padding: 0 28px 20px;
+  background: hsl(var(--post-hue), 68%, 46%);
+  border-radius: 0 0 18px 18px;
+  margin-left: -28px;
+  margin-right: -28px;
+  box-shadow: 0 8px 28px rgba(21,21,31,0.08);
+}
+
+/* 3) Floating back-to-top button — appears after scrolling 400px.
+   Thumb-friendly 48x48px tap target, bottom-right corner, slow fade. */
+.scroll-top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  border: 2px solid #ffce00;
+  box-shadow: 0 8px 22px rgba(227,0,11,0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 900;
+  font-size: 1.3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.scroll-top-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.scroll-top-btn:hover,
+.scroll-top-btn:focus { transform: translateY(-3px); outline: none; }
+.scroll-top-btn:active { transform: translateY(0); }
+@media (max-width: 540px) {
+  .scroll-top-btn { right: 14px; bottom: 14px; width: 52px; height: 52px; }
+}
