@@ -1132,6 +1132,16 @@
         .then(topo => { _worldTopology = topo; return topo; });
       return _worldLoading;
     }
+    let _usStatesTopology = null;
+    let _usStatesLoading = null;
+    async function loadUsStates() {
+      if (_usStatesTopology) return _usStatesTopology;
+      if (_usStatesLoading) return _usStatesLoading;
+      _usStatesLoading = fetch('https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json')
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('us-atlas ' + r.status)))
+        .then(topo => { _usStatesTopology = topo; return topo; });
+      return _usStatesLoading;
+    }
     function colorForCount(n, maxN) {
       // Three-stop interpolation on log scale: cream -> LEGO yellow -> LEGO red.
       // Log keeps the US (which usually dwarfs everything) from flattening the
@@ -1200,6 +1210,30 @@
           g.appendChild(el);
         });
 
+        // US state borders — fade in once the user zooms past ~2x so the
+        //   small world map isn't cluttered, but zooming on the US reveals
+        //   state-level outlines. us-atlas is lon/lat so the same projection
+        //   lines them up with the country layer.
+        let statesPath = null;
+        try {
+          const usTopo = await loadUsStates();
+          const statesMesh = topojson.mesh(
+            usTopo,
+            usTopo.objects.states,
+            (a, b) => a !== b
+          );
+          statesPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          statesPath.setAttribute('d', path(statesMesh));
+          statesPath.setAttribute('fill', 'none');
+          statesPath.setAttribute('stroke', '#1f2937');
+          statesPath.setAttribute('stroke-width', '0.5');
+          statesPath.setAttribute('stroke-linejoin', 'round');
+          statesPath.setAttribute('vector-effect', 'non-scaling-stroke');
+          statesPath.setAttribute('opacity', '0');
+          statesPath.setAttribute('pointer-events', 'none');
+          g.appendChild(statesPath);
+        } catch (_) { /* soft-fail: countries still work */ }
+
         // Zoom + pan: scroll-wheel to zoom, click-and-drag to pan, pinch
         //   on touch, plus the +/-/RESET buttons in the corner.
         const d3svg = d3.select(svg);
@@ -1210,6 +1244,10 @@
           .on('zoom', (ev) => {
             d3g.attr('transform', ev.transform);
             tip.style.opacity = '0';
+            if (statesPath) {
+              const t = Math.max(0, Math.min(1, (ev.transform.k - 2) / 2));
+              statesPath.setAttribute('opacity', t.toFixed(3));
+            }
           });
         d3svg.call(zoom);
         d3svg.on('dblclick.zoom', null); // free up double-click for later use
