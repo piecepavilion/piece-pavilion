@@ -53,10 +53,10 @@ def parse_post(slug_dir):
 
     full_title = m(r"<title>([^<]+)</title>")
     if full_title:
-        title = full_title.split("|")[0].strip()
+        title = html.unescape(full_title.split("|")[0].strip())
     else:
         title = slug_dir.replace("-", " ").title()
-    desc = m(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']') or ""
+    desc = html.unescape(m(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']') or "")
 
     # datePublished from JSON-LD; fall back to today only as last resort.
     date_iso = None
