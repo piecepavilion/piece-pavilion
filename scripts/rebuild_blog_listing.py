@@ -114,21 +114,51 @@ def _fit_font(draw, text, path, max_width, target_size, min_size=24):
     return ImageFont.truetype(path, min_size)
 
 
+# Per-category LEGO palette for auto-generated thumbnails. Each entry is
+# (bright, dark, text_ink, label_ink). The gradient goes dark top-left to
+# bright bottom-right. GOLD takes dark ink since white-on-yellow is unreadable.
+THUMB_PALETTE = {
+    # key:     bright             dark               text ink           label ink
+    "guide":   ((227,   0,  11), (155,   0,   8), (255, 255, 255), (255, 255, 255, 230)),
+    "news":    ((255, 206,   0), (180, 142,   0), ( 21,  21,  31), ( 21,  21,  31, 220)),
+    "minifig": (( 28, 138, 214), ( 14,  82, 140), (255, 255, 255), (255, 255, 255, 230)),
+    "sets":    (( 60, 158,  79), ( 36, 100,  48), (255, 255, 255), (255, 255, 255, 230)),
+    "parts":   (( 48,  48,  60), ( 21,  21,  31), (255, 255, 255), (255, 255, 255, 230)),
+}
+
+def thumb_category(title):
+    """Pick a category key from the title using the same patterns the blog
+    listing uses. First match wins, so order matters: minifig before parts
+    (both mention 'piece'), guide before news (both can mention a year)."""
+    t = (title or "").lower()
+    import re as _re
+    if _re.search(r"minifig|minifigure", t):            return "minifig"
+    if _re.search(r"\bset(s)?\b|advent|retir", t):      return "sets"
+    if _re.search(r"how to|guide|tips|tricks|collect|spot", t): return "guide"
+    if _re.search(r"part|piece|brick", t):              return "parts"
+    if _re.search(r"now on|20\d\d|new|release|announced|black friday|cyber monday", t):
+        return "news"
+    return "guide"  # safe default — matches the sitewide brand accent
+
+
 def generate_thumb_png(title, slug, out_path):
     """Render a 1200x600 PNG thumbnail matching the hand-made PNG style:
-    red diagonal gradient, small 'PIECE PAVILION' label centered above a
-    big Title Case phrase in Fredoka Bold, small seal logo in top-right."""
+    LEGO-palette diagonal gradient (color picked per category), small
+    'PIECE PAVILION' label centered above a big Title Case phrase in
+    Fredoka Bold, small seal logo in top-right."""
     W, H = 1200, 600
+    cat = thumb_category(title)
+    bright, dark, ink, label_ink = THUMB_PALETTE[cat]
 
-    # Diagonal gradient from dark red (top-left) to bright red (bottom-right).
+    # Diagonal gradient from dark (top-left) to bright (bottom-right).
     base = Image.new("RGB", (W, H))
     px = base.load()
     for y in range(H):
         for x in range(W):
             t = (x + y) / (W + H)
-            r = int(155 + (255 - 155) * t)
-            g = int(0   + (34  - 0)   * t)
-            b = int(8   + (34  - 8)   * t)
+            r = int(dark[0] + (bright[0] - dark[0]) * t)
+            g = int(dark[1] + (bright[1] - dark[1]) * t)
+            b = int(dark[2] + (bright[2] - dark[2]) * t)
             px[x, y] = (r, g, b)
     img = base
     draw = ImageDraw.Draw(img)
@@ -148,8 +178,7 @@ def generate_thumb_png(title, slug, out_path):
     label_font = ImageFont.truetype(FONT_SEMI, 36)
     lb = draw.textbbox((0, 0), label, font=label_font)
     lw = lb[2] - lb[0]
-    draw.text(((W - lw) // 2, 180), label, font=label_font,
-              fill=(255, 255, 255, 230))
+    draw.text(((W - lw) // 2, 180), label, font=label_font, fill=label_ink)
 
     # Big phrase in Fredoka Bold, centered horizontally.
     phrase = thumb_phrase(title)
@@ -159,9 +188,11 @@ def generate_thumb_png(title, slug, out_path):
     text_h = bbox[3] - bbox[1]
     x = (W - text_w) // 2
     y = (H - text_h) // 2 + 20
-    # Soft drop shadow for depth.
-    draw.text((x + 3, y + 4), phrase, font=font, fill=(0, 0, 0, 120))
-    draw.text((x, y), phrase, font=font, fill=(255, 255, 255))
+    # Soft drop shadow for depth. On gold the dark text already pops;
+    # the shadow still softens the edge.
+    shadow = (0, 0, 0, 120) if ink == (255, 255, 255) else (255, 255, 255, 90)
+    draw.text((x + 3, y + 4), phrase, font=font, fill=shadow)
+    draw.text((x, y), phrase, font=font, fill=ink)
 
     img.save(out_path, "PNG", optimize=True)
 
