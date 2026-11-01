@@ -1,6 +1,5 @@
 // ===== SIDEBAR / DRAWER TOGGLE =====
-const sidebarTab     = document.getElementById('sidebar-tab');     // legacy left-edge tab (blog pages)
-const headerBurger   = document.getElementById('header-burger');   // new header hamburger
+const headerBurger   = document.getElementById('header-burger');   // header hamburger
 const sidebar        = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const sidebarClose   = document.getElementById('sidebar-close');
@@ -10,7 +9,6 @@ function openSidebar() {
   lastFocusBeforeSidebar = document.activeElement;
   sidebar.classList.add('open');
   sidebarOverlay.classList.add('open');
-  if (sidebarTab) sidebarTab.classList.add('open');
   // Lock body scroll so the user doesn't accidentally scroll the page
   // under the sidebar on mobile.
   document.body.style.overflow = 'hidden';
@@ -28,7 +26,6 @@ function openSidebar() {
 function closeSidebar() {
   sidebar.classList.remove('open');
   sidebarOverlay.classList.remove('open');
-  if (sidebarTab) sidebarTab.classList.remove('open');
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
   if (headerBurger) headerBurger.setAttribute('aria-expanded', 'false');
@@ -48,7 +45,6 @@ function toggleSidebar() {
 }
 
 if (sidebar) {
-  if (sidebarTab)    sidebarTab.addEventListener('click', toggleSidebar);
   if (headerBurger)  headerBurger.addEventListener('click', toggleSidebar);
   if (sidebarClose)  sidebarClose.addEventListener('click', closeSidebar);
   if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
@@ -487,26 +483,11 @@ Promise.race([bothLoaded, timeout]).then(revealBanner);
     .catch(() => { /* keep the hardcoded fallback cards */ });
 })();
 
-// ===== FLYER LIGHTBOX =====
-const lightbox = document.getElementById('flyer-lightbox');
-if (lightbox) {
-  const lightboxImg = lightbox.querySelector('.lightbox-img');
-  document.querySelectorAll('.announcement-img').forEach(img => {
-    img.addEventListener('click', () => {
-      lightboxImg.src = img.dataset.full || img.src;
-      lightbox.classList.add('open');
-    });
-  });
-  lightbox.querySelector('.lightbox-close').addEventListener('click', () => {
-    lightbox.classList.remove('open');
-  });
-  lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) lightbox.classList.remove('open');
-  });
-}
-
 // ===== FADE-IN ON SCROLL =====
-const fadeEls = document.querySelectorAll('.card, .feature, .featured-item, .blog-preview-card, .section-header, .contact-inner h2, .contact-inner p');
+// Removed: .feature + .contact-inner selectors referred to a former homepage
+// section that no longer exists. .card is unused too but kept harmlessly in
+// case any legacy page still uses it.
+const fadeEls = document.querySelectorAll('.card, .featured-item, .blog-preview-card, .section-header');
 fadeEls.forEach(el => el.classList.add('fade-in'));
 
 const observer = new IntersectionObserver((entries) => {
