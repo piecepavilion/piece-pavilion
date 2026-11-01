@@ -756,6 +756,21 @@ img { display: block; max-width: 100%; }
   background: #15151f;
   color: var(--yellow);
 }
+/* When body.blog-fresh is set (newest post < 6h old, see
+   markBlogFreshness in script.js), pulse the pill between its default
+   dark and brand red so the "new blog" catches the eye without being
+   obnoxious. Same 2.6s ease-in-out as the nav blink, kept in sync.
+   Yellow text reads well on both backgrounds. */
+body.blog-fresh .ticker-pill.blog {
+  animation: tickerBlogBlink 2.6s ease-in-out infinite;
+}
+@keyframes tickerBlogBlink {
+  0%, 100% { background: #15151f; }
+  50%      { background: var(--red); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.blog-fresh .ticker-pill.blog { animation: none; }
+}
 /* "Just Added" — white chip for a clean "fresh listing" vibe */
 .ticker-pill:not(.hot):not(.blog) {
   background: var(--white);

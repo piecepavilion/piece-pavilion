@@ -434,8 +434,9 @@ Promise.race([bothLoaded, timeout]).then(revealBanner);
  */
 (function markBlogFreshness() {
   const nav = document.getElementById('nav-blog');
-  if (!nav) return;
-  const windowHours = parseFloat(nav.dataset.freshWindowHours) || 6;
+  // Nav may be absent on some pages, but we still want the homepage
+  // banner's "Latest Blog" pill to pulse when a fresh post lands.
+  const windowHours = (nav && parseFloat(nav.dataset.freshWindowHours)) || 6;
   fetch('/blog/latest.json?t=' + Date.now(), { cache: 'no-store' })
     .then(r => r.ok ? r.json() : null)
     .then(data => {
@@ -443,7 +444,12 @@ Promise.race([bothLoaded, timeout]).then(revealBanner);
       const t = Date.parse(data.published);
       if (!isFinite(t)) return;
       const ageHours = (Date.now() - t) / 3_600_000;
-      if (ageHours < windowHours) nav.classList.add('is-fresh');
+      if (ageHours < windowHours) {
+        if (nav) nav.classList.add('is-fresh');
+        // Also mark the whole page so the ticker's "Latest Blog" pill
+        // pulses for the same 6h window. CSS targets .blog-fresh.
+        document.body.classList.add('blog-fresh');
+      }
     })
     .catch(() => {});
 })();
