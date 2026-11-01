@@ -579,7 +579,7 @@
   <!-- ================================================================
        Pizzazz enhancements for the blog listing. All additive — doesn't
        touch the markup, just DECORATES each existing .blog-card with:
-         - "LATEST" badge on the newest card only
+         - "LATEST" badge on the newest card, "HOT" on the second-newest
          - Estimated reading time (based on description word count)
          - A category tag inferred from the title keywords
        ================================================================ -->
@@ -600,15 +600,16 @@
     const now = Date.now();
 
     cards.forEach((card, i) => {
-      // 1. "Latest" badge — ONLY on the newest card. The old behavior also
-      //    stamped "Hot" on anything < 10 days old, but that cluttered the
-      //    list (the newest 3-4 posts all read as noisy), so it's gone.
-      if (i === 0) {
+      // 1. Badges: newest post gets "Latest", second-newest gets "Hot",
+      //    everything else is clean. When a new post lands tomorrow, the
+      //    current Latest naturally rolls to Hot (now at index 1) and the
+      //    new one takes Latest — no time-window logic needed.
+      if (i === 0 || i === 1) {
         const thumb = card.querySelector('.blog-card-thumb');
         if (thumb) {
           const b = document.createElement('span');
-          b.className = 'blog-badge';
-          b.textContent = 'Latest';
+          b.className = (i === 0) ? 'blog-badge' : 'blog-badge hot';
+          b.textContent = (i === 0) ? 'Latest' : 'Hot';
           thumb.appendChild(b);
         }
       }
