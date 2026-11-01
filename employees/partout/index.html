@@ -96,6 +96,19 @@
 
   <script>
     var DATA = {sets: []};
+    // HTML-escape any string before putting it into innerHTML. Labels, set
+    // names and image URLs come from staff input + BrickLink API — both are
+    // technically trusted, but a stray < in a label name used to be able
+    // to break the card layout and in principle allowed script injection
+    // via a mistyped label.
+    function escHtml(s){
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
     var money = function(n){ return (n<0?"-$":"$") + Math.abs(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
     var pctTxt = function(f){ return (Math.round((f||0)*1000)/10) + "%"; };
 
@@ -109,10 +122,10 @@
       return (
         '<div class="card">' +
           '<div class="head">' +
-            '<img src="' + s.set_image + '" alt="" onerror="this.style.visibility=\'hidden\'" />' +
-            '<div style="flex:1"><div class="no">Set ' + s.set_no + (s.label ? ' · ' + s.label : '') + '</div>' +
-            '<h3>' + (s.set_name || s.set_no) + '</h3></div>' +
-            '<button class="rm" title="Stop tracking" data-set="' + s.set_no + '">&times;</button>' +
+            '<img src="' + escHtml(s.set_image) + '" alt="" onerror="this.style.visibility=\'hidden\'" />' +
+            '<div style="flex:1"><div class="no">Set ' + escHtml(s.set_no) + (s.label ? ' · ' + escHtml(s.label) : '') + '</div>' +
+            '<h3>' + escHtml(s.set_name || s.set_no) + '</h3></div>' +
+            '<button class="rm" title="Stop tracking" data-set="' + escHtml(s.set_no) + '">&times;</button>' +
           '</div>' +
           '<div class="barwrap"><div class="barfill" style="width:' + Math.min(pct*100,100) + '%"></div>' +
             '<div class="pct">' + pctTxt(pct) + ' sold</div></div>' +
@@ -129,7 +142,7 @@
             row('Projected profit', '<span class="'+projCls+'">'+money(s.profit_projected)+'</span>') +
           '</div>' +
           '<div class="foot">Est. value' + unpriced +
-            ' · <a class="setlink" target="_blank" rel="noopener" href="https://www.bricklink.com/v2/catalog/catalogitem.page?S=' + s.set_no + '">BrickLink catalog ↗</a></div>' +
+            ' · <a class="setlink" target="_blank" rel="noopener" href="https://www.bricklink.com/v2/catalog/catalogitem.page?S=' + encodeURIComponent(s.set_no) + '">BrickLink catalog ↗</a></div>' +
         '</div>');
     }
     function row(k,v){ return '<div class="r"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }

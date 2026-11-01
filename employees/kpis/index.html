@@ -629,15 +629,25 @@
         const d = new Date(key + '-15');
         return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
       };
+      // Build a date -> revenue index first so a shorter dR series (e.g.
+      // pp-ops publishes revenue backfill a day behind orders) can't crash
+      // the dashboard with "cannot read property 'revenue' of undefined".
+      const revByDate = {};
+      for (let i = 0; i < (dR || []).length; i++) {
+        if (dR[i] && dR[i].date != null) revByDate[dR[i].date] = dR[i].revenue || 0;
+      }
       for (let i = 0; i < dO.length; i++) {
-        const key = bucketKey(dO[i].date);
+        const row = dO[i] || {};
+        const date = row.date;
+        if (date == null) continue;
+        const key = bucketKey(date);
         if (!map.has(key)) {
           map.set(key, { label: bucketLabel(key), orders: 0, revenue: 0, key });
           order.push(key);
         }
         const b = map.get(key);
-        b.orders += dO[i].orders;
-        b.revenue += dR[i].revenue;
+        b.orders += row.orders || 0;
+        b.revenue += revByDate[date] || 0;
       }
       return order.map(k => {
         const b = map.get(k);

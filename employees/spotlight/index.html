@@ -83,7 +83,22 @@
     var ITEMS = [];
     var msg = document.getElementById('msg');
     function setMsg(t, cls){ msg.textContent = t || ''; msg.className = 'msg' + (cls ? ' ' + cls : ''); }
-    function esc(s){ return (s || '').replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); }
+    function esc(s){ return (s || '').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); }); }
+    // Shared helper for mutating fetches: throws on network error or non-OK
+    // response so the caller's .then only runs on real success and .catch
+    // runs on any failure (expired Access JWT, 500 from Worker, dropped net).
+    function postJSON(url, body){
+      return fetch(url, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
+        .then(function(r){
+          if(!r.ok) throw new Error('HTTP ' + r.status);
+          var ct = r.headers.get('content-type') || '';
+          return ct.indexOf('application/json') === 0 ? r.json() : {};
+        })
+        .then(function(j){
+          if(j && j.error) throw new Error(j.error);
+          return j;
+        });
+    }
 
     function render(){
       var list = document.getElementById('list');
@@ -166,22 +181,25 @@
       var idx = ITEMS.findIndex(function(x){ return x.id === id; });
       if(e.target.closest('.del')){
         if(!confirm('Delete this image?')) return;
-        fetch(API + '/delete', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ id: id }) })
-          .then(function(){ setMsg('Deleted.', 'ok'); load(); });
+        postJSON(API + '/delete', { id: id })
+          .then(function(){ setMsg('Deleted.', 'ok'); load(); })
+          .catch(function(err){ setMsg('Delete failed: ' + err.message, 'err'); });
       } else if(e.target.closest('.save')){
         var body = { id: id,
           caption: itemEl.querySelector('.cap').value,
           link: itemEl.querySelector('.link').value,
           enabled: itemEl.querySelector('.en').checked };
-        fetch(API + '/update', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
-          .then(function(){ setMsg('Saved.', 'ok'); load(); });
+        postJSON(API + '/update', body)
+          .then(function(){ setMsg('Saved.', 'ok'); load(); })
+          .catch(function(err){ setMsg('Save failed: ' + err.message, 'err'); });
       } else if(e.target.closest('.up') || e.target.closest('.down')){
         var to = e.target.closest('.up') ? idx - 1 : idx + 1;
         if(to < 0 || to >= ITEMS.length) return;
         var order = ITEMS.map(function(x){ return x.id; });
         order.splice(to, 0, order.splice(idx, 1)[0]);
-        fetch(API + '/reorder', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ order: order }) })
-          .then(function(){ load(); });
+        postJSON(API + '/reorder', { order: order })
+          .then(function(){ load(); })
+          .catch(function(err){ setMsg('Reorder failed: ' + err.message, 'err'); });
       }
     });
 
