@@ -229,6 +229,92 @@ def thumb_phrase(title):
 
 
 
+def pick_related(all_posts, current_slug):
+    """Return up to 3 related posts for the given slug. Same category first
+    (so a minifig post links to other minifig posts), then newest other
+    posts to fill. Never includes the current post. all_posts must already
+    be sorted newest-first."""
+    current = next((p for p in all_posts if p["slug"] == current_slug), None)
+    if not current:
+        return []
+    cur_cat = thumb_category(current["title"])
+    same = [p for p in all_posts
+            if p["slug"] != current_slug
+            and thumb_category(p["title"]) == cur_cat]
+    other = [p for p in all_posts
+             if p["slug"] != current_slug
+             and thumb_category(p["title"]) != cur_cat]
+    picks = same[:3]
+    if len(picks) < 3:
+        picks += other[:3 - len(picks)]
+    return picks
+
+
+def render_related(related):
+    """Return the full <!-- RELATED-START --> ... <!-- RELATED-END --> block
+    for a post. Empty string when there are no related posts."""
+    if not related:
+        return ""
+    cards = []
+    for p in related:
+        card = (
+            '      <a href="/blog/{slug}/" class="related-card">\n'
+            '        <div class="related-card-thumb"><img src="/thumb/{slug}.png" alt="" loading="lazy" /></div>\n'
+            '        <div class="related-card-body">\n'
+            '          <h3>{title}</h3>\n'
+            '          <span class="related-card-link">Read &rarr;</span>\n'
+            '        </div>\n'
+            '      </a>'
+        ).format(slug=p["slug"], title=html.escape(p["title"]))
+        cards.append(card)
+    return (
+        '  <!-- RELATED-START -->\n'
+        '  <section class="related-posts" aria-labelledby="related-heading">\n'
+        '    <div class="related-posts-inner">\n'
+        '      <h2 id="related-heading">You might also like</h2>\n'
+        '      <div class="related-grid">\n'
+        + "\n".join(cards) + "\n"
+        '      </div>\n'
+        '    </div>\n'
+        '  </section>\n'
+        '  <!-- RELATED-END -->\n'
+    )
+
+
+def strip_legacy_more_posts(html_txt):
+    """Older blog posts had a hand-coded `<!-- ===== MORE POSTS ===== -->`
+    section with the same two stale posts in every article. The new related-
+    posts block replaces it, so remove the legacy section when found."""
+    pat = re.compile(
+        r'[ \t]*<!-- =+ MORE POSTS =+ -->\s*'
+        r'<section\s+class="more-posts">[\s\S]*?</section>\s*',
+        re.I,
+    )
+    return pat.sub("", html_txt, count=1)
+
+
+def inject_related(html_txt, block):
+    """Replace the existing RELATED block if present; otherwise insert the
+    block right before the <!-- ===== NEWSLETTER ===== --> comment. Also
+    strips any legacy hand-coded MORE POSTS section first. Returns
+    (new_html, changed_bool)."""
+    html_txt = strip_legacy_more_posts(html_txt)
+    pat = re.compile(
+        r'[ \t]*<!-- RELATED-START -->[\s\S]*?<!-- RELATED-END -->\n?',
+        re.I,
+    )
+    if pat.search(html_txt):
+        new_html = pat.sub(block, html_txt, count=1)
+        return new_html, True
+    nl_pat = re.compile(r'[ \t]*<!-- =+ NEWSLETTER[^>]*-->', re.I)
+    m = nl_pat.search(html_txt)
+    if not m:
+        return html_txt, False
+    insert_pos = m.start()
+    new_html = html_txt[:insert_pos] + block + html_txt[insert_pos:]
+    return new_html, True
+
+
 def render_cards(posts):
     """Build the inner HTML of <div class="blog-cards">. Every post has a
     real PNG thumb at /thumb/<slug>.png — either hand-made or auto-generated
@@ -330,6 +416,27 @@ def main():
             print("  SKIP thumb for %s: %s" % (p["slug"], e))
     if generated:
         print("Generated %d thumbnails" % generated)
+
+    # Inject "You might also like" block at the bottom of every blog article.
+    # Same-category posts first, then recent other posts. Keeps readers inside
+    # the blog and helps Google see internal links between posts (SEO).
+    updated_related = 0
+    for p in posts:
+        related = pick_related(posts, p["slug"])
+        block = render_related(related)
+        if not block:
+            continue
+        post_path = os.path.join(BLOG_DIR, p["slug"], "index.html")
+        if not os.path.isfile(post_path):
+            continue
+        with open(post_path, "r", encoding="utf-8") as f:
+            txt = f.read()
+        new_txt, changed = inject_related(txt, block)
+        if changed:
+            with open(post_path, "w", encoding="utf-8") as f:
+                f.write(new_txt)
+            updated_related += 1
+    print("Updated related-posts block in %d articles" % updated_related)
 
     # Rebuild blog/index.html card section.
     with open(LISTING, "r", encoding="utf-8") as f:
