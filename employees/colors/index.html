@@ -419,12 +419,12 @@
           '<span class="num">'+esc(part.no)+'</span>' +
           '<span class="name">'+esc(part.name || "")+'</span>' +
           '<span class="count">'+part.colors.length+' color'+(part.colors.length===1?"":"s")+' available</span>' +
-          '<a class="bl-link" href="https://www.bricklink.com/v2/catalog/catalogitem.page?P='+encodeURIComponent(part.no)+'" target="_blank" rel="noopener">Open on BrickLink &rarr;</a>' +
+          '<a class="bl-link" href="https://www.bricklink.com/v2/catalog/catalogitem.page?'+(/^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/.test((part.no||"").toLowerCase())?"M":"P")+'='+encodeURIComponent(part.no)+'" target="_blank" rel="noopener">Open on BrickLink &rarr;</a>' +
         '</div>' +
       '</div>';
     const html = part.colors.map((c) => {
       const name = COLOR_NAME_BY_ID[c.id] || ("Color #"+c.id);
-      return '<a class="tile" href="https://www.bricklink.com/v2/catalog/catalogitem.page?P='+encodeURIComponent(part.no)+'#T=C&C='+c.id+'" target="_blank" rel="noopener" title="'+esc(name)+' &mdash; open on BrickLink">' +
+      return '<a class="tile" href="https://www.bricklink.com/v2/catalog/catalogitem.page?'+(/^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/.test((part.no||"").toLowerCase())?"M":"P")+'='+encodeURIComponent(part.no)+'#T=C&C='+c.id+'" target="_blank" rel="noopener" title="'+esc(name)+' &mdash; open on BrickLink">' +
         '<div class="img loading">' +
           '<img alt="" loading="lazy" src="'+imgUrlFor(c.id, part.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
         '</div>' +
