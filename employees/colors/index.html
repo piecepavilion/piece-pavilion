@@ -121,14 +121,14 @@
   const head   = $("#partHead");
   const grid   = $("#grid");
 
-  // bl-colors.json gives us color_id -> name AND color_id -> hex-ish swatch.
-  // We ship it in /employees/pick/bl-colors.json so this page reuses it.
+  // bl-colors.json gives us color_id -> name AND the real BrickLink hex.
+  // Both come from BL's /colors API via scripts/fetch_bl_colors.py.
   let COLOR_NAME_BY_ID = {};      // "11" -> "Black"
-  let COLOR_HEX_BY_ID = {};       // "11" -> "#05131D" (approx)
+  let COLOR_HEX_BY_ID = {};       // "11" -> "#05131D" (from BL /colors)
 
-  // Approximate hex values for common BL color IDs. We don't ship an
-  // exhaustive map -- just enough so the swatch dot reads correctly on
-  // the big solid colors. Unknown IDs fall back to a neutral gray.
+  // Fallback hex for the common solid colors in case bl-colors.json's by_id
+  // map is missing (older cached copy). Replaced by the real BL hex as soon
+  // as the file loads.
   const APPROX_HEX = {
     1:"#f4f4f4", 2:"#e4cd9e", 3:"#f2cd37", 4:"#fe8a18", 5:"#c91a09",
     6:"#237841", 7:"#0055bf", 8:"#583927", 9:"#9ba19d",10:"#6d6e5c",
@@ -246,9 +246,13 @@
       const r = await fetch("/employees/pick/bl-colors.json", { credentials: "include" });
       if (!r.ok) throw new Error("colors file missing");
       const j = await r.json();
-      // bl-colors.json shape: { source, count, colors: { "Black": 11, ... } }
+      // bl-colors.json shape: { source, count, colors: {"Black":11,...},
+      // by_id: { "11": {"name":"Black","hex":"#05131D","type":"Solid"}, ... } }
       Object.entries(j.colors || {}).forEach(([name, id]) => {
         COLOR_NAME_BY_ID[String(id)] = name;
+      });
+      Object.entries(j.by_id || {}).forEach(([id, meta]) => {
+        if (meta && meta.hex) COLOR_HEX_BY_ID[String(id)] = meta.hex;
       });
     } catch (e){
       // Non-fatal; names fall back to "Color #N".
