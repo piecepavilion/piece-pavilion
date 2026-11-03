@@ -286,83 +286,110 @@
     }
   }
 
-  // Static catalog loaded once per session from /employees/colors/catalog.json.
-  // 158 common reseller parts × their colors, straight from BrickLink Store API,
-  // baked at build time. Means Color Lookup works without the Worker.
-  let CATALOG = null;      // { parts: [...], colors: {id: {name, hex}} }
-  let CATALOG_PROMISE = null;
+  // 3-file catalog, lazy-loaded:
+  //   catalog.json   (20 KB) — BrickLink colors + category names
+  //   parts.json    (6.7 MB) — every LEGO part (name/number/category)
+  //   elements.json (868 KB) — part_num -> [bl_color_id, ...]
+  // Only catalog.json loads on page open. parts.json loads on first search,
+  // elements.json loads on first part click.
+  let CATALOG = null, PARTS = null, ELEMENTS = null;
+  let CATALOG_P = null, PARTS_P = null, ELEMENTS_P = null;
+
   async function catalog(){
     if (CATALOG) return CATALOG;
-    if (!CATALOG_PROMISE){
-      CATALOG_PROMISE = fetch("/employees/colors/catalog.json", { credentials: "include" })
+    if (!CATALOG_P){
+      CATALOG_P = fetch("/employees/colors/catalog.json", { credentials: "include" })
         .then((r) => r.ok ? r.json() : null)
-        .then((j) => { CATALOG = j; return j; })
-        .catch(() => null);
+        .then((j) => { CATALOG = j; return j; }).catch(() => null);
     }
-    return CATALOG_PROMISE;
+    return CATALOG_P;
+  }
+  async function parts(){
+    if (PARTS) return PARTS;
+    if (!PARTS_P){
+      setMsg("info", "Loading full part catalog (one-time, ~7 MB)...");
+      PARTS_P = fetch("/employees/colors/parts.json", { credentials: "include" })
+        .then((r) => r.ok ? r.json() : [])
+        .then((j) => { PARTS = j; setMsg("", ""); return j; }).catch(() => []);
+    }
+    return PARTS_P;
+  }
+  async function elements(){
+    if (ELEMENTS) return ELEMENTS;
+    if (!ELEMENTS_P){
+      ELEMENTS_P = fetch("/employees/colors/elements.json", { credentials: "include" })
+        .then((r) => r.ok ? r.json() : {})
+        .then((j) => { ELEMENTS = j; return j; }).catch(() => ({}));
+    }
+    return ELEMENTS_P;
+  }
+
+  function colorsForPart(no){
+    const map = ELEMENTS || {};
+    const ids = map[no] || map[no.toLowerCase()] || map[no.toUpperCase()] || [];
+    return ids.map((id) => ({ id: Number(id) }));
   }
 
   async function lookupByNumber(no){
     setMsg("info", "Looking up part "+esc(no)+"...");
-    const cat = await catalog();
-    if (cat && cat.parts){
-      // Case-insensitive match. BL part numbers are mixed-case ('3068b').
-      const noLc = no.toLowerCase();
-      const hit = cat.parts.find((p) => (p.no || "").toLowerCase() === noLc);
-      if (hit){
-        if (!hit.colors || !hit.colors.length){
-          setMsg("info", 'No color variants on record for "'+esc(hit.no)+'".');
-          return;
+    const [p, e] = await Promise.all([parts(), elements()]);
+    const noLc = no.toLowerCase();
+    const hit = p.find((x) => (x.no || "").toLowerCase() === noLc);
+    if (!hit){
+      // Not in the static part list — try the Worker as a fallback for brand-new parts.
+      try {
+        const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(no), { credentials: "include" });
+        if (r.ok){
+          const part = await r.json();
+          if (part && part.colors && part.colors.length){
+            setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+".");
+            renderPart(part);
+            setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
+            return;
+          }
         }
-        setMsg("ok", "Showing "+hit.colors.length+" color"+(hit.colors.length===1?"":"s")+" for "+esc(hit.no)+".");
-        renderPart({ no: hit.no, name: hit.name, colors: hit.colors });
-        setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
-        return;
-      }
+      } catch(_) {}
+      setMsg("info", '"'+esc(no)+'" is not in the catalog. Trying a name search...');
+      await lookupByName(no);
+      return;
     }
-    // Not in the static catalog — try the Worker as a fallback for exotic parts.
-    try {
-      const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(no), { credentials: "include" });
-      if (r.ok){
-        const part = await r.json();
-        if (part && part.colors && part.colors.length){
-          setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+".");
-          renderPart(part);
-          setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
-          return;
-        }
-      }
-    } catch(_) {}
-    // Last resort: name search against the static catalog.
-    setMsg("info", '"'+esc(no)+'" is not in the baked-in catalog. Trying a name search...');
-    await lookupByName(no);
+    const cols = colorsForPart(hit.no);
+    if (!cols.length){
+      // Even if we have no color mapping, render the hero image using color 0.
+      setMsg("info", 'No color variants recorded for "'+esc(hit.no)+'" — showing the base image.');
+      renderPart({ no: hit.no, name: hit.name, colors: [] });
+      return;
+    }
+    setMsg("ok", "Showing "+cols.length+" color"+(cols.length===1?"":"s")+" for "+esc(hit.no)+".");
+    renderPart({ no: hit.no, name: hit.name, colors: cols });
+    setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
   }
 
   async function lookupByName(q){
     setMsg("info", "Searching for \""+esc(q)+"\"...");
-    const cat = await catalog();
-    if (!cat || !cat.parts){
-      setMsg("err", 'Catalog file is missing. Refresh the page, or ask Dad to redeploy /employees/colors/catalog.json.');
+    const p = await parts();
+    if (!p || !p.length){
+      setMsg("err", 'Catalog file is missing. Refresh the page, or ask Dad to redeploy /employees/colors/parts.json.');
       return;
     }
-    // Normalize: lowercase, collapse whitespace, strip "x" spacing variants so
-    // "brick 1x1" and "brick 1 x 1" both hit "brick 1 x 1".
     const norm = (s) => (s || "").toLowerCase()
       .replace(/\s+/g, " ")
       .replace(/(\d)x(\d)/g, "$1 x $2")
       .trim();
     const needle = norm(q);
     const terms = needle.split(" ").filter(Boolean);
-    const matches = cat.parts.filter((p) => {
-      const hay = norm(p.name) + " " + (p.no || "").toLowerCase();
-      return terms.every((t) => hay.includes(t));
-    }).slice(0, 25);
+    const matches = [];
+    for (let i = 0; i < p.length && matches.length < 50; i++){
+      const row = p[i];
+      const hay = norm(row.name) + " " + (row.no || "").toLowerCase();
+      if (terms.every((t) => hay.includes(t))) matches.push(row);
+    }
     if (!matches.length){
-      setMsg("info", 'No parts in the catalog matched "'+esc(q)+'". Try fewer words — "brick 1 x 1", "tile 2 x 2".');
+      setMsg("info", 'No parts matched "'+esc(q)+'". Try fewer words — "brick 1 x 1", "tile 2 x 2".');
       return;
     }
     setMsg("ok", "Found "+matches.length+" match"+(matches.length===1?"":"es")+" for \""+esc(q)+"\". Click any to see every color.");
-    renderSearchResults(matches.map((p) => ({ no: p.no, name: p.name })));
+    renderSearchResults(matches.map((x) => ({ no: x.no, name: x.name })));
     setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2400);
   }
 
@@ -397,22 +424,18 @@
   }
 
   // Load the color-id-to-name map once, cached for the session.
+  // catalog.json shape: { colors: {"<id>": {id, name, hex, type}}, ... }
   (async () => {
     try {
-      const r = await fetch("/employees/pick/bl-colors.json", { credentials: "include" });
-      if (!r.ok) throw new Error("colors file missing");
-      const j = await r.json();
-      // bl-colors.json shape: { source, count, colors: {"Black":11,...},
-      // by_id: { "11": {"name":"Black","hex":"#05131D","type":"Solid"}, ... } }
-      Object.entries(j.colors || {}).forEach(([name, id]) => {
-        COLOR_NAME_BY_ID[String(id)] = name;
-      });
-      Object.entries(j.by_id || {}).forEach(([id, meta]) => {
-        if (meta && meta.hex) COLOR_HEX_BY_ID[String(id)] = meta.hex;
+      const j = await catalog();
+      if (!j || !j.colors) throw new Error("catalog colors missing");
+      Object.entries(j.colors).forEach(([id, meta]) => {
+        if (meta && meta.name) COLOR_NAME_BY_ID[String(id)] = meta.name;
+        if (meta && meta.hex)  COLOR_HEX_BY_ID[String(id)]  = meta.hex;
       });
     } catch (e){
       // Non-fatal; names fall back to "Color #N".
-      console.warn("bl-colors.json load failed", e);
+      console.warn("catalog colors load failed", e);
     }
   })();
 
@@ -468,15 +491,23 @@
   async function runSuggest(q){
     if (q === lastQuery) return;
     lastQuery = q;
-    suggestEl.innerHTML = '<div class="loading">Searching BrickLink...</div>';
+    suggestEl.innerHTML = '<div class="loading">Searching 65k parts...</div>';
     suggestEl.classList.add("open");
     try {
-      const r = await fetch("/employees/api/colors/search?q=" + encodeURIComponent(q), { credentials: "include" });
-      if (!r.ok){ closeSuggest(); return; }
-      const j = await r.json();
-      // Guard against stale response for an older keystroke.
+      const p = await parts();
       if (q !== lastQuery) return;
-      renderSuggest(j.items || []);
+      const norm = (s) => (s || "").toLowerCase()
+        .replace(/\s+/g, " ")
+        .replace(/(\d)x(\d)/g, "$1 x $2")
+        .trim();
+      const terms = norm(q).split(" ").filter(Boolean);
+      const items = [];
+      for (let i = 0; i < p.length && items.length < 12; i++){
+        const row = p[i];
+        const hay = norm(row.name) + " " + (row.no || "").toLowerCase();
+        if (terms.every((t) => hay.includes(t))) items.push({ no: row.no, name: row.name });
+      }
+      renderSuggest(items);
     } catch (_){ closeSuggest(); }
   }
 
