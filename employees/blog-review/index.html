@@ -158,6 +158,88 @@
       padding:10px 14px; border-radius:8px; margin:16px 0;
     }
     .thumb-hint strong { color:#92540b; }
+
+    /* ===== CELEBRATION OVERLAY ===== */
+    /* Fires on successful blog publish only; dismisses on close button only.
+       Pointer-events none on background pieces so the Close button is clickable. */
+    #celebrate-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(10,8,20,.72) 0%, rgba(10,8,20,.86) 100%);
+      animation: celfade .35s ease-out both;
+    }
+    @keyframes celfade { from { opacity: 0; } to { opacity: 1; } }
+    #celebrate-fireworks {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none;
+    }
+    #celebrate-confetti {
+      position: fixed; inset: 0; pointer-events: none; overflow: hidden;
+    }
+    #celebrate-confetti .c {
+      position: absolute; top: -24px; width: 10px; height: 16px;
+      background: #e3000b;
+      opacity: 0.95;
+      animation: confall linear forwards;
+      animation-iteration-count: infinite;
+    }
+    @keyframes confall {
+      0%   { transform: translateY(-24px) rotate(0deg);   opacity: 1; }
+      85%  { opacity: 1; }
+      100% { transform: translateY(102vh) rotate(720deg); opacity: 0.9; }
+    }
+    #celebrate-panel {
+      position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      pointer-events: auto; z-index: 2;
+      background: linear-gradient(145deg, #fff 0%, #fff8ec 100%);
+      border: 3px solid #ffce00;
+      border-radius: 20px;
+      padding: 36px 48px 32px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 0 0 6px rgba(255,206,0,.18);
+      text-align: center;
+      max-width: 520px;
+      width: calc(100vw - 48px);
+      animation: celpop .5s cubic-bezier(.3,1.6,.5,1) both;
+    }
+    @keyframes celpop {
+      0%   { transform: translate(-50%, -50%) scale(.4);  opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+    }
+    #celebrate-panel .burst {
+      font-size: 2.4rem; margin-bottom: 6px; letter-spacing: 4px;
+      animation: wiggle 1.1s ease-in-out infinite;
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-3deg); }
+      50%      { transform: rotate(3deg); }
+    }
+    #celebrate-panel h2 {
+      font-family: 'Fredoka','Nunito',sans-serif;
+      font-size: 2rem; color: #e3000b; margin: 4px 0 8px;
+      letter-spacing: -0.02em;
+    }
+    #celebrate-panel p {
+      font-size: 1.02rem; color: #3a4150; margin-bottom: 22px;
+      font-weight: 700; line-height: 1.4;
+    }
+    #celebrate-close {
+      background: #e3000b; color: #fff; border: none; cursor: pointer;
+      padding: 12px 32px; border-radius: 50px; font-weight: 800;
+      font-family: 'Nunito', sans-serif; font-size: 1rem;
+      box-shadow: 0 4px 14px rgba(227,0,11,.35);
+      transition: transform .12s, box-shadow .12s, background .12s;
+    }
+    #celebrate-close:hover {
+      background: #9b0008; transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(227,0,11,.4);
+    }
+    #celebrate-close:active { transform: translateY(0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      #celebrate-overlay { animation: none; }
+      #celebrate-panel { animation: none; }
+      #celebrate-panel .burst { animation: none; }
+      #celebrate-confetti .c { animation-duration: 10s; }
+    }
   </style>
 </head>
 <body>
@@ -418,6 +500,7 @@
       try {
         const r = await api('POST', '/publish/' + encodeURIComponent(d.id));
         toast('Published! ' + (r.url || ''));
+        celebrate(d.title);
         await refreshCounts();
         state.tab = 'published';
         activateTab('published');
@@ -428,6 +511,136 @@
         toast('Publish failed: ' + e.message, 'err');
         btn.disabled = false; btn.textContent = 'Publish to Site →';
       }
+    }
+
+    // ===== CELEBRATION OVERLAY =====
+    // Fires on a successful publish only. Pure UI -- never touches the
+    // blog's HTML, JSON or the Worker response. Dismisses on click of the
+    // close button only (Dad asked for it to stay until he closes it).
+    function celebrate(title) {
+      // Guard: never render twice on top of each other.
+      if (document.getElementById('celebrate-overlay')) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'celebrate-overlay';
+      overlay.innerHTML =
+        '<canvas id="celebrate-fireworks"></canvas>' +
+        '<div id="celebrate-confetti"></div>' +
+        '<div id="celebrate-panel">' +
+          '<div class="burst">&#127881; &#127878; &#127881;</div>' +
+          '<h2>Blog Published!</h2>' +
+          '<p>' + (title ? title.replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])) : '') + '</p>' +
+          '<button id="celebrate-close" type="button">Close</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      // Build 120 confetti pieces
+      const confetti = document.getElementById('celebrate-confetti');
+      const CONF_COLORS = ['#e3000b','#ffce00','#1c8ad6','#3c9e4f','#f08f1c','#ffffff','#9b0008','#ffde6b'];
+      const conFrag = document.createDocumentFragment();
+      for (let i = 0; i < 120; i++) {
+        const p = document.createElement('span');
+        p.className = 'c';
+        const c = CONF_COLORS[Math.floor(Math.random()*CONF_COLORS.length)];
+        p.style.background = c;
+        p.style.left = (Math.random() * 100) + 'vw';
+        p.style.animationDelay = (Math.random() * 2.5) + 's';
+        p.style.animationDuration = (3.6 + Math.random() * 3.2) + 's';
+        p.style.transform = 'rotate(' + (Math.random()*360) + 'deg)';
+        if (Math.random() < 0.35) p.style.borderRadius = '50%'; // mix circles with rectangles
+        conFrag.appendChild(p);
+      }
+      confetti.appendChild(conFrag);
+
+      // Fireworks on canvas
+      const canvas = document.getElementById('celebrate-fireworks');
+      const ctx = canvas.getContext('2d');
+      let W = 0, H = 0;
+      function sizeCanvas(){
+        W = canvas.width  = window.innerWidth * devicePixelRatio;
+        H = canvas.height = window.innerHeight * devicePixelRatio;
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+      }
+      sizeCanvas();
+      window.addEventListener('resize', sizeCanvas);
+
+      const particles = [];
+      const rockets = [];
+      const FW_COLORS = [
+        [227,0,11],[255,206,0],[28,138,214],[60,158,79],
+        [240,143,28],[255,255,255],[250,100,180]
+      ];
+      function launch() {
+        const x = Math.random() * W * 0.8 + W * 0.1;
+        const targetY = H * (0.15 + Math.random() * 0.35);
+        rockets.push({
+          x, y: H,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: -Math.sqrt(2 * 0.14 * (H - targetY)),
+          targetY,
+          color: FW_COLORS[Math.floor(Math.random()*FW_COLORS.length)]
+        });
+      }
+      function burst(x, y, color) {
+        const n = 60 + Math.floor(Math.random() * 40);
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = Math.random() * 6 + 2;
+          particles.push({
+            x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+            color, life: 60 + Math.random() * 40, age: 0
+          });
+        }
+      }
+
+      let running = true, lastLaunch = 0;
+      function frame(ts) {
+        if (!running) return;
+        ctx.fillStyle = 'rgba(10,8,20,0.22)';
+        ctx.fillRect(0, 0, W, H);
+
+        if (ts - lastLaunch > 350 + Math.random() * 450) {
+          launch();
+          lastLaunch = ts;
+        }
+        // Rockets
+        for (let i = rockets.length - 1; i >= 0; i--) {
+          const r = rockets[i];
+          r.vy += 0.14;
+          r.x += r.vx; r.y += r.vy;
+          ctx.fillStyle = 'rgba('+r.color[0]+','+r.color[1]+','+r.color[2]+',0.95)';
+          ctx.fillRect(r.x - 1.5*devicePixelRatio, r.y - 2*devicePixelRatio, 3*devicePixelRatio, 4*devicePixelRatio);
+          if (r.vy >= 0 || r.y <= r.targetY) {
+            burst(r.x, r.y, r.color);
+            rockets.splice(i, 1);
+          }
+        }
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.age++;
+          p.vy += 0.08;
+          p.vx *= 0.985; p.vy *= 0.985;
+          p.x += p.vx; p.y += p.vy;
+          const alpha = Math.max(0, 1 - p.age / p.life);
+          ctx.fillStyle = 'rgba('+p.color[0]+','+p.color[1]+','+p.color[2]+','+alpha+')';
+          ctx.fillRect(p.x, p.y, 2*devicePixelRatio, 2*devicePixelRatio);
+          if (p.age >= p.life) particles.splice(i, 1);
+        }
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+
+      // Immediate opening burst volley so the first bang isn't a 1-second wait
+      for (let i = 0; i < 3; i++) {
+        setTimeout(launch, 60 + i * 180);
+      }
+
+      document.getElementById('celebrate-close').addEventListener('click', () => {
+        running = false;
+        overlay.remove();
+      });
     }
 
     async function doArchive(d) {
