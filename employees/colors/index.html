@@ -104,9 +104,12 @@
     .is-loading .grid.real{display:none}
 
     /* Category sections in search results. */
-    .cat-section{margin-bottom:26px}
+    .cat-section{margin-bottom:30px}
     .cat-h{font-size:1.08rem;color:var(--slate);margin:4px 0 12px;padding:8px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:10px;letter-spacing:-.005em}
     .cat-h span{color:var(--muted);font-weight:600;font-size:.85rem;font-family:'JetBrains Mono','Consolas',monospace}
+    .size-sub{margin:8px 0 20px}
+    .size-h{font-size:.9rem;color:var(--mid);margin:12px 0 10px;padding-left:4px;font-weight:700;font-family:'Nunito',sans-serif;letter-spacing:.02em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+    .size-h span{color:var(--muted);font-weight:600;font-size:.78rem;font-family:'JetBrains Mono','Consolas',monospace;text-transform:none}
 
     /* Filter chips below the search box. */
     .filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
@@ -160,20 +163,39 @@
         <button class="btn" id="goBtn">Go &rarr;</button>
       </div>
       <div class="filter-row" id="filterRow">
-        <span class="filter-label">Show:</span>
+        <span class="filter-label">Shape:</span>
         <button class="chip" data-fam="brick">Bricks</button>
         <button class="chip" data-fam="plate">Plates</button>
         <button class="chip" data-fam="tile">Tiles</button>
         <button class="chip" data-fam="slope">Slopes</button>
         <button class="chip" data-fam="round">Round</button>
-        <button class="chip" data-fam="minifig">Minifig</button>
-        <button class="chip" data-fam="technic">Technic</button>
-        <button class="chip" data-fam="wheel">Wheels</button>
-        <button class="chip" data-fam="window">Windows</button>
         <button class="chip" data-fam="panel">Panels</button>
-        <button class="chip" data-fam="animal">Animal</button>
+        <button class="chip" data-fam="bar">Bars/Fences</button>
+        <button class="chip" data-fam="hinge">Hinges</button>
+        <button class="chip" data-fam="baseplate">Baseplates</button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Minifig:</span>
+        <button class="chip" data-fam="minifig">Whole figs</button>
+        <button class="chip" data-fam="body">Heads &amp; Body</button>
+        <button class="chip" data-fam="hair">Hair / Hats</button>
+        <button class="chip" data-fam="accessory">Accessories</button>
+        <button class="chip" data-fam="tool">Tools / Weapons</button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">World:</span>
+        <button class="chip" data-fam="vehicle">Vehicles</button>
+        <button class="chip" data-fam="wheel">Wheels</button>
+        <button class="chip" data-fam="window">Windows / Doors</button>
+        <button class="chip" data-fam="plant">Plants</button>
+        <button class="chip" data-fam="animal">Animals</button>
+        <button class="chip" data-fam="flag">Flags / Signs</button>
+        <button class="chip" data-fam="container">Containers</button>
+        <button class="chip" data-fam="technic">Technic</button>
+      </div>
+      <div class="filter-row">
         <button class="chip" data-fam="verified">Verified&check;</button>
-        <button class="chip clear-chip" id="clearFilters">Clear</button>
+        <button class="chip clear-chip" id="clearFilters">Clear all</button>
       </div>
       <div class="hint">
         Type a number for direct lookup, or type a name to see matches &mdash; click one to pull its colors.
@@ -435,22 +457,33 @@
     setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
   }
 
-  // Family filters — explicit chips the user picks instead of "brick"
-  // auto-expanding to slopes. Each family maps to a set of Rebrickable
-  // category IDs. Search text is now just a text filter; broadening is
-  // the chips' job.
+  // Family filters — explicit chips the user picks. Each family maps to
+  // a set of Rebrickable category IDs. Multi-select = OR across cats.
   const FAMILIES = {
-    brick:   [11, 5, 8, 20],       // Bricks, Bricks Special, Technic Bricks, Round & Cones
-    plate:   [14, 9, 21, 49],      // Plates, Plates Special, Round & Dishes, Wedged
-    tile:    [19, 15, 67],         // Tiles, Tiles Special, Round & Curved
-    slope:   [3, 6, 37],           // Bricks Sloped, Wedged, Curved
-    round:   [20, 21, 67],         // Round bricks, round plates, round tiles
-    minifig: [13, 27, 59, 60, 61, 65, 70, 71, 72, 73],
-    technic: [8, 12, 25, 26, 40, 46, 51, 52, 53, 54, 55],
-    wheel:   [29, 35, 36, 47],
-    window:  [16],
-    panel:   [23, 32, 38],
-    animal:  [28, 74, 75, 76],
+    brick:    [11, 5, 8],              // Bricks, Bricks Special, Technic Bricks
+    plate:    [14, 9, 49],             // Plates, Plates Special, Wedged
+    tile:     [19, 15],                // Tiles, Tiles Special
+    slope:    [3, 6, 37],              // Bricks Sloped, Wedged, Curved
+    round:    [20, 21, 67],            // Round bricks/plates/tiles
+    cone:     [20],                    // Round & Cones
+    minifig:  [13],                    // whole minifigs
+    body:     [59, 60, 61, 62, 63, 64],// heads, upper, lower body (minifig+minidoll)
+    accessory:[27, 65, 70, 71, 72, 73],// accessories, headwear, hipwear, neckwear, head-acc, weapons
+    hair:     [65],                    // headwear/hair/hats (same cat)
+    technic:  [12, 25, 26, 40, 46, 51, 52, 53, 54, 55],
+    wheel:    [29],                    // wheels + tyres
+    vehicle:  [35, 36, 47],            // transportation + windscreens
+    window:   [16],
+    panel:    [23],
+    bar:      [32],                    // Bars, Ladders, Fences
+    flag:     [38],                    // Flags, Banners, Signs
+    plant:    [76],                    // Plants & Trees
+    animal:   [28, 74, 75],            // Animals + accessories + body parts
+    tool:     [56, 73],                // Tools + weapons/shields
+    container:[7],
+    hinge:    [18],
+    baseplate:[1],
+    sticker:  [58],
   };
   // active filter state
   const FILTERS = { fams: new Set(), verifiedOnly: false };
@@ -536,9 +569,23 @@
     renderSearchResults(matches, q);
   }
 
+  // Pull a "size" key out of a part name — "Brick 2 x 4" → "2 x 4",
+  // "Plate 1 x 1" → "1 x 1". If no NxM pattern, returns "" (other).
+  function extractSize(name){
+    const m = (name || "").match(/(\d+)\s*[xX]\s*(\d+)(?:\s*[xX]\s*(\d+))?/);
+    if (!m) return "";
+    const a = parseInt(m[1], 10), b = parseInt(m[2], 10), c = m[3] ? parseInt(m[3], 10) : null;
+    return c ? (a + " x " + b + " x " + c) : (a + " x " + b);
+  }
+  // Sort size keys naturally: "1 x 1" before "1 x 2" before "2 x 2".
+  function sizeSortKey(s){
+    const parts = s.split(" x ").map((n) => parseInt(n, 10) || 999);
+    while (parts.length < 3) parts.push(0);
+    return parts[0] * 10000 + parts[1] * 100 + parts[2];
+  }
+
   function renderSearchResults(items, q){
-    // Group results by category so searching "brick" shows Brick, then
-    // Brick Modified, then Slope, then Arch, etc — all under one search.
+    // Group results by category, then WITHIN each category by size.
     const groups = {};
     const order = [];
     items.forEach((it) => {
@@ -547,16 +594,32 @@
       groups[key].push(it);
     });
 
+    const headerText = q
+      ? '"'+esc(q)+'" &mdash; '+items.length+' piece'+(items.length===1?"":"s")+' across '+order.length+' categor'+(order.length===1?"y":"ies")
+      : items.length+' piece'+(items.length===1?"":"s")+' across '+order.length+' categor'+(order.length===1?"y":"ies");
     head.innerHTML =
       '<div class="part-head">' +
         '<span class="num">RESULTS</span>' +
-        '<span class="name">"'+esc(q)+'" &mdash; '+items.length+' piece'+(items.length===1?"":"s")+' across '+order.length+' categor'+(order.length===1?"y":"ies")+'</span>' +
+        '<span class="name">'+headerText+'</span>' +
         '<span class="count">tap any to open on BrickLink</span>' +
       '</div>';
 
     const sections = order.map((catName) => {
       const rows = groups[catName];
-      const tiles = rows.map((it) => {
+      // Sub-group within this category by size.
+      const bySize = {};
+      rows.forEach((r) => {
+        const sz = extractSize(r.name);
+        (bySize[sz] = bySize[sz] || []).push(r);
+      });
+      const sizeOrder = Object.keys(bySize).sort((a, b) => {
+        if (!a) return 1; if (!b) return -1;         // "Other" (no size) last
+        return sizeSortKey(a) - sizeSortKey(b);
+      });
+
+      const subs = sizeOrder.map((sz) => {
+        const srows = bySize[sz];
+        const tiles = srows.map((it) => {
         const bl = "https://www.bricklink.com/v2/catalog/catalogitem.page?P=" + encodeURIComponent(it.no);
         // Image: if BL-verified, use the official BL image_url directly. If not,
         // walk a color chain: part's own color → white → light gray → black → red.
@@ -582,8 +645,11 @@
           '</a>' +
           '<button class="colors-btn" data-no="'+esc(it.no)+'" title="See every color">colors</button>' +
         '</div>';
+        }).join("");
+        const sizeLabel = sz ? sz : "Other";
+        return '<div class="size-sub"><h4 class="size-h">'+esc(sizeLabel)+' <span>&middot; '+srows.length+'</span></h4><div class="grid">'+tiles+'</div></div>';
       }).join("");
-      return '<section class="cat-section"><h3 class="cat-h">'+esc(catName)+' <span>&middot; '+rows.length+'</span></h3><div class="grid">'+tiles+'</div></section>';
+      return '<section class="cat-section"><h3 class="cat-h">'+esc(catName)+' <span>&middot; '+rows.length+'</span></h3>'+subs+'</section>';
     }).join("");
 
     grid.innerHTML = sections;
