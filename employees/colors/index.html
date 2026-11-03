@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — Part Color Lookup</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#e3000b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --red:#e3000b;--red-dark:#9b0008;--yellow:#ffce00;
+      --ink:#15151f;--slate:#3a4150;--mid:#6b7280;--muted:#9ca3af;
+      --line:#e6e8ec;--bg:#f5f6f9;--surface:#fff;
+      --radius:14px;--shadow-sm:0 2px 8px rgba(20,22,29,.05);
+      --shadow:0 6px 18px rgba(20,22,29,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    a{color:var(--red);text-decoration:none}
+
+    .topbar{background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px}
+    .topbar img{height:44px;width:auto;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+    .topbar .brand-wrap .sub{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:1px}
+    .topbar h1{font-size:1.45rem;color:#fff}
+    .topbar .back{margin-left:auto;color:#fff;font-weight:800;font-size:.88rem;border:1.5px solid rgba(255,255,255,.4);border-radius:50px;padding:8px 16px}
+    .topbar .back:hover{background:rgba(255,255,255,.14);border-color:#fff}
+
+    .wrap{max-width:1240px;margin:0 auto;padding:28px 24px 60px}
+    .lead{color:var(--slate);margin-bottom:20px;font-size:1.02rem}
+
+    .search-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);margin-bottom:24px}
+    .search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .search-row label{font-weight:700;color:var(--slate);font-size:.95rem;white-space:nowrap}
+    .search-row input{flex:1;min-width:200px;border:1.5px solid var(--line);border-radius:10px;padding:12px 16px;font-family:'Nunito';font-size:1.05rem;font-weight:700}
+    .search-row input:focus{outline:none;border-color:var(--red)}
+    .btn{background:var(--red);color:#fff;border:none;padding:12px 22px;border-radius:50px;font-weight:800;font-size:1rem;cursor:pointer;font-family:'Nunito';white-space:nowrap}
+    .btn:hover{background:var(--red-dark)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .hint{color:var(--muted);font-size:.85rem;margin-top:10px}
+
+    .msg{padding:14px 16px;border-radius:10px;font-weight:600;margin-bottom:18px}
+    .msg.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+    .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    .msg.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+
+    .part-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;box-shadow:var(--shadow-sm)}
+    .part-head .num{background:var(--ink);color:#fff;padding:6px 14px;border-radius:50px;font-family:'JetBrains Mono','Consolas',monospace;font-size:.95rem;font-weight:700}
+    .part-head .name{font-size:1.1rem;font-weight:800;color:var(--ink)}
+    .part-head .count{margin-left:auto;background:var(--yellow);color:var(--ink);padding:6px 14px;border-radius:50px;font-weight:800;font-size:.9rem}
+    .part-head a{font-size:.85rem;color:var(--mid);font-weight:600}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+    .tile{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:transform .12s,box-shadow .12s;position:relative}
+    .tile:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .tile .img{aspect-ratio:1/1;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+    .tile .img img{max-width:88%;max-height:88%;object-fit:contain;transition:transform .2s}
+    .tile:hover .img img{transform:scale(1.05)}
+    .tile .img.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shim 1.3s linear infinite}
+    @keyframes shim{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+    .meta{padding:12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+    .swatch-row{display:flex;align-items:center;gap:8px}
+    .swatch{width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(0,0,0,.08);flex-shrink:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
+    .cname{font-weight:800;font-size:.9rem;line-height:1.25;color:var(--ink)}
+    .cid{color:var(--mid);font-size:.78rem;font-family:'JetBrains Mono','Consolas',monospace;font-weight:700}
+    .qty{color:var(--muted);font-size:.74rem;margin-top:2px}
+
+    .skeleton{display:none}
+    .is-loading .skeleton{display:grid}
+    .is-loading .grid.real{display:none}
+
+    @media(max-width:620px){
+      .topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}
+      .wrap{padding:20px 14px 40px}
+      .search-card{padding:16px}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div class="brand-wrap">
+      <div class="sub">Piece Pavilion</div>
+      <h1>Part Color Lookup</h1>
+    </div>
+    <a class="back" href="/employees/">&larr; Back to staff</a>
+  </div>
+
+  <div class="wrap">
+    <p class="lead">
+      Type a part number (like <strong>3005</strong>, <strong>3001</strong>, or <strong>2412b</strong>)
+      and see every color BrickLink lists for it &mdash; picture, color name, and color ID.
+    </p>
+
+    <div class="search-card">
+      <div class="search-row">
+        <label for="partNo">Part number:</label>
+        <input id="partNo" type="text" autocomplete="off" placeholder="e.g. 3005" autofocus />
+        <button class="btn" id="goBtn">Look up &rarr;</button>
+      </div>
+      <div class="hint">Enter the BrickLink part number exactly (letters at the end matter: <em>2412b</em> is not <em>2412</em>).</div>
+    </div>
+
+    <div id="msg"></div>
+    <div id="partHead"></div>
+    <div id="grid" class="grid real"></div>
+  </div>
+
+<script>
+(function(){
+  const $ = (s) => document.querySelector(s);
+  const partIn = $("#partNo");
+  const goBtn  = $("#goBtn");
+  const msg    = $("#msg");
+  const head   = $("#partHead");
+  const grid   = $("#grid");
+
+  // bl-colors.json gives us color_id -> name AND color_id -> hex-ish swatch.
+  // We ship it in /employees/pick/bl-colors.json so this page reuses it.
+  let COLOR_NAME_BY_ID = {};      // "11" -> "Black"
+  let COLOR_HEX_BY_ID = {};       // "11" -> "#05131D" (approx)
+
+  // Approximate hex values for common BL color IDs. We don't ship an
+  // exhaustive map -- just enough so the swatch dot reads correctly on
+  // the big solid colors. Unknown IDs fall back to a neutral gray.
+  const APPROX_HEX = {
+    1:"#f4f4f4", 2:"#e4cd9e", 3:"#f2cd37", 4:"#fe8a18", 5:"#c91a09",
+    6:"#237841", 7:"#0055bf", 8:"#583927", 9:"#9ba19d",10:"#6d6e5c",
+    11:"#05131d",23:"#f09ba0",24:"#81007b",25:"#fab28a",27:"#b31004",
+    28:"#d9a979",29:"#a95500",31:"#ffa70b",33:"#f8f184",34:"#bbe90b",
+    36:"#4b974a",38:"#a0bcac",39:"#aee9ef",40:"#55a5af",41:"#55a5af",
+    42:"#2a66c9",43:"#4c61db",44:"#8aa7d6",46:"#aee9af",47:"#c870a0",
+    48:"#95b790",49:"#e6e3da",50:"#df6695",51:"#8d73b3",54:"#845e84",
+    55:"#5a93db",56:"#df6695",57:"#645a4c",58:"#7b2f1f",59:"#631c08",
+    60:"#f5f3d7",61:"#deac66",62:"#b4d2e3",63:"#0a3463",64:"#59a04b",
+    65:"#dbac34",66:"#9ca3a8",67:"#b4b5b2",68:"#dc9137",69:"#689883",
+    70:"#92a89a",71:"#ca1f7b",72:"#4697d2",73:"#9391e4",74:"#aeced6",
+    76:"#b7d84b",77:"#575857",80:"#184632",82:"#aa4d8e",83:"#f6f2df",
+    84:"#ae7a59",85:"#6c6e68",86:"#afb5c7",87:"#73acd3",88:"#5d2b0e",
+    89:"#6c3d9c",90:"#f6d7b3",91:"#965f49",93:"#cd6298",94:"#c87080",
+    95:"#a0a19f",96:"#f3cf9b",97:"#2e4786",98:"#f08f1c",99:"#e6e3e0",
+   103:"#f7e5a5",104:"#da70d6",105:"#aed6e4",106:"#b67f4e",107:"#bb6185",
+   108:"#56eb33",109:"#1b2a34",110:"#f08f1c",113:"#aae3f0",114:"#df6695",
+   118:"#bdc6ad",119:"#eae7df",120:"#352100",121:"#f8f287",122:"#4c586b",
+   125:"#afafaf",150:"#aa7d55",151:"#898788",152:"#aedaec",153:"#078bc9",
+   154:"#9aa2cc",155:"#a4a76e",156:"#4697d2",157:"#cebcd8",158:"#b2c247",
+   159:"#f5f3d7",160:"#b6704f",161:"#e4cd9e",162:"#b6b4de",163:"#75be7c",
+   164:"#fcb76d",165:"#ff5f17",166:"#39ff14",167:"#e55a3c",168:"#4f3418",
+   169:"#a5321c",170:"#f0bb6c",171:"#efefa2",172:"#f5a000",173:"#c6a86b",
+   174:"#5a93db",220:"#f05e60",221:"#56eb33",222:"#f08f1c",223:"#aae3f0",
+   224:"#df6695",225:"#833b1c",226:"#90ee90",227:"#e6cefa",228:"#eceae9",
+   229:"#d1b47a",230:"#b67ebc",231:"#f08f70",232:"#1b2a34",233:"#56eb33",
+   234:"#b580b3",235:"#dc9137",236:"#f7f716",237:"#ae7a59",238:"#dbac34",
+   239:"#b4b5b2",240:"#8b4513",241:"#deb887",242:"#4f4b25",243:"#7a5593",
+   244:"#131315",245:"#c3a2ca",246:"#dcc5e3",247:"#aed6e4",248:"#b2c247",
+   249:"#ad6f52",250:"#cf6a4c",251:"#262727",252:"#a51b1b",253:"#2e7d32",
+   254:"#1a3263",255:"#5d2b0e"
+  };
+
+  function setMsg(kind, text){
+    if (!text){ msg.innerHTML = ""; return; }
+    msg.innerHTML = '<div class="msg '+kind+'">'+text+'</div>';
+  }
+
+  function hexFor(id){
+    if (COLOR_HEX_BY_ID[id]) return COLOR_HEX_BY_ID[id];
+    if (APPROX_HEX[id]) return APPROX_HEX[id];
+    return "#cfd3dc";
+  }
+
+  function imgUrlFor(colorId, partNo){
+    // Reuse the pick sheet's image proxy -- same KV cache keeps hits warm.
+    return "/employees/api/pick/img/P/"+encodeURIComponent(colorId)+"/"+encodeURIComponent(partNo)+".png";
+  }
+
+  function renderPart(part){
+    head.innerHTML =
+      '<div class="part-head">' +
+        '<span class="num">'+esc(part.no)+'</span>' +
+        '<span class="name">'+esc(part.name || "")+'</span>' +
+        '<a href="https://www.bricklink.com/v2/catalog/catalogitem.page?P='+encodeURIComponent(part.no)+'" target="_blank" rel="noopener">BL catalog &rarr;</a>' +
+        '<span class="count">'+part.colors.length+' color'+(part.colors.length===1?"":"s")+'</span>' +
+      '</div>';
+    const html = part.colors.map((c) => {
+      const name = COLOR_NAME_BY_ID[c.id] || ("Color #"+c.id);
+      return '<a class="tile" href="https://www.bricklink.com/v2/catalog/catalogitem.page?P='+encodeURIComponent(part.no)+'#T=C&C='+c.id+'" target="_blank" rel="noopener" title="'+esc(name)+' &mdash; open on BrickLink">' +
+        '<div class="img loading">' +
+          '<img alt="" loading="lazy" src="'+imgUrlFor(c.id, part.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
+        '</div>' +
+        '<div class="meta">' +
+          '<div class="swatch-row"><span class="swatch" style="background:'+hexFor(c.id)+'"></span><span class="cname">'+esc(name)+'</span></div>' +
+          '<span class="cid">ID '+c.id+'</span>' +
+          (c.qty ? '<span class="qty">'+c.qty.toLocaleString()+' lots on BL</span>' : '') +
+        '</div>' +
+      '</a>';
+    }).join("");
+    grid.innerHTML = html;
+  }
+
+  function esc(s){
+    return String(s||"").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  async function lookup(){
+    const raw = (partIn.value || "").trim().replace(/\s+/g, "");
+    if (!raw){ setMsg("err", "Enter a part number first."); partIn.focus(); return; }
+    goBtn.disabled = true;
+    setMsg("info", "Looking up part "+esc(raw)+" on BrickLink...");
+    head.innerHTML = ""; grid.innerHTML = "";
+    try {
+      const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(raw), { credentials: "include" });
+      if (r.status === 404){
+        setMsg("err", 'Part "'+esc(raw)+'" not found in BrickLink. Double-check the number &mdash; letters at the end matter.');
+        return;
+      }
+      if (!r.ok){
+        const j = await r.json().catch(()=>({}));
+        setMsg("err", "Lookup failed: " + esc(j.error || r.statusText));
+        return;
+      }
+      const part = await r.json();
+      if (!part.colors || !part.colors.length){
+        setMsg("info", 'BrickLink has no color variants on record for "'+esc(part.no)+'".');
+        return;
+      }
+      setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+"." + (part.cached ? ' <small>(from cache)</small>' : ""));
+      renderPart(part);
+      // Clear the ok message after a moment so it doesn't clutter.
+      setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
+    } catch (e){
+      setMsg("err", "Network error: " + esc(String(e && e.message || e)));
+    } finally {
+      goBtn.disabled = false;
+    }
+  }
+
+  // Load the color-id-to-name map once, cached for the session.
+  (async () => {
+    try {
+      const r = await fetch("/employees/pick/bl-colors.json", { credentials: "include" });
+      if (!r.ok) throw new Error("colors file missing");
+      const j = await r.json();
+      // bl-colors.json shape: { source, count, colors: { "Black": 11, ... } }
+      Object.entries(j.colors || {}).forEach(([name, id]) => {
+        COLOR_NAME_BY_ID[String(id)] = name;
+      });
+    } catch (e){
+      // Non-fatal; names fall back to "Color #N".
+      console.warn("bl-colors.json load failed", e);
+    }
+  })();
+
+  goBtn.addEventListener("click", lookup);
+  partIn.addEventListener("keydown", (e) => { if (e.key === "Enter") lookup(); });
+
+  // Deep-link support: /employees/colors/#3005 or ?part=3005 pre-populates and runs.
+  const q = new URLSearchParams(location.search).get("part") || location.hash.replace(/^#/, "");
+  if (q){ partIn.value = q; lookup(); }
+})();
+</script>
+</body>
+</html>
