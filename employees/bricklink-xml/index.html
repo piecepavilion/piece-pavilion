@@ -872,6 +872,9 @@
       el.addEventListener("input", () => {
         const tr = el.closest("tr");
         if (el.dataset.k === "ITEMID") autoFillOnPartId(tr);
+        // Price auto-fetch: when ID/Color/Condition change on a row whose
+        // Price is still empty, pull the BL 6-mo avg in the background.
+        if (["ITEMID","COLOR","CONDITION"].includes(el.dataset.k)) autoPriceRow(tr);
         recountGrid(); saveGridDebounced(); flagRow(tr);
       });
       el.addEventListener("focus", () => resetFillStepOnFocus(el.closest("tr")));
@@ -1039,6 +1042,48 @@
     if (i < 0) return;
     FILL_ROW_STEP = i;  // next press will fill i+1
     updateFillButtonLabel();
+  }
+
+  // ========== AUTO-PRICE PER ROW ==========
+  // Debounced per-row: once a row has ITEMID + COLOR (or a minifig ID
+  // alone) + CONDITION, fetch the BL 6-month avg and drop it into PRICE
+  // IF PRICE is still blank. If Dad has typed a price, we leave it alone.
+  const ROW_TIMERS = new WeakMap();
+  function autoPriceRow(tr){
+    if (!tr) return;
+    clearTimeout(ROW_TIMERS.get(tr));
+    const t = setTimeout(() => {
+      const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
+      const no = get("ITEMID"); if (!no) return;
+      // Don't overwrite a price Dad already typed in.
+      if ((get("PRICE") || "").trim()) return;
+      const cond = (get("CONDITION") || "N").toUpperCase();
+      const colorRaw = get("COLOR");
+      const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(no);
+      const color = colorRaw ? colorNameToId(colorRaw) : "";
+      if (!isMinifig && !color) return;  // non-minifig still needs a color
+      const type = isMinifig ? "M" : "P";
+      const priceEl = tr.querySelector('[data-k="PRICE"]');
+      priceEl.placeholder = "fetching...";
+      const qs = "no=" + encodeURIComponent(no) +
+                 "&type=" + encodeURIComponent(type) +
+                 "&condition=" + encodeURIComponent(cond) +
+                 (color ? "&color_id=" + encodeURIComponent(color) : "");
+      fetch("/employees/api/colors/price?" + qs, { credentials: "include" })
+        .then((r) => r.ok ? r.json() : null)
+        .then((j) => {
+          priceEl.placeholder = "0.00";
+          if (!j) return;
+          const p = j.qty_avg_price > 0 ? j.qty_avg_price : j.avg_price;
+          // Guard: only set if Dad STILL hasn't typed something manually.
+          if (p > 0 && !((priceEl.value || "").trim())){
+            priceEl.value = Number(p).toFixed(3);
+            flagRow(tr); recountGrid(); saveGridDebounced();
+          }
+        })
+        .catch(() => { priceEl.placeholder = "0.00"; });
+    }, 600);
+    ROW_TIMERS.set(tr, t);
   }
 
   // Auto-apply defaults to a row the moment a Part ID is typed in it —
