@@ -102,6 +102,16 @@
     .is-loading .skeleton{display:grid}
     .is-loading .grid.real{display:none}
 
+    /* Category sections in search results. */
+    .cat-section{margin-bottom:26px}
+    .cat-h{font-size:1.08rem;color:var(--slate);margin:4px 0 12px;padding:8px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:10px;letter-spacing:-.005em}
+    .cat-h span{color:var(--muted);font-weight:600;font-size:.85rem;font-family:'JetBrains Mono','Consolas',monospace}
+
+    /* Tile internals when it has a BL link + colors button. */
+    .tile .tile-link{display:block;color:inherit;text-decoration:none}
+    .tile .colors-btn{position:absolute;top:8px;right:8px;background:rgba(227,0,11,.95);color:#fff;border:none;padding:5px 10px;border-radius:50px;font-family:'Nunito';font-weight:800;font-size:.72rem;cursor:pointer;letter-spacing:.03em;box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:2}
+    .tile .colors-btn:hover{background:var(--red-dark)}
+
     @media(max-width:620px){
       .topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}
       .wrap{padding:20px 14px 40px}
@@ -365,58 +375,124 @@
     setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
   }
 
-  async function lookupByName(q){
-    setMsg("info", "Searching for \""+esc(q)+"\"...");
-    const p = await parts();
+  // "brick" means more than just the Brick category — it's a reseller's
+  // mental grouping of brick-SHAPED things. Searching one group name ORs
+  // the search across every member category.
+  const GROUPS = {
+    "brick":   ["brick","slope","arch","cone","panel","wedge","bracket"],
+    "bricks":  ["brick","slope","arch","cone","panel","wedge","bracket"],
+    "slope":   ["slope","wedge","arch"],
+    "slopes":  ["slope","wedge","arch"],
+    "plate":   ["plate"],
+    "plates":  ["plate"],
+    "tile":    ["tile"],
+    "tiles":   ["tile"],
+    "technic": ["technic","beam","pin","axle","liftarm","gear"],
+    "minifig": ["minifig","head","torso","leg","hair","hat","headgear","hand","arm"],
+    "minifigure": ["minifig","head","torso","leg","hair","hat","headgear","hand","arm"],
+    "mini":    ["minifig","head","torso","leg","hair","hat"],
+    "wheel":   ["wheel","tire","tyre","wheel accessory"],
+    "wheels":  ["wheel","tire","tyre"],
+    "window":  ["window","windscreen","glass"],
+    "windows": ["window","windscreen","glass"],
+    "door":    ["door"],
+    "doors":   ["door"],
+    "round":   ["round"],
+    "flower":  ["flower","plant"],
+    "plant":   ["plant","flower"],
+    "food":    ["food"],
+    "weapon":  ["weapon","sword","gun","shield"],
+    "tool":    ["tool","equipment"],
+  };
+
+  function termMatches(hay, t){
+    if (GROUPS[t]) return GROUPS[t].some((syn) => hay.includes(syn));
+    return hay.includes(t);
+  }
+
+  async function lookupByName(q, opts){
+    const silent = opts && opts.silent;
+    if (!silent) setMsg("info", "Searching for \""+esc(q)+"\"...");
+    const [p, cat] = await Promise.all([parts(), catalog()]);
     if (!p || !p.length){
-      setMsg("err", 'Catalog file is missing. Refresh the page, or ask Dad to redeploy /employees/colors/parts.json.');
+      setMsg("err", 'Catalog file is missing. Refresh the page.');
       return;
     }
+    const CATS = (cat && cat.categories) || {};
     const norm = (s) => (s || "").toLowerCase()
       .replace(/\s+/g, " ")
       .replace(/(\d)x(\d)/g, "$1 x $2")
       .trim();
     const needle = norm(q);
     const terms = needle.split(" ").filter(Boolean);
+
     const matches = [];
-    for (let i = 0; i < p.length && matches.length < 50; i++){
+    for (let i = 0; i < p.length && matches.length < 300; i++){
       const row = p[i];
-      const hay = norm(row.name) + " " + (row.no || "").toLowerCase();
-      if (terms.every((t) => hay.includes(t))) matches.push(row);
+      const catName = CATS[row.cat_id] || "";
+      const hay = norm(row.name) + " " + (row.no || "").toLowerCase() + " " + norm(catName);
+      if (terms.every((t) => termMatches(hay, t))){
+        matches.push({ no: row.no, name: row.name, cat_id: row.cat_id, cat: catName });
+      }
     }
     if (!matches.length){
-      setMsg("info", 'No parts matched "'+esc(q)+'". Try fewer words — "brick 1 x 1", "tile 2 x 2".');
+      if (!silent) setMsg("info", 'No parts matched "'+esc(q)+'". Try "brick", "slope", "minifig", or "3001".');
+      head.innerHTML = ""; grid.innerHTML = "";
       return;
     }
-    setMsg("ok", "Found "+matches.length+" match"+(matches.length===1?"":"es")+" for \""+esc(q)+"\". Click any to see every color.");
-    renderSearchResults(matches.map((x) => ({ no: x.no, name: x.name })));
-    setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2400);
+    if (!silent){
+      setMsg("ok", "Found "+matches.length+" piece"+(matches.length===1?"":"s")+" for \""+esc(q)+"\". Click any to open on BrickLink. Click \"colors\" for every color.");
+      setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2600);
+    }
+    renderSearchResults(matches, q);
   }
 
-  function renderSearchResults(items){
+  function renderSearchResults(items, q){
+    // Group results by category so searching "brick" shows Brick, then
+    // Brick Modified, then Slope, then Arch, etc — all under one search.
+    const groups = {};
+    const order = [];
+    items.forEach((it) => {
+      const key = it.cat || "Other";
+      if (!(key in groups)){ groups[key] = []; order.push(key); }
+      groups[key].push(it);
+    });
+
     head.innerHTML =
       '<div class="part-head">' +
-        '<span class="num">SEARCH</span>' +
-        '<span class="name">Click a part to see all its colors</span>' +
-        '<span class="count">'+items.length+' match'+(items.length===1?"":"es")+'</span>' +
+        '<span class="num">RESULTS</span>' +
+        '<span class="name">"'+esc(q)+'" &mdash; '+items.length+' piece'+(items.length===1?"":"s")+' across '+order.length+' categor'+(order.length===1?"y":"ies")+'</span>' +
+        '<span class="count">tap any to open on BrickLink</span>' +
       '</div>';
-    grid.innerHTML = items.map((it) =>
-      '<a class="tile" href="#" data-no="'+esc(it.no)+'" title="Load colors for '+esc(it.no)+'">' +
-        '<div class="img loading">' +
-          '<img alt="" loading="lazy" src="'+imgUrlFor(0, it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
-        '</div>' +
-        '<div class="meta">' +
-          '<div class="swatch-row"><span class="cname">'+esc(it.name)+'</span></div>' +
-          '<span class="cid">'+esc(it.no)+'</span>' +
-        '</div>' +
-      '</a>'
-    ).join("");
-    // Click a tile → load that part's colors.
-    grid.querySelectorAll(".tile").forEach((el) => {
-      el.addEventListener("click", (ev) => {
+
+    const sections = order.map((catName) => {
+      const rows = groups[catName];
+      const tiles = rows.map((it) => {
+        const bl = "https://www.bricklink.com/v2/catalog/catalogitem.page?P=" + encodeURIComponent(it.no);
+        return '<div class="tile" title="'+esc(it.name)+'">' +
+          '<a class="tile-link" href="'+bl+'" target="_blank" rel="noopener">' +
+            '<div class="img loading">' +
+              '<img alt="" loading="lazy" src="'+imgUrlFor(0, it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
+            '</div>' +
+            '<div class="meta">' +
+              '<div class="swatch-row"><span class="cname">'+esc(it.name)+'</span></div>' +
+              '<span class="cid">'+esc(it.no)+'</span>' +
+            '</div>' +
+          '</a>' +
+          '<button class="colors-btn" data-no="'+esc(it.no)+'" title="See every color">colors</button>' +
+        '</div>';
+      }).join("");
+      return '<section class="cat-section"><h3 class="cat-h">'+esc(catName)+' <span>&middot; '+rows.length+'</span></h3><div class="grid">'+tiles+'</div></section>';
+    }).join("");
+
+    grid.innerHTML = sections;
+
+    // "colors" button on each tile → open the detail view in-place.
+    grid.querySelectorAll(".colors-btn").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
         ev.preventDefault();
-        const no = el.dataset.no;
-        partIn.value = no;
+        ev.stopPropagation();
+        partIn.value = btn.dataset.no;
         lookup();
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
@@ -511,16 +587,16 @@
     } catch (_){ closeSuggest(); }
   }
 
+  // Live search: as soon as the input has 2+ chars that aren't a bare
+  // part number, fire the full search into the main grid. No button needed.
   partIn.addEventListener("input", () => {
     const v = partIn.value.trim();
-    if (!v){ closeSuggest(); return; }
-    if (looksLikeNumber(v)){ closeSuggest(); return; }  // let Enter / Look up handle direct ID
+    closeSuggest();  // old dropdown no longer used
+    if (!v){ head.innerHTML = ""; grid.innerHTML = ""; setMsg("", ""); return; }
+    if (looksLikeNumber(v.replace(/\s+/g, ""))) return;  // Enter / Go handles exact IDs
+    if (v.length < 2) return;
     clearTimeout(suggestTimer);
-    suggestTimer = setTimeout(() => runSuggest(v), 350);
-  });
-  partIn.addEventListener("blur", () => { setTimeout(closeSuggest, 160); });
-  partIn.addEventListener("focus", () => {
-    if (suggestItems.length) suggestEl.classList.add("open");
+    suggestTimer = setTimeout(() => lookupByName(v, {silent:true}), 220);
   });
 
   goBtn.addEventListener("click", lookup);
