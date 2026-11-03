@@ -1311,27 +1311,29 @@ article picture.blog-hero,
    can live side by side without stepping on each other.
    ================================================================ */
 body[data-category="seller-guide"] {
-  background: linear-gradient(180deg, #e7f2fa 0%, #d9ebf5 100%) !important;
+  background: #0a0a0f !important;
+  color: #e6e8ec;
 }
 body[data-category="seller-guide"] .main-content {
   background: transparent;
 }
 body[data-category="seller-guide"] .blog-article {
-  background: #ffffff;
+  background: #15151f;
   border-radius: 18px;
-  box-shadow: 0 10px 30px rgba(28, 138, 214, 0.14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   margin: 20px auto 32px;
   padding: 44px 48px 56px;
   max-width: 880px;
-  border-top: 6px solid #1c8ad6;
+  border-top: 6px solid #ffce00;
+  color: #e6e8ec;
 }
 body[data-category="seller-guide"] .blog-article::before {
-  content: "BrickLink Guide for Sellers";
+  content: "BrickLink Blog";
   display: inline-block;
-  background: linear-gradient(135deg, #1c8ad6 0%, #0e548c 100%);
-  color: #ffffff;
+  background: #ffce00;
+  color: #15151f;
   font-family: 'Fredoka','Nunito',sans-serif;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.78rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1339,15 +1341,13 @@ body[data-category="seller-guide"] .blog-article::before {
   border-radius: 50px;
   margin-bottom: 18px;
 }
-/* The first paragraph of a seller guide carries the series tagline in
-   italics (see draft body_html). Give it a lead-paragraph look so new
-   readers see the series description before the article itself starts. */
+/* First-paragraph italic tagline — muted light-on-dark lead. */
 body[data-category="seller-guide"] .blog-article > p:first-of-type em {
   display: block;
   font-size: 1.05rem;
-  color: #0e548c;
-  background: #eaf4fb;
-  border-left: 4px solid #1c8ad6;
+  color: #ffce00;
+  background: rgba(255, 206, 0, 0.08);
+  border-left: 4px solid #ffce00;
   padding: 14px 18px;
   border-radius: 0 10px 10px 0;
   margin: 8px 0 20px;
@@ -1356,34 +1356,48 @@ body[data-category="seller-guide"] .blog-article > p:first-of-type em {
   font-weight: 500;
 }
 body[data-category="seller-guide"] .blog-article h1 {
-  color: #0e548c;
+  color: #ffffff;
   letter-spacing: -0.01em;
 }
 body[data-category="seller-guide"] .blog-article h2 {
-  color: #0e548c;
+  color: #ffce00;
   border-left: 4px solid #ffce00;
   padding-left: 14px;
   margin-top: 32px;
   margin-bottom: 10px;
 }
+body[data-category="seller-guide"] .blog-article p,
+body[data-category="seller-guide"] .blog-article li {
+  color: #d4d7df;
+}
 body[data-category="seller-guide"] .blog-article a {
-  color: #0e548c;
-  border-bottom: 2px solid rgba(14, 84, 140, 0.25);
+  color: #ffce00;
+  border-bottom: 2px solid rgba(255, 206, 0, 0.35);
 }
 body[data-category="seller-guide"] .blog-article a:hover {
-  color: #ffce00;
-  background: #0e548c;
-  border-bottom-color: #0e548c;
+  color: #15151f;
+  background: #ffce00;
+  border-bottom-color: #ffce00;
 }
 body[data-category="seller-guide"] .related-posts {
   background: transparent;
-  border-top: 1px solid rgba(14, 84, 140, 0.15);
+  border-top: 1px solid rgba(255, 206, 0, 0.2);
+}
+body[data-category="seller-guide"] .related-posts h2 {
+  color: #ffffff;
 }
 body[data-category="seller-guide"] .related-posts h2::before {
-  background: #1c8ad6;
+  background: #ffce00;
+}
+body[data-category="seller-guide"] .related-card {
+  background: #1f1f2b;
+  border-color: rgba(255, 206, 0, 0.2);
+}
+body[data-category="seller-guide"] .related-card .related-card-body h3 {
+  color: #ffffff;
 }
 body[data-category="seller-guide"] .related-card:hover {
-  border-color: #1c8ad6;
+  border-color: #ffce00;
 }
 body[data-category="seller-guide"] .related-card:hover .related-card-body h3 {
   color: #1c8ad6;

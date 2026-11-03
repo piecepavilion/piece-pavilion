@@ -155,12 +155,13 @@
           Everything auto-saves to this browser.
         </p>
 
-        <!-- Defaults bar — apply once, fill every empty row. -->
+        <!-- Defaults bar — set these once, every new row Dad types a Part ID
+             in gets auto-filled; clicking Fill empties also fills all rows. -->
         <div class="defaults-bar">
-          <span class="d-label">Defaults:</span>
+          <span class="d-label">Use for all rows:</span>
           <span class="d-field">
             <label>Color</label>
-            <input id="defColor" type="text" placeholder="e.g. 5 or red" size="10" />
+            <input id="defColor" type="text" placeholder="red or 5" size="10" />
           </span>
           <span class="d-field">
             <label>Condition</label>
@@ -174,8 +175,8 @@
             <label>Price</label>
             <input id="defPrice" type="text" inputmode="decimal" placeholder="0.00" size="6" />
           </span>
-          <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill empties</button>
-          <span class="d-note">Fills blank cells on every row at once.</span>
+          <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill blanks now</button>
+          <span class="d-note">Also auto-fills whenever you type a Part ID.</span>
         </div>
 
         <div class="bl-grid-wrap">
@@ -808,7 +809,11 @@
     // Press Enter on any cell to add a fresh row below if we're on the last one.
     GRID_BODY.querySelectorAll("input, textarea, select").forEach((el) => {
       if (el.__wired) return; el.__wired = true;
-      el.addEventListener("input", () => { recountGrid(); saveGridDebounced(); flagRow(el.closest("tr")); });
+      el.addEventListener("input", () => {
+        const tr = el.closest("tr");
+        if (el.dataset.k === "ITEMID") autoFillOnPartId(tr);
+        recountGrid(); saveGridDebounced(); flagRow(tr);
+      });
       el.addEventListener("change", () => { recountGrid(); saveGridDebounced(); flagRow(el.closest("tr")); });
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey && el.tagName !== "TEXTAREA"){
@@ -911,14 +916,20 @@
   }
 
   // ========== DEFAULTS ==========
+  // Fill every row's blank Color/Condition/Price with the defaults bar's
+  // values. Works on EVERY row including empty ones — Dad can set the
+  // defaults once, then just type Part IDs down the first column.
   function applyDefaults(){
     const dc = (document.getElementById("defColor").value || "").trim();
     const dcond = (document.getElementById("defCondition").value || "").trim();
     const dprice = (document.getElementById("defPrice").value || "").trim();
+    if (!dc && !dcond && !dprice){
+      gridMsg("warn", "Set a default Color, Condition, or Price above first, then click Fill empties.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3000);
+      return;
+    }
     let touched = 0;
     GRID_BODY.querySelectorAll("tr").forEach((tr) => {
-      const partId = (tr.querySelector('[data-k="ITEMID"]').value || "").trim();
-      if (!partId) return;  // only fill rows that have a Part ID
       const fill = (k, v) => {
         if (!v) return;
         const el = tr.querySelector('[data-k="'+k+'"]');
@@ -928,8 +939,24 @@
       flagRow(tr);
     });
     recountGrid(); saveGrid();
-    gridMsg("ok", "Filled " + touched + " empty cell" + (touched === 1 ? "" : "s") + " from defaults.");
+    gridMsg("ok", "Filled " + touched + " blank cell" + (touched === 1 ? "" : "s") + " across every row.");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2500);
+  }
+
+  // Auto-apply defaults to a row the moment a Part ID is typed in it —
+  // so the defaults bar "just works" without needing to click Fill empties.
+  function autoFillOnPartId(tr){
+    const dc = (document.getElementById("defColor").value || "").trim();
+    const dcond = (document.getElementById("defCondition").value || "").trim();
+    const dprice = (document.getElementById("defPrice").value || "").trim();
+    const partId = (tr.querySelector('[data-k="ITEMID"]').value || "").trim();
+    if (!partId) return;
+    const fill = (k, v) => {
+      if (!v) return;
+      const el = tr.querySelector('[data-k="'+k+'"]');
+      if (el && !(el.value || "").trim()) el.value = v;
+    };
+    fill("COLOR", dc); fill("CONDITION", dcond); fill("PRICE", dprice);
   }
   // Save defaults so they persist too.
   ["defColor","defCondition","defPrice"].forEach((id) => {

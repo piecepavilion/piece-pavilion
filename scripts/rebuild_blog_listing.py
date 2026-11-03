@@ -133,10 +133,9 @@ THUMB_PALETTE = {
     "minifig":       (( 28, 138, 214), ( 14,  82, 140), (255, 255, 255), (255, 255, 255, 230)),
     "sets":          (( 60, 158,  79), ( 36, 100,  48), (255, 255, 255), (255, 255, 255, 230)),
     "parts":         (( 48,  48,  60), ( 21,  21,  31), (255, 255, 255), (255, 255, 255, 230)),
-    # Seller Guide series — Dad's BrickLink-sellers' tips posts. Soft blue
-    # that matches the body background set in blog.css under
-    # body[data-category="seller-guide"].
-    "seller-guide":  ((174, 214, 228), (105, 170, 206), ( 14,  84, 140), ( 14,  84, 140, 220)),
+    # Seller Guide series — Dad's BrickLink-sellers' tips posts. Black
+    # covers, simple, consistent across the whole series.
+    "seller-guide":  (( 50,  50,  60), ( 10,  10,  15), (255, 255, 255), (255, 255, 255, 230)),
 }
 
 def thumb_category(title):
@@ -146,8 +145,8 @@ def thumb_category(title):
     t = (title or "").lower()
     import re as _re
     # Seller Guide wins first -- these posts carry a BrickLink-seller branding
-    # and need the blue palette, even though they'd also match "guide".
-    if _re.search(r"seller.?guide|bricklink seller|guide for.*seller", t):
+    # and need the black palette, even though they'd also match "guide".
+    if _re.search(r"seller.?guide|bricklink seller|guide for.*seller|bricklink.?blog|bricklink.?guide", t):
         return "seller-guide"
     if _re.search(r"minifig|minifigure", t):            return "minifig"
     if _re.search(r"\bset(s)?\b|advent|retir", t):      return "sets"
