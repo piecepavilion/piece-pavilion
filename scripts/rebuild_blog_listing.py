@@ -118,12 +118,16 @@ def _fit_font(draw, text, path, max_width, target_size, min_size=24):
 # (bright, dark, text_ink, label_ink). The gradient goes dark top-left to
 # bright bottom-right. GOLD takes dark ink since white-on-yellow is unreadable.
 THUMB_PALETTE = {
-    # key:     bright             dark               text ink           label ink
-    "guide":   ((227,   0,  11), (155,   0,   8), (255, 255, 255), (255, 255, 255, 230)),
-    "news":    ((255, 206,   0), (180, 142,   0), ( 21,  21,  31), ( 21,  21,  31, 220)),
-    "minifig": (( 28, 138, 214), ( 14,  82, 140), (255, 255, 255), (255, 255, 255, 230)),
-    "sets":    (( 60, 158,  79), ( 36, 100,  48), (255, 255, 255), (255, 255, 255, 230)),
-    "parts":   (( 48,  48,  60), ( 21,  21,  31), (255, 255, 255), (255, 255, 255, 230)),
+    # key:            bright             dark               text ink           label ink
+    "guide":         ((227,   0,  11), (155,   0,   8), (255, 255, 255), (255, 255, 255, 230)),
+    "news":          ((255, 206,   0), (180, 142,   0), ( 21,  21,  31), ( 21,  21,  31, 220)),
+    "minifig":       (( 28, 138, 214), ( 14,  82, 140), (255, 255, 255), (255, 255, 255, 230)),
+    "sets":          (( 60, 158,  79), ( 36, 100,  48), (255, 255, 255), (255, 255, 255, 230)),
+    "parts":         (( 48,  48,  60), ( 21,  21,  31), (255, 255, 255), (255, 255, 255, 230)),
+    # Seller Guide series — Dad's BrickLink-sellers' tips posts. Soft blue
+    # that matches the body background set in blog.css under
+    # body[data-category="seller-guide"].
+    "seller-guide":  ((174, 214, 228), (105, 170, 206), ( 14,  84, 140), ( 14,  84, 140, 220)),
 }
 
 def thumb_category(title):
@@ -132,6 +136,10 @@ def thumb_category(title):
     (both mention 'piece'), guide before news (both can mention a year)."""
     t = (title or "").lower()
     import re as _re
+    # Seller Guide wins first -- these posts carry a BrickLink-seller branding
+    # and need the blue palette, even though they'd also match "guide".
+    if _re.search(r"seller.?guide|bricklink seller|guide for.*seller", t):
+        return "seller-guide"
     if _re.search(r"minifig|minifigure", t):            return "minifig"
     if _re.search(r"\bset(s)?\b|advent|retir", t):      return "sets"
     if _re.search(r"how to|guide|tips|tricks|collect|spot", t): return "guide"
