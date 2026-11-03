@@ -426,15 +426,34 @@
     const needle = norm(q);
     const terms = needle.split(" ").filter(Boolean);
 
-    const matches = [];
-    for (let i = 0; i < p.length && matches.length < 300; i++){
+    // Score each hit so the best matches float to the top.
+    const scored = [];
+    const needleLc = needle.replace(/\s+/g, "");
+    for (let i = 0; i < p.length; i++){
       const row = p[i];
       const catName = CATS[row.cat_id] || "";
-      const hay = norm(row.name) + " " + (row.no || "").toLowerCase() + " " + norm(catName);
-      if (terms.every((t) => termMatches(hay, t))){
-        matches.push({ no: row.no, name: row.name, cat_id: row.cat_id, cat: catName });
-      }
+      const nameLc = norm(row.name);
+      const noLc = (row.no || "").toLowerCase();
+      const catLc = norm(catName);
+      const hay = nameLc + " " + noLc + " " + catLc;
+      if (!terms.every((t) => termMatches(hay, t))) continue;
+      // Rank:
+      //  - exact part-number match → 100
+      //  - name starts with query  → 60
+      //  - name contains full query → 40
+      //  - category name match     → 20
+      //  - fallback (word-by-word)  → 10
+      let score = 10;
+      if (noLc === needleLc) score = 100;
+      else if (nameLc.startsWith(needle)) score = 60;
+      else if (nameLc.includes(needle))   score = 40;
+      else if (catLc.includes(needle))    score = 20;
+      scored.push({ score, row: { no: row.no, name: row.name, cat_id: row.cat_id, cat: catName, img_c: row.img_c } });
+      if (scored.length > 1200) break;  // bound the sort cost
     }
+    scored.sort((a, b) => b.score - a.score || (a.row.cat_id - b.row.cat_id) || a.row.name.localeCompare(b.row.name));
+    const matches = scored.slice(0, 300).map((s) => s.row);
+
     if (!matches.length){
       if (!silent) setMsg("info", 'No parts matched "'+esc(q)+'". Try "brick", "slope", "minifig", or "3001".');
       head.innerHTML = ""; grid.innerHTML = "";
@@ -469,10 +488,11 @@
       const rows = groups[catName];
       const tiles = rows.map((it) => {
         const bl = "https://www.bricklink.com/v2/catalog/catalogitem.page?P=" + encodeURIComponent(it.no);
+        const heroColor = it.img_c || 1;
         return '<div class="tile" title="'+esc(it.name)+'">' +
           '<a class="tile-link" href="'+bl+'" target="_blank" rel="noopener">' +
             '<div class="img loading">' +
-              '<img alt="" loading="lazy" src="'+imgUrlFor(0, it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
+              '<img alt="" loading="lazy" src="'+imgUrlFor(heroColor, it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
             '</div>' +
             '<div class="meta">' +
               '<div class="swatch-row"><span class="cname">'+esc(it.name)+'</span></div>' +
