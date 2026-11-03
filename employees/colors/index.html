@@ -200,7 +200,22 @@
         <button class="chip" data-fam="animal">Animals</button>
         <button class="chip" data-fam="flag">Flags / Signs</button>
         <button class="chip" data-fam="container">Containers</button>
+        <button class="chip" data-fam="rock">Rock</button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Mechanics:</span>
         <button class="chip" data-fam="technic">Technic</button>
+        <button class="chip" data-fam="gear">Gears</button>
+        <button class="chip" data-fam="pneumatic">Pneumatics</button>
+        <button class="chip" data-fam="electronic">Electronics</button>
+        <button class="chip" data-fam="support">Supports / Cranes</button>
+        <button class="chip" data-fam="projectile">Projectiles</button>
+        <button class="chip" data-fam="magnet">Magnets</button>
+        <button class="chip" data-fam="tube">Tubes / Hoses</button>
+        <button class="chip" data-fam="rope">String / Rope</button>
+        <button class="chip" data-fam="buildable">Big Figures</button>
+        <button class="chip" data-fam="sticker">Stickers</button>
+        <button class="chip" data-fam="other">Other</button>
       </div>
       <div class="filter-row">
         <button class="chip" data-fam="verified">Verified&check;</button>
@@ -494,23 +509,50 @@
     hinge:    [18],
     baseplate:[1],
     sticker:  [58],
+    gear:     [17],              // Gear Parts
+    pneumatic:[22],              // Pneumatics
+    electronic:[45],             // Electronics
+    support:  [34],              // Supports, Girders and Cranes
+    projectile:[68],             // Projectiles / Launchers
+    rock:     [33],              // Rock
+    buildable:[41],              // Large Buildable Figures
+    tube:     [30],              // Tubes and Hoses
+    magnet:   [39],              // Magnets and Holders
+    rope:     [31],              // String, Bands and Reels
+    other:    [24, 77, 78, 44],  // Other, Non-System, Pen & Watch, Mechanical
   };
   // When a family is picked, these are the sub-category choices that
-  // appear on the side so Dad can narrow (Bricks → Technic / Slope / Round...).
+  // appear on the side so Dad can narrow further. Each sub has `ids`
+  // (Rebrickable cat_ids) and optionally `name` (substring that must
+  // appear in the part name) for finer slices.
   const SUB_CATS = {
     brick: [
-      { label: "Standard", ids: [11] },
-      { label: "Special",  ids: [5]  },
-      { label: "Technic",  ids: [8]  },
+      { label: "Standard",    ids: [11] },
+      { label: "Modified",    ids: [5], name: "modified" },
+      { label: "Headlight",   ids: [5], name: "headlight" },
+      { label: "With Studs",  ids: [5], name: "studs" },
+      { label: "With Pin",    ids: [5], name: "pin" },
+      { label: "Arch",        ids: [5], name: "arch" },
+      { label: "Corner",      ids: [5], name: "corner" },
+      { label: "Other Special", ids: [5] },
+      { label: "Technic",     ids: [8] },
     ],
     plate: [
-      { label: "Standard", ids: [14] },
-      { label: "Special",  ids: [9]  },
-      { label: "Wedged",   ids: [49] },
+      { label: "Standard",    ids: [14] },
+      { label: "Modified",    ids: [9], name: "modified" },
+      { label: "With Clip",   ids: [9], name: "clip" },
+      { label: "With Hole",   ids: [9], name: "hole" },
+      { label: "With Bar",    ids: [9], name: "bar" },
+      { label: "With Tooth",  ids: [9], name: "tooth" },
+      { label: "Other Special", ids: [9] },
+      { label: "Wedged",      ids: [49] },
     ],
     tile: [
-      { label: "Standard", ids: [19] },
-      { label: "Special",  ids: [15] },
+      { label: "Standard",    ids: [19] },
+      { label: "Modified",    ids: [15], name: "modified" },
+      { label: "With Clip",   ids: [15], name: "clip" },
+      { label: "Grille",      ids: [15], name: "grille" },
+      { label: "Other Special", ids: [15] },
     ],
     slope: [
       { label: "Sloped",   ids: [3]  },
@@ -588,18 +630,31 @@
     const needle = (q === "*") ? "" : norm(q);
     const terms = needle ? needle.split(" ").filter(Boolean) : [];
 
-    // Collect allowed cat_ids. If a family has sub-selections, use ONLY those.
-    // Otherwise use the family's full cat list.
-    const famCats = new Set();
+    // Build a list of allowed [cat_id, name_substring] pairs. A part matches
+    // if ANY pair's cat_id equals the part's cat AND the part's name contains
+    // the substring (or no substring is required).
+    const allowPairs = [];
     FILTERS.fams.forEach((f) => {
-      const sub = FILTERS.subs[f];
-      if (sub && sub.size){
-        sub.forEach((c) => famCats.add(c));
+      const selected = FILTERS.subs[f];
+      if (selected && selected.size){
+        selected.forEach((subIdx) => {
+          const sub = (SUB_CATS[f] || [])[subIdx];
+          if (!sub) return;
+          sub.ids.forEach((c) => allowPairs.push([c, sub.name || ""]));
+        });
       } else {
-        (FAMILIES[f] || []).forEach((c) => famCats.add(c));
+        (FAMILIES[f] || []).forEach((c) => allowPairs.push([c, ""]));
       }
     });
-    const useCat = famCats.size > 0;
+    const useCat = allowPairs.length > 0;
+    function catAllowed(catId, nameLc){
+      for (let i = 0; i < allowPairs.length; i++){
+        const [c, sub] = allowPairs[i];
+        if (c !== catId) continue;
+        if (!sub || nameLc.includes(sub)) return true;
+      }
+      return false;
+    }
 
     // Score each hit so the best matches float to the top.
     const scored = [];
@@ -612,10 +667,10 @@
       seen.add(row.no);
       const blData = BL[row.no];
       if (FILTERS.verifiedOnly && !blData) continue;
-      if (useCat && !famCats.has(row.cat_id)) continue;
       const catName = (blData && blData.name && CATS[blData.cat_id]) || CATS[row.cat_id] || "";
       const displayName = (blData && blData.name) || row.name;
       const nameLc = norm(displayName);
+      if (useCat && !catAllowed(row.cat_id, nameLc)) continue;
       const noLc = (row.no || "").toLowerCase();
       const catLc = norm(catName);
       const hay = nameLc + " " + noLc + " " + catLc;
@@ -894,9 +949,9 @@
     row.hidden = false;
     row.innerHTML = active.map((fam) => {
       const selected = FILTERS.subs[fam] || new Set();
-      const chips = SUB_CATS[fam].map((sc) => {
-        const on = Array.from(selected).some((cid) => sc.ids.includes(cid));
-        return '<button class="sub-chip'+(on?" on":"")+'" data-fam="'+fam+'" data-ids="'+sc.ids.join(",")+'">'+esc(sc.label)+'</button>';
+      const chips = SUB_CATS[fam].map((sc, i) => {
+        const on = selected.has(i);
+        return '<button class="sub-chip'+(on?" on":"")+'" data-fam="'+fam+'" data-i="'+i+'">'+esc(sc.label)+'</button>';
       }).join("");
       return '<span class="sub-fam">'+esc(fam)+'</span>' + chips;
     }).join('<span class="sub-label" style="margin-left:14px">·</span>');
@@ -904,11 +959,11 @@
     row.querySelectorAll(".sub-chip").forEach((btn) => {
       btn.addEventListener("click", () => {
         const fam = btn.dataset.fam;
-        const ids = btn.dataset.ids.split(",").map((x) => parseInt(x, 10));
+        const i = parseInt(btn.dataset.i, 10);
         FILTERS.subs[fam] = FILTERS.subs[fam] || new Set();
         btn.classList.toggle("on");
-        if (btn.classList.contains("on")) ids.forEach((id) => FILTERS.subs[fam].add(id));
-        else ids.forEach((id) => FILTERS.subs[fam].delete(id));
+        if (btn.classList.contains("on")) FILTERS.subs[fam].add(i);
+        else FILTERS.subs[fam].delete(i);
         scheduleRerun(0);
       });
     });
