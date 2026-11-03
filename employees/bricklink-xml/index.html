@@ -73,6 +73,28 @@
     details p{font-size:.85rem;color:var(--slate);line-height:1.55;margin-bottom:6px}
     details code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:.82rem}
 
+    /* ========== GRID (spreadsheet-style data entry) ========== */
+    .grid-tabs{display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--line)}
+    .grid-tab{background:transparent;border:none;padding:10px 20px;font-family:'Nunito';font-weight:800;font-size:.95rem;color:var(--mid);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .14s}
+    .grid-tab:hover{color:var(--ink)}
+    .grid-tab.on{color:var(--red);border-bottom-color:var(--red)}
+    .mode-panel{display:none}
+    .mode-panel.on{display:block}
+    .bl-grid{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.88rem;table-layout:fixed}
+    .bl-grid th{background:#15151f;color:#fff;padding:9px 10px;text-align:left;font-weight:800;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;border-right:1px solid #2a2a3a}
+    .bl-grid th:last-child{border-right:none}
+    .bl-grid td{padding:0;border-top:1px solid var(--line);border-right:1px solid var(--line);background:#fff}
+    .bl-grid td:last-child{border-right:none}
+    .bl-grid tbody tr:nth-child(odd) td{background:#fafbfd}
+    .bl-grid td input, .bl-grid td textarea, .bl-grid td select{width:100%;border:none;background:transparent;padding:8px 10px;font-family:'Nunito';font-size:.88rem;color:var(--ink);resize:none;outline:none}
+    .bl-grid td textarea{min-height:36px;line-height:1.3;font-family:'Nunito'}
+    .bl-grid td input:focus, .bl-grid td textarea:focus, .bl-grid td select:focus{background:#fff8d6;box-shadow:inset 0 0 0 2px var(--yellow)}
+    .bl-grid td.num input{text-align:right;font-family:'JetBrains Mono','Consolas',monospace}
+    .bl-grid-wrap{overflow-x:auto;margin-top:4px}
+    .grid-col-rownum{width:38px;background:#f3f4f6!important;color:var(--muted);text-align:center;font-weight:700;font-family:'JetBrains Mono','Consolas',monospace;font-size:.8rem;padding:6px 2px!important;user-select:none}
+    .row-tools{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .row-tools .hint-mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;color:var(--muted)}
+
     @media(max-width:620px){.topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}.wrap{padding:20px 14px 40px}.card{padding:16px}}
   </style>
 </head>
@@ -89,12 +111,55 @@
 
   <div class="wrap">
     <p class="lead">
-      Paste the XML from your Google Sheet (or upload the file). This cleans it up into the format
-      BrickLink's <strong>Bulk Upload</strong> accepts, so you can drop it into
-      BrickLink's "Verify Items" box without the usual format errors.
+      Build BrickLink bulk-upload XML either by <strong>typing rows directly</strong>
+      into the grid, or by <strong>pasting XML</strong> from your sheet. Either way
+      the output is cleaned into the format BrickLink's <strong>Bulk Upload</strong>
+      accepts, ready to drop into "Verify Items" without the usual format errors.
     </p>
 
-    <!-- STEP 1: INPUT -->
+    <!-- MODE SWITCHER -->
+    <div class="grid-tabs">
+      <button class="grid-tab on" id="tabGrid" type="button">Type rows (grid)</button>
+      <button class="grid-tab"    id="tabPaste" type="button">Paste XML</button>
+    </div>
+
+    <!-- MODE: GRID -->
+    <div class="mode-panel on" id="panelGrid">
+      <div class="card">
+        <h2><span class="step">1</span> Fill in the rows</h2>
+        <p style="color:var(--mid);font-size:.9rem;margin-bottom:12px">
+          One part per row. <strong>Part ID</strong>, <strong>Color</strong>, <strong>Qty</strong>, and <strong>Price</strong> are required;
+          Remarks and Description are optional. Press <kbd>Tab</kbd> to move across, <kbd>Enter</kbd> to drop a row.
+        </p>
+        <div class="bl-grid-wrap">
+          <table class="bl-grid" id="blGrid">
+            <thead>
+              <tr>
+                <th class="grid-col-rownum">#</th>
+                <th style="width:14%">Part ID</th>
+                <th style="width:10%">Color</th>
+                <th style="width:8%">Qty</th>
+                <th style="width:10%">Price</th>
+                <th style="width:10%">Condition</th>
+                <th style="width:24%">My Remarks</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="blGridBody"></tbody>
+          </table>
+        </div>
+        <div class="row-tools">
+          <button class="btn" id="buildFromGridBtn" type="button">Build XML &rarr;</button>
+          <button class="btn ghost" id="addRowsBtn" type="button">+ 25 more rows</button>
+          <button class="btn ghost" id="clearGridBtn" type="button">Clear grid</button>
+          <span class="hint-mono" id="gridCount">0 filled rows</span>
+        </div>
+        <div id="gridMsg" class="msg hidden"></div>
+      </div>
+    </div>
+
+    <!-- MODE: PASTE -->
+    <div class="mode-panel" id="panelPaste">
     <div class="card">
       <h2><span class="step">1</span> Paste or upload</h2>
       <textarea id="in" placeholder="Paste your sheet's XML here, or click the Upload button to pick an .xml file..."></textarea>
@@ -120,8 +185,9 @@
       </div>
       <div id="inMsg" class="msg hidden"></div>
     </div>
+    </div> <!-- /#panelPaste -->
 
-    <!-- STEP 2: OUTPUT -->
+    <!-- STEP 2: OUTPUT (shared by both modes) -->
     <div class="card">
       <h2><span class="step">2</span> BrickLink-ready XML</h2>
       <textarea id="out" readonly placeholder="Your clean XML will appear here..."></textarea>
@@ -621,6 +687,136 @@
   dc.addEventListener("change", () => {
     try { localStorage.setItem("pp_bl_default_color", dc.value.trim()); } catch(e){}
   });
+
+  // ========== TAB SWITCHER ==========
+  function showPanel(name){
+    document.querySelectorAll(".mode-panel").forEach((p) => p.classList.remove("on"));
+    document.querySelectorAll(".grid-tab").forEach((t) => t.classList.remove("on"));
+    document.getElementById("panel" + name).classList.add("on");
+    document.getElementById("tab" + name).classList.add("on");
+    try { localStorage.setItem("pp_bl_xml_mode", name); } catch(e){}
+  }
+  document.getElementById("tabGrid").addEventListener("click", () => showPanel("Grid"));
+  document.getElementById("tabPaste").addEventListener("click", () => showPanel("Paste"));
+  try {
+    const savedMode = localStorage.getItem("pp_bl_xml_mode");
+    if (savedMode === "Paste") showPanel("Paste");
+  } catch(e){}
+
+  // ========== GRID ==========
+  const GRID_BODY = document.getElementById("blGridBody");
+  const GRID_MSG  = document.getElementById("gridMsg");
+  const GRID_COUNT = document.getElementById("gridCount");
+
+  function makeRow(n){
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="grid-col-rownum">'+n+'</td>' +
+      '<td><input type="text" data-k="ITEMID" autocomplete="off" placeholder="e.g. 3005" /></td>' +
+      '<td><input type="text" data-k="COLOR"  autocomplete="off" placeholder="5 or red" /></td>' +
+      '<td class="num"><input type="text" inputmode="numeric" data-k="QTY" autocomplete="off" placeholder="1" /></td>' +
+      '<td class="num"><input type="text" inputmode="decimal" data-k="PRICE" autocomplete="off" placeholder="0.00" /></td>' +
+      '<td><select data-k="CONDITION">' +
+        '<option value=""></option>' +
+        '<option value="N">New</option>' +
+        '<option value="U">Used</option>' +
+      '</select></td>' +
+      '<td><textarea data-k="REMARKS" rows="1" placeholder="internal note"></textarea></td>' +
+      '<td><textarea data-k="DESCRIPTION" rows="1" placeholder="public description"></textarea></td>';
+    return tr;
+  }
+  function addRows(n){
+    const start = GRID_BODY.children.length;
+    for (let i = 1; i <= n; i++) GRID_BODY.appendChild(makeRow(start + i));
+    wireGrid();
+    recountGrid();
+  }
+  function wireGrid(){
+    // Press Enter on any cell to add a fresh row below if we're on the last one.
+    GRID_BODY.querySelectorAll("input, textarea, select").forEach((el) => {
+      if (el.__wired) return; el.__wired = true;
+      el.addEventListener("input", recountGrid);
+      el.addEventListener("change", recountGrid);
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey && el.tagName !== "TEXTAREA"){
+          e.preventDefault();
+          const tr = el.closest("tr");
+          if (tr === GRID_BODY.lastElementChild) addRows(1);
+          const next = tr.nextElementSibling;
+          if (next) next.querySelector("input, select").focus();
+        }
+      });
+    });
+  }
+  function recountGrid(){
+    let filled = 0;
+    GRID_BODY.querySelectorAll("tr").forEach((tr) => {
+      const v = tr.querySelector('[data-k="ITEMID"]').value.trim();
+      if (v) filled++;
+    });
+    GRID_COUNT.textContent = filled + " filled row" + (filled === 1 ? "" : "s");
+  }
+  function clearGrid(){
+    GRID_BODY.innerHTML = "";
+    addRows(30);
+    GRID_MSG.className = "msg hidden"; GRID_MSG.textContent = "";
+  }
+  function gridMsg(kind, text){
+    GRID_MSG.className = "msg " + kind;
+    GRID_MSG.textContent = text;
+  }
+
+  // Build XML from the grid rows, drop it in the #in textarea, run convert.
+  function buildFromGrid(){
+    const rows = [];
+    const problems = [];
+    GRID_BODY.querySelectorAll("tr").forEach((tr, i) => {
+      const n = i + 1;
+      const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
+      const itemid = get("ITEMID");
+      if (!itemid) return;  // skip empty rows silently
+      const colorRaw = get("COLOR");
+      const color = colorNameToId(colorRaw);
+      const qty = get("QTY");
+      const price = get("PRICE");
+      const cond = get("CONDITION");
+      const remarks = get("REMARKS");
+      const desc = get("DESCRIPTION");
+      if (!qty) problems.push("Row " + n + ": Qty missing");
+      if (!price) problems.push("Row " + n + ": Price missing");
+      if (!cond) problems.push("Row " + n + ": Condition missing");
+      if (colorRaw && !color) problems.push("Row " + n + ': Color "' + colorRaw + '" not recognized');
+      rows.push({ ITEMTYPE:"P", ITEMID:itemid, COLOR:color, QTY:qty, PRICE:price,
+                  CONDITION:cond, REMARKS:remarks, DESCRIPTION:desc });
+    });
+    if (!rows.length){ gridMsg("err", "No rows filled in. Type at least one Part ID."); return; }
+    if (problems.length){ gridMsg("warn", "Fix these before BL will accept it:\n• " + problems.join("\n• ")); }
+
+    // Emit XML in BrickLink's expected order, then feed into the existing
+    // Paste pipeline so it goes through the same cleanup + validation.
+    const xmlParts = ["<INVENTORY>"];
+    rows.forEach((r) => {
+      xmlParts.push("  <ITEM>");
+      FIELD_ORDER.forEach((k) => {
+        const v = r[k];
+        if (v == null || v === "") return;
+        xmlParts.push("    <" + k + ">" + escXML(String(v)) + "</" + k + ">");
+      });
+      xmlParts.push("  </ITEM>");
+    });
+    xmlParts.push("</INVENTORY>");
+    inEl.value = xmlParts.join("\n");
+    convert();  // run the existing cleanup flow
+    if (!problems.length) gridMsg("ok", "Built XML for " + rows.length + " row" + (rows.length===1?"":"s") + " — see the output below.");
+    document.getElementById("out").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  document.getElementById("buildFromGridBtn").addEventListener("click", buildFromGrid);
+  document.getElementById("addRowsBtn").addEventListener("click", () => addRows(25));
+  document.getElementById("clearGridBtn").addEventListener("click", clearGrid);
+
+  // Start with 30 blank rows.
+  addRows(30);
 })();
 </script>
 </body>
