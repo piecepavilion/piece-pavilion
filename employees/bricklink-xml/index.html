@@ -173,6 +173,64 @@
   };
   const BOOLS = {"RETAIN":1,"STOCKROOM":1,"NOTIFY":1};
 
+  // ========== BRICKLINK COLOR NAME -> ID ==========
+  // From BrickLink v2 color guide. Keys are normalized (lowercase, no
+  // spaces/hyphens). Common informal aliases ("black", "gray") map to the
+  // most-used BL id for that name.
+  const COLOR_MAP = {
+    // SOLID -- official BrickLink names
+    "white":1,"verylightgray":49,"verylightbluishgray":99,"lightgray":9,"lightbluishgray":86,
+    "darkgray":10,"darkbluishgray":85,"black":11,
+    "darkred":59,"red":5,"reddishorange":167,"darksalmon":231,"salmon":25,"coral":220,"lightsalmon":26,"sandred":58,
+    "darkbrown":120,"umber":168,"brown":8,"reddishbrown":88,"lightbrown":91,"mediumbrown":240,"fabulandbrown":106,
+    "darktan":69,"tan":2,"lightnougat":90,"mediumtan":241,"nougat":28,"mediumnougat":150,"darknougat":225,"sienna":169,
+    "fabulandorange":160,"earthorange":29,"darkorange":68,"rust":27,"neonorange":165,"orange":4,
+    "mediumorange":31,"lightorange":32,"brightlightorange":110,"warmyellowishorange":172,"verylightorange":96,
+    "darkyellow":161,"ochreyellow":173,"yellow":3,"lightyellow":33,"brightlightyellow":103,"neonyellow":236,"lemon":171,
+    "neongreen":166,"lightlime":35,"yellowishgreen":158,"mediumlime":76,"lime":34,"fabulandlime":248,
+    "olivegreen":155,"darkolivegreen":242,"darkgreen":80,"green":6,"brightgreen":36,"mediumgreen":37,"lightgreen":38,"sandgreen":48,
+    "darkturquoise":39,"lightturquoise":40,"aqua":41,"lightaqua":152,
+    "darkblue":63,"blue":7,"darkazure":153,"littlerobotsblue":247,"maerskblue":72,"mediumazure":156,
+    "skyblue":87,"mediumblue":42,"brightlightblue":105,"lightblue":62,"sandblue":55,"darkroyalblue":109,
+    "violet":43,"royalblue":97,"mediumviolet":73,"lilac":245,"blueviolet":174,"lightlilac":246,"lightviolet":44,
+    "darkpurple":89,"purple":24,"lightpurple":93,"magenta":71,"mediumlavender":157,"lavender":154,"clikitslavender":227,"sandpurple":54,
+    "darkpink":47,"brightpink":104,"pink":23,"rosepink":56,"warmpink":175,"mediumdarkpink":94,
+    // TRANSPARENT
+    "transclear":12,"clear":12,"transparent":12,
+    "transbrown":13,"transblack":251,"transred":17,"transneonorange":18,"transorange":98,"translightorange":164,
+    "transneonyellow":121,"transyellow":19,"transneongreen":16,"transbrightgreen":108,"translightgreen":221,
+    "translightbrightgreen":226,"transgreen":20,"transdarkblue":14,"transmediumblue":74,"translightblue":15,
+    "transaqua":113,"translightpurple":114,"transmediumpurple":234,"transpurple":51,"transdarkpink":50,"transpink":107,
+    // CHROME / PEARL / METALLIC / MILKY / GLITTER
+    "chromegold":21,"chromesilver":22,"chromeantiquebrass":57,"chromeblack":122,"chromeblue":52,"chromegreen":64,"chromepink":82,
+    "pearlwhite":83,"pearlverylightgray":119,"pearllightgray":66,"flatsilver":95,"bioniclesilver":239,
+    "pearldarkgray":77,"pearlblack":244,"pearllightgold":61,"pearlgold":115,"reddishgold":235,"bioniclegold":238,
+    "flatdarkgold":81,"reddishcopper":249,"copper":84,"bioniclecopper":237,
+    "pearlbrown":255,"pearlred":252,"pearlgreen":253,"pearlblue":254,"pearlsandblue":78,"pearlsandpurple":243,
+    "satintransclear":228,"satintransbrown":229,"satintransyellow":170,"satintransbrightgreen":233,
+    "satintranslightblue":223,"satintransdarkblue":232,"satintranspurple":230,"satintransdarkpink":224,
+    "metallicsilver":67,"metallicgreen":70,"metallicgold":65,"metalliccopper":250,
+    "milkywhite":60,"glowindarkwhite":159,"glowindarkopaque":46,"glowindarktrans":118,
+    "glittertransclear":101,"glittertransorange":222,"glittertransneongreen":163,
+    "glittertranslightblue":162,"glittertranspurple":102,"glittertransdarkpink":100,
+    // INFORMAL ALIASES people type
+    "gray":86,"grey":86,"lightgrey":86,"darkgrey":85,"silver":95,"gold":115,"bronze":84
+  };
+
+  function colorNameToId(v){
+    if (v == null || v === "") return "";
+    const s = String(v).trim();
+    // Already numeric? use it.
+    if (/^[0-9]+$/.test(s)) return s;
+    // Normalize: lowercase, strip anything that isn't a letter.
+    const k = s.toLowerCase().replace(/[^a-z]/g,"");
+    if (!k) return "";
+    if (COLOR_MAP[k]) return String(COLOR_MAP[k]);
+    // "Trans Red" written without the dash; try "trans"+rest already handled.
+    // Return empty to signal unknown -- caller will treat as missing color.
+    return "";
+  }
+
   // ========== HELPERS ==========
   function escXML(s){
     // BrickLink only needs the three XML musts in element content. &apos;
@@ -314,8 +372,14 @@
     // ITEMID: preserve case EXACTLY (minifig IDs like "sw0001a" are case
     // sensitive in BrickLink). Only trim and strip surrounding junk.
     if (rec.ITEMID)      out.ITEMID     = String(rec.ITEMID).trim().replace(/\s+/g,"");
-    // COLOR must be a plain integer. Strip anything non-numeric.
-    if (rec.COLOR)       out.COLOR      = intOnly(rec.COLOR);
+    // COLOR must be a plain integer. If Dad's sheet wrote a color NAME
+    // ("black", "dark red", "trans-red"), translate it to the BL id.
+    // Unknown names return "" so validation catches them.
+    if (rec.COLOR) {
+      const asId = colorNameToId(rec.COLOR);
+      if (asId) out.COLOR = asId;
+      else out._COLOR_UNKNOWN = String(rec.COLOR).trim(); // for error message
+    }
     // QTY must be a positive integer >= 1.
     if (rec.QTY)         out.QTY        = intOnly(rec.QTY);
     // PRICE/MYCOST always 2+ decimals.
@@ -356,8 +420,13 @@
       if (!it.CONDITION) errors.push("Row "+n+" ("+id+"): missing CONDITION (N or U)");
       // Parts and Minifigs need COLOR. Sets/Books/Gear don't.
       if ((it.ITEMTYPE === "P" || it.ITEMTYPE === "M") && !it.COLOR){
-        errors.push("Row "+n+" ("+id+"): parts and minifigs need a COLOR id");
+        if (it._COLOR_UNKNOWN) {
+          errors.push("Row "+n+" ("+id+"): color \""+it._COLOR_UNKNOWN+"\" not recognized — use a BrickLink color name (red, black, dark red, light bluish gray, trans-red...) or a numeric ID");
+        } else {
+          errors.push("Row "+n+" ("+id+"): parts and minifigs need a COLOR id");
+        }
       }
+      delete it._COLOR_UNKNOWN;
       // Set numbers nearly always need the -1 suffix in BrickLink. Flag if
       // itemtype=S and the id has no dash.
       if (it.ITEMTYPE === "S" && it.ITEMID && !/-/.test(it.ITEMID)){
