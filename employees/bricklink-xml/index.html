@@ -107,6 +107,17 @@
         <button class="btn ghost" id="sampleBtn" type="button">Load sample</button>
         <button class="btn ghost" id="clearBtn" type="button">Clear</button>
       </div>
+      <div class="row" style="margin-top:10px;padding-top:12px;border-top:1px solid var(--line)">
+        <label for="defaultColor" style="font-weight:700;color:var(--slate);font-size:.9rem">
+          Default color for parts missing one:
+        </label>
+        <input id="defaultColor" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 5"
+               style="width:90px;border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;font-family:'Nunito';font-size:.95rem;font-weight:700" />
+        <span style="font-size:.82rem;color:var(--muted)">
+          Color ID (<a href="https://www.bricklink.com/catalogColors.asp" target="_blank" rel="noopener">BL color list</a>).
+          Leave blank to keep missing-color as an error.
+        </span>
+      </div>
       <div id="inMsg" class="msg hidden"></div>
     </div>
 
@@ -419,6 +430,21 @@
     }
 
     const cleaned = items.map(cleanItem);
+
+    // If the user set a Default color, backfill any parts/minifigs that are
+    // missing one. Track which rows we filled so we can note it in the UI.
+    const defColor = (document.getElementById("defaultColor").value || "").trim();
+    const defColorId = defColor.replace(/[^0-9]/g,"");
+    const autofilled = [];
+    if (defColorId){
+      cleaned.forEach((it, i) => {
+        if ((it.ITEMTYPE === "P" || it.ITEMTYPE === "M") && !it.COLOR){
+          it.COLOR = defColorId;
+          autofilled.push((i+1) + " (" + (it.ITEMID||"?") + ")");
+        }
+      });
+    }
+
     const { warnings, errors } = validate(cleaned);
     const xml = buildXML(cleaned);
     outEl.value = xml;
@@ -440,6 +466,7 @@
 
     // Feedback
     const parts = ["Found <strong>" + cleaned.length + "</strong> item"+(cleaned.length===1?"":"s")+" via "+mode+"."];
+    if (autofilled.length) parts.push("<br/>&#9989; Filled in default COLOR <strong>"+defColorId+"</strong> on row"+(autofilled.length===1?"":"s")+" "+autofilled.join(", ")+".");
     if (warnings.length) parts.push("<br/>&#9888; " + warnings.join("<br/>&#9888; "));
     if (errors.length){
       setMsg(outMsg, "err",
@@ -511,6 +538,13 @@
   // Keyboard: Ctrl/Cmd+Enter to convert
   inEl.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") convert();
+  });
+
+  // Remember the default color between visits.
+  const dc = document.getElementById("defaultColor");
+  try { dc.value = localStorage.getItem("pp_bl_default_color") || ""; } catch(e){}
+  dc.addEventListener("change", () => {
+    try { localStorage.setItem("pp_bl_default_color", dc.value.trim()); } catch(e){}
   });
 })();
 </script>
