@@ -128,7 +128,7 @@
 
     <details>
       <summary>Required fields &amp; valid values (click to expand)</summary>
-      <p><strong>Required per item:</strong> <code>ITEMTYPE</code>, <code>ITEMID</code>, <code>MINQTY</code>, <code>PRICE</code>, <code>CONDITION</code>. For parts and minifigs you also need <code>COLOR</code> (color ID).</p>
+      <p><strong>Required per item:</strong> <code>ITEMTYPE</code>, <code>ITEMID</code>, <code>QTY</code>, <code>PRICE</code>, <code>CONDITION</code>. For parts and minifigs you also need <code>COLOR</code> (color ID). <em>Tip: your sheet probably says "MINQTY" or "Quantity" — the converter maps those to QTY automatically.</em></p>
       <p><strong>ITEMTYPE:</strong> <code>P</code> = Part, <code>M</code> = Minifig, <code>S</code> = Set, <code>G</code> = Gear, <code>B</code> = Book, <code>C</code> = Catalog, <code>I</code> = Instruction, <code>O</code> = Original Box</p>
       <p><strong>CONDITION:</strong> <code>N</code> = New, <code>U</code> = Used</p>
       <p><strong>Optional:</strong> <code>DESCRIPTION</code>, <code>REMARKS</code>, <code>MYCOST</code>, <code>BULK</code>, <code>SALE</code>, <code>STOCKROOM</code>, <code>RETAIN</code>, <code>SUBCONDITION</code>, <code>TIERQTY1..3</code>, <code>TIERPRICE1..3</code>, <code>BUYERUSERNAME</code>, <code>NOTIFY</code></p>
@@ -139,8 +139,12 @@
 (function(){
   // ========== FIELD DEFS ==========
   // Order BrickLink expects. Only emit tags that have a value.
+  // BrickLink Bulk Add uses <QTY>, not <MINQTY>. (MINQTY is for Mass Update
+  // of existing inventory -- different tool, different tag.) Getting this
+  // wrong makes BL say "Quantity: Value is missing or not numeric" even
+  // though the number is right there.
   const FIELD_ORDER = [
-    "ITEMTYPE","ITEMID","COLOR","MINQTY","PRICE","CONDITION","SUBCONDITION",
+    "ITEMTYPE","ITEMID","COLOR","QTY","PRICE","CONDITION","SUBCONDITION",
     "DESCRIPTION","REMARKS","MYCOST","BULK","SALE","STOCKROOM","RETAIN",
     "TIERQTY1","TIERPRICE1","TIERQTY2","TIERPRICE2","TIERQTY3","TIERPRICE3",
     "BUYERUSERNAME","NOTIFY"
@@ -150,14 +154,12 @@
     "TYPE":"ITEMTYPE","ITEM_TYPE":"ITEMTYPE","ITEMTYPECODE":"ITEMTYPE",
     "ID":"ITEMID","ITEM":"ITEMID","PART":"ITEMID","PARTNO":"ITEMID","PARTNUMBER":"ITEMID","SET":"ITEMID","SETNO":"ITEMID","NO":"ITEMID",
     "COLORID":"COLOR","COLOUR":"COLOR","COLOURID":"COLOR",
-    "QTY":"MINQTY","QUANTITY":"MINQTY","QUANTITYMIN":"MINQTY","MIN":"MINQTY",
+    "MINQTY":"QTY","QUANTITY":"QTY","QUANTITYMIN":"QTY","MIN":"QTY","QUANTITYMAX":"QTY","MAXQTY":"QTY",
     "COST":"MYCOST","MYCOSTEACH":"MYCOST",
     "COND":"CONDITION","NEW":"CONDITION","USED":"CONDITION",
     "DESC":"DESCRIPTION","NOTES":"REMARKS","REMARK":"REMARKS",
     "BIN":"REMARKS","LOCATION":"REMARKS"
   };
-  // Numeric fields BrickLink wants without quotes/currency symbols.
-  const NUMERIC = {"PRICE":1,"MYCOST":1,"MINQTY":1,"BULK":1,"SALE":1,"TIERQTY1":1,"TIERQTY2":1,"TIERQTY3":1,"TIERPRICE1":1,"TIERPRICE2":1,"TIERPRICE3":1};
   const BOOLS = {"RETAIN":1,"STOCKROOM":1,"NOTIFY":1};
 
   // ========== HELPERS ==========
@@ -303,8 +305,8 @@
     if (rec.ITEMID)      out.ITEMID     = String(rec.ITEMID).trim().replace(/\s+/g,"");
     // COLOR must be a plain integer. Strip anything non-numeric.
     if (rec.COLOR)       out.COLOR      = intOnly(rec.COLOR);
-    // MINQTY must be a positive integer >= 1.
-    if (rec.MINQTY)      out.MINQTY     = intOnly(rec.MINQTY);
+    // QTY must be a positive integer >= 1.
+    if (rec.QTY)         out.QTY        = intOnly(rec.QTY);
     // PRICE/MYCOST always 2+ decimals.
     if (rec.PRICE)       out.PRICE      = money(rec.PRICE);
     if (rec.MYCOST)      out.MYCOST     = money(rec.MYCOST);
@@ -336,8 +338,8 @@
       const id = it.ITEMID || "?";
       if (!it.ITEMTYPE)  errors.push("Row "+n+" ("+id+"): missing ITEMTYPE");
       if (!it.ITEMID)    errors.push("Row "+n+": missing ITEMID");
-      if (!it.MINQTY)    errors.push("Row "+n+" ("+id+"): missing MINQTY (quantity)");
-      else if (parseInt(it.MINQTY,10) < 1) errors.push("Row "+n+" ("+id+"): MINQTY must be at least 1");
+      if (!it.QTY)       errors.push("Row "+n+" ("+id+"): missing QTY (quantity)");
+      else if (parseInt(it.QTY,10) < 1) errors.push("Row "+n+" ("+id+"): QTY must be at least 1");
       if (!it.PRICE)     errors.push("Row "+n+" ("+id+"): missing PRICE");
       else if (parseFloat(it.PRICE) <= 0) errors.push("Row "+n+" ("+id+"): PRICE must be greater than 0");
       if (!it.CONDITION) errors.push("Row "+n+" ("+id+"): missing CONDITION (N or U)");
@@ -426,7 +428,7 @@
     // Stats
     let totalQty = 0, totalVal = 0;
     cleaned.forEach(it => {
-      const q = parseFloat(it.MINQTY) || 0;
+      const q = parseFloat(it.QTY) || 0;
       const p = parseFloat(it.PRICE)  || 0;
       totalQty += q;
       totalVal += q * p;
@@ -461,9 +463,9 @@
   $("#sampleBtn").addEventListener("click", () => {
     inEl.value = [
       "<INVENTORY>",
-      "<ITEM><ITEMTYPE>P</ITEMTYPE><ITEMID>3001</ITEMID><COLOR>5</COLOR><MINQTY>10</MINQTY><PRICE>0.08</PRICE><CONDITION>U</CONDITION><REMARKS>Bin A3</REMARKS></ITEM>",
-      "<ITEM><ITEMTYPE>P</ITEMTYPE><ITEMID>3003</ITEMID><COLOR>11</COLOR><MINQTY>25</MINQTY><PRICE>0.05</PRICE><CONDITION>U</CONDITION><REMARKS>Bin A4</REMARKS></ITEM>",
-      "<ITEM><ITEMTYPE>M</ITEMTYPE><ITEMID>sw0001a</ITEMID><MINQTY>1</MINQTY><PRICE>12.00</PRICE><CONDITION>N</CONDITION></ITEM>",
+      "<ITEM><ITEMTYPE>P</ITEMTYPE><ITEMID>3001</ITEMID><COLOR>5</COLOR><QTY>10</QTY><PRICE>0.08</PRICE><CONDITION>U</CONDITION><REMARKS>Bin A3</REMARKS></ITEM>",
+      "<ITEM><ITEMTYPE>P</ITEMTYPE><ITEMID>3003</ITEMID><COLOR>11</COLOR><QTY>25</QTY><PRICE>0.05</PRICE><CONDITION>U</CONDITION><REMARKS>Bin A4</REMARKS></ITEM>",
+      "<ITEM><ITEMTYPE>M</ITEMTYPE><ITEMID>sw0001a</ITEMID><COLOR>0</COLOR><QTY>1</QTY><PRICE>12.00</PRICE><CONDITION>N</CONDITION></ITEM>",
       "</INVENTORY>"
     ].join("\n");
     convert();
