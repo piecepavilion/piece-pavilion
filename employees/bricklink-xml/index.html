@@ -1165,10 +1165,12 @@
       const no = get("ITEMID");
       const colorRaw = get("COLOR");
       const cond = (get("CONDITION") || "N").toUpperCase();
-      if (!no || !colorRaw) return;
-      const color = colorNameToId(colorRaw);
-      if (!color) return;
-      targets.push({ tr, no, color, cond });
+      if (!no) return;
+      // Minifig items (sh*, njo*, col*, cas*, etc.) don't need a color.
+      const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(no);
+      const color = colorRaw ? colorNameToId(colorRaw) : "";
+      if (!isMinifig && !color) return;
+      targets.push({ tr, no, color: color || "", cond, type: isMinifig ? "M" : "P" });
     });
     if (!targets.length){
       gridMsg("warn", "No rows have both a Part ID and a Color — nothing to price.");
@@ -1182,12 +1184,13 @@
 
     let updated = 0, failed = 0;
     for (let i = 0; i < targets.length; i++){
-      const { tr, no, color, cond } = targets[i];
+      const { tr, no, color, cond, type } = targets[i];
       try {
-        const r = await fetch("/employees/api/colors/price?no=" + encodeURIComponent(no) +
-                              "&color_id=" + encodeURIComponent(color) +
-                              "&condition=" + encodeURIComponent(cond),
-                              { credentials: "include" });
+        const qs = "no=" + encodeURIComponent(no) +
+                   "&type=" + encodeURIComponent(type) +
+                   "&condition=" + encodeURIComponent(cond) +
+                   (color ? "&color_id=" + encodeURIComponent(color) : "");
+        const r = await fetch("/employees/api/colors/price?" + qs, { credentials: "include" });
         if (r.ok){
           const j = await r.json();
           // qty_avg_price is the lot-weighted average — usually more accurate
