@@ -474,7 +474,7 @@ def update_banner(html_txt, newest):
     if not newest:
         return html_txt, False
     new_href = "/blog/%s/" % newest["slug"]
-    new_strong = ">&#127876; New on the Blog: %s<" % html.escape(newest["title"])
+    new_strong = ">New on the Blog: %s<" % html.escape(newest["title"])
 
     # Replace the href on the announcement-text link.
     html2 = re.sub(
@@ -483,9 +483,9 @@ def update_banner(html_txt, newest):
         html_txt,
         count=1,
     )
-    # Replace the strong line.
+    # Replace the strong line (matches old emoji form and the new no-emoji form).
     html3 = re.sub(
-        r'>\s*&#127876;\s*New on the Blog:[^<]*<',
+        r'>\s*(?:&#127876;\s*)?New on the Blog:[^<]*<',
         new_strong,
         html2,
         count=1,
