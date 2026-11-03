@@ -233,7 +233,7 @@
         <button class="chip" data-fam="verified">Verified&check;</button>
         <button class="chip clear-chip" id="clearFilters">Clear all</button>
       </div>
-      <div class="sub-row" id="subRow" hidden></div>
+      <div class="sub-row" id="subRow" hidden style="display:none !important"></div>
       <div class="hint">
         Type a number for direct lookup, or type a name to see matches &mdash; click one to pull its colors.
         BrickLink's catalog uses spaces around <em>x</em> (so "<em>brick 1 x 1</em>", not "<em>brick 1x1</em>").
@@ -243,34 +243,6 @@
     <div id="msg"></div>
     <div id="partHead"></div>
     <div id="grid" class="grid real"></div>
-
-    <!-- Welcome state: shown when nothing is filtered. Click a tile to activate. -->
-    <div id="welcome">
-      <h2 class="welcome-h">Browse by category</h2>
-      <p class="welcome-lead">Pick a category to start, or type a part number / name above.</p>
-      <div class="welcome">
-        <div class="wc" data-fam="brick">     <span class="emoji">&#129521;</span><div class="wname">Bricks</div><div class="wsub">Standard, Modified, Technic</div></div>
-        <div class="wc" data-fam="plate">     <span class="emoji">&#9641;</span><div class="wname">Plates</div><div class="wsub">All sizes &amp; shapes</div></div>
-        <div class="wc" data-fam="tile">      <span class="emoji">&#128997;</span><div class="wname">Tiles</div><div class="wsub">Flat tops &amp; grilles</div></div>
-        <div class="wc" data-fam="slope">     <span class="emoji">&#128441;</span><div class="wname">Slopes</div><div class="wsub">Sloped, curved, inverted</div></div>
-        <div class="wc" data-fam="round">     <span class="emoji">&#9679;</span><div class="wname">Round</div><div class="wsub">Round bricks, plates, tiles</div></div>
-        <div class="wc" data-fam="minifig">   <span class="emoji">&#129489;</span><div class="wname">Minifigs</div><div class="wsub">Whole figures</div></div>
-        <div class="wc" data-fam="body">      <span class="emoji">&#129492;</span><div class="wname">Minifig Bodies</div><div class="wsub">Heads &amp; body parts</div></div>
-        <div class="wc" data-fam="accessory"> <span class="emoji">&#127913;</span><div class="wname">Accessories</div><div class="wsub">Hats, weapons, tools</div></div>
-        <div class="wc" data-fam="technic">   <span class="emoji">&#9881;</span><div class="wname">Technic</div><div class="wsub">Beams, axles, pins</div></div>
-        <div class="wc" data-fam="vehicle">   <span class="emoji">&#128663;</span><div class="wname">Vehicles</div><div class="wsub">Cars, planes, trains, boats</div></div>
-        <div class="wc" data-fam="wheel">     <span class="emoji">&#127948;</span><div class="wname">Wheels</div><div class="wsub">Wheels &amp; tires</div></div>
-        <div class="wc" data-fam="window">    <span class="emoji">&#128682;</span><div class="wname">Windows / Doors</div><div class="wsub">Window, door, frame</div></div>
-        <div class="wc" data-fam="plant">     <span class="emoji">&#127807;</span><div class="wname">Plants</div><div class="wsub">Flowers, trees, leaves</div></div>
-        <div class="wc" data-fam="animal">    <span class="emoji">&#128052;</span><div class="wname">Animals</div><div class="wsub">Animals &amp; body parts</div></div>
-        <div class="wc" data-fam="tool">      <span class="emoji">&#128296;</span><div class="wname">Tools / Weapons</div><div class="wsub">Hammers, swords, saws</div></div>
-        <div class="wc" data-fam="container"> <span class="emoji">&#128230;</span><div class="wname">Containers</div><div class="wsub">Boxes, barrels, bottles</div></div>
-        <div class="wc" data-fam="flag">      <span class="emoji">&#127988;</span><div class="wname">Flags / Signs</div><div class="wsub">Flags, banners, signs</div></div>
-        <div class="wc" data-fam="baseplate"> <span class="emoji">&#128208;</span><div class="wname">Baseplates</div><div class="wsub">Roads &amp; bases</div></div>
-        <div class="wc" data-fam="projectile"><span class="emoji">&#127993;</span><div class="wname">Projectiles</div><div class="wsub">Darts, missiles, launchers</div></div>
-        <div class="wc" data-fam="electronic"><span class="emoji">&#128268;</span><div class="wname">Electronics</div><div class="wsub">Lights &amp; motors</div></div>
-      </div>
-    </div>
   </div>
 
 <script>
@@ -1211,9 +1183,13 @@
   }
   document.querySelectorAll(".filter-row").forEach((r) => r.addEventListener("click", handleChipClick));
 
-  // Build the side sub-filter row for each active family that has sub-cats.
+  // Sub-filter row disabled per Dad (2026-11-03). Kept as a no-op so the
+  // existing calls from the chip handler still work.
   function renderSubRow(){
     const row = document.getElementById("subRow");
+    if (row){ row.hidden = true; row.innerHTML = ""; }
+    return;
+    // dead code preserved below for easy re-enable
     const active = Array.from(FILTERS.fams).filter((f) => SUB_CATS[f]);
     if (!active.length){ row.hidden = true; row.innerHTML = ""; return; }
     row.hidden = false;
