@@ -226,37 +226,106 @@
     return String(s||"").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
 
+  // ========== MAIN LOOKUP — DUAL MODE ==========
+  // If the input looks like a part number, do a direct color lookup.
+  // Otherwise, search by name and render the matches in the main area so
+  // Dad can see "brick 1 x 1, brick 1 x 2, brick 1 x 3 ..." and click one.
   async function lookup(){
-    const raw = (partIn.value || "").trim().replace(/\s+/g, "");
-    if (!raw){ setMsg("err", "Enter a part number first."); partIn.focus(); return; }
+    const raw = (partIn.value || "").trim();
+    if (!raw){ setMsg("err", "Type a part number or a name first."); partIn.focus(); return; }
+    closeSuggest();
     goBtn.disabled = true;
-    setMsg("info", "Looking up part "+esc(raw)+" on BrickLink...");
     head.innerHTML = ""; grid.innerHTML = "";
     try {
-      const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(raw), { credentials: "include" });
-      if (r.status === 404){
-        setMsg("err", 'Part "'+esc(raw)+'" not found in BrickLink. Double-check the number &mdash; letters at the end matter.');
-        return;
+      const compact = raw.replace(/\s+/g, "");
+      if (looksLikeNumber(compact)) {
+        await lookupByNumber(compact);
+      } else {
+        await lookupByName(raw);
       }
-      if (!r.ok){
-        const j = await r.json().catch(()=>({}));
-        setMsg("err", "Lookup failed: " + esc(j.error || r.statusText));
-        return;
-      }
-      const part = await r.json();
-      if (!part.colors || !part.colors.length){
-        setMsg("info", 'BrickLink has no color variants on record for "'+esc(part.no)+'".');
-        return;
-      }
-      setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+"." + (part.cached ? ' <small>(from cache)</small>' : ""));
-      renderPart(part);
-      // Clear the ok message after a moment so it doesn't clutter.
-      setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
-    } catch (e){
+    } catch (e) {
       setMsg("err", "Network error: " + esc(String(e && e.message || e)));
     } finally {
       goBtn.disabled = false;
     }
+  }
+
+  async function lookupByNumber(no){
+    setMsg("info", "Looking up part "+esc(no)+" on BrickLink...");
+    const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(no), { credentials: "include" });
+    if (r.status === 404){
+      // Direct lookup missed -- if the input has no digits mixed with letters,
+      // it was probably a word, so fall back to name search.
+      setMsg("info", 'No part exactly matches "'+esc(no)+'". Trying a name search...');
+      await lookupByName(no);
+      return;
+    }
+    if (!r.ok){
+      const j = await r.json().catch(()=>({}));
+      setMsg("err", "Lookup failed: " + esc(j.error || r.statusText));
+      return;
+    }
+    const part = await r.json();
+    if (!part.colors || !part.colors.length){
+      setMsg("info", 'BrickLink has no color variants on record for "'+esc(part.no)+'".');
+      return;
+    }
+    setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+"." + (part.cached ? ' <small>(from cache)</small>' : ""));
+    renderPart(part);
+    setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
+  }
+
+  async function lookupByName(q){
+    setMsg("info", "Searching BrickLink for \""+esc(q)+"\"...");
+    const r = await fetch("/employees/api/colors/search?q=" + encodeURIComponent(q), { credentials: "include" });
+    if (!r.ok){
+      if (r.status === 404 || r.status === 501) {
+        setMsg("err", 'Name search is not available yet &mdash; the Worker needs to be redeployed. Until then, use the exact BrickLink part number (e.g. <strong>3005</strong>, <strong>3001</strong>, <strong>2412b</strong>).');
+      } else {
+        const j = await r.json().catch(()=>({}));
+        setMsg("err", "Search failed: " + esc(j.error || r.statusText));
+      }
+      return;
+    }
+    const j = await r.json();
+    const items = j.items || [];
+    if (!items.length){
+      setMsg("info", 'No parts matched "'+esc(q)+'". Try fewer words, or use spaces around <em>x</em> ("brick 1 x 1" not "brick 1x1").');
+      return;
+    }
+    setMsg("ok", "Found "+items.length+" match"+(items.length===1?"":"es")+" for \""+esc(q)+"\". Click any to see every color it comes in.");
+    renderSearchResults(items);
+    setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2400);
+  }
+
+  function renderSearchResults(items){
+    head.innerHTML =
+      '<div class="part-head">' +
+        '<span class="num">SEARCH</span>' +
+        '<span class="name">Click a part to see all its colors</span>' +
+        '<span class="count">'+items.length+' match'+(items.length===1?"":"es")+'</span>' +
+      '</div>';
+    grid.innerHTML = items.map((it) =>
+      '<a class="tile" href="#" data-no="'+esc(it.no)+'" title="Load colors for '+esc(it.no)+'">' +
+        '<div class="img loading">' +
+          '<img alt="" loading="lazy" src="'+imgUrlFor(0, it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
+        '</div>' +
+        '<div class="meta">' +
+          '<div class="swatch-row"><span class="cname">'+esc(it.name)+'</span></div>' +
+          '<span class="cid">'+esc(it.no)+'</span>' +
+        '</div>' +
+      '</a>'
+    ).join("");
+    // Click a tile → load that part's colors.
+    grid.querySelectorAll(".tile").forEach((el) => {
+      el.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        const no = el.dataset.no;
+        partIn.value = no;
+        lookup();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
   }
 
   // Load the color-id-to-name map once, cached for the session.
