@@ -186,6 +186,12 @@
     .tile .tile-link{pointer-events:auto}
     .tile .colors-btn{position:absolute;top:8px;right:8px;background:rgba(227,0,11,.95);color:#fff;border:none;padding:5px 10px;border-radius:50px;font-family:'Nunito';font-weight:800;font-size:.72rem;cursor:pointer;letter-spacing:.03em;box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:2}
     .tile .colors-btn:hover{background:var(--red-dark)}
+    .tile .copy-btn{position:absolute;top:8px;left:8px;background:rgba(21,21,31,.85);color:#fff;border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.78rem;line-height:1;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:2;transition:background .15s, transform .12s}
+    .tile .copy-btn:hover{background:var(--red);transform:scale(1.08)}
+    .tile .copy-btn:active{transform:scale(.92)}
+    .tile .copy-btn.copied{background:var(--green)}
+    .tile .copy-btn.copied::before{content:"✓";font-weight:900}
+    .tile .copy-btn.copied{font-size:0}
     .tile.verified{border-color:#86efac}
     .tile .verified{color:#16a34a;font-weight:900;margin-left:auto;font-size:1rem;line-height:1}
 
@@ -1255,6 +1261,7 @@
             '</div>' +
           '</a>' +
           '<button class="colors-btn" data-no="'+esc(it.no)+'" title="See every color">colors</button>' +
+          '<button class="copy-btn" data-no="'+esc(it.no)+'" title="Copy part ID '+esc(it.no)+'" aria-label="Copy part ID">&#128203;</button>' +
         '</div>';
         }).join("");
         const sizeLabel = sz ? sz : "Other";
@@ -1272,6 +1279,32 @@
         if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button > 0) return;
         ev.preventDefault();
         window.open(a.href, "_blank", "noopener");
+      });
+    });
+
+    // Copy-ID button on each tile → copy part number to clipboard.
+    grid.querySelectorAll(".copy-btn").forEach((btn) => {
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const no = btn.dataset.no;
+        try {
+          await navigator.clipboard.writeText(no);
+        } catch (_){
+          // Fallback for older browsers / no-clipboard-permission contexts
+          const ta = document.createElement("textarea");
+          ta.value = no; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); } catch(_){}
+          document.body.removeChild(ta);
+        }
+        btn.classList.add("copied");
+        const prevTitle = btn.title;
+        btn.title = "Copied " + no + "!";
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          btn.title = prevTitle;
+        }, 1200);
       });
     });
 
