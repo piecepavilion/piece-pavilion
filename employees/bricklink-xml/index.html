@@ -873,13 +873,18 @@
       el.addEventListener("input", () => {
         const tr = el.closest("tr");
         if (el.dataset.k === "ITEMID") autoFillOnPartId(tr);
-        // Price auto-fetch: when ID/Color/Condition change on a row whose
-        // Price is still empty, pull the BL 6-mo avg in the background.
         if (["ITEMID","COLOR","CONDITION"].includes(el.dataset.k)) autoPriceRow(tr);
+        // Mark that the price was typed by hand so auto-price doesn't overwrite it.
+        if (el.dataset.k === "PRICE") tr.dataset.priceManual = "1";
         recountGrid(); saveGridDebounced(); flagRow(tr);
       });
       el.addEventListener("focus", () => resetFillStepOnFocus(el.closest("tr")));
-      el.addEventListener("change", () => { recountGrid(); saveGridDebounced(); flagRow(el.closest("tr")); });
+      el.addEventListener("change", () => {
+        const tr = el.closest("tr");
+        // Condition is a <select> — only fires 'change' on selection, not 'input'.
+        if (["ITEMID","COLOR","CONDITION"].includes(el.dataset.k)) autoPriceRow(tr);
+        recountGrid(); saveGridDebounced(); flagRow(tr);
+      });
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey && el.tagName !== "TEXTAREA"){
           e.preventDefault();
@@ -1056,8 +1061,9 @@
     const t = setTimeout(() => {
       const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
       const no = get("ITEMID"); if (!no) return;
-      // Don't overwrite a price Dad already typed in.
-      if ((get("PRICE") || "").trim()) return;
+      // Only skip if Dad TYPED a price himself. If the price was auto-filled
+      // from the yellow defaults bar, override with the BL average.
+      if (tr.dataset.priceManual === "1" && (get("PRICE") || "").trim()) return;
       const cond = (get("CONDITION") || "N").toUpperCase();
       const colorRaw = get("COLOR");
       const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(no);
@@ -1076,8 +1082,8 @@
           priceEl.placeholder = "0.00";
           if (!j) return;
           const p = j.qty_avg_price > 0 ? j.qty_avg_price : j.avg_price;
-          // Guard: only set if Dad STILL hasn't typed something manually.
-          if (p > 0 && !((priceEl.value || "").trim())){
+          // Override unless Dad has flagged this row's price as manual.
+          if (p > 0 && tr.dataset.priceManual !== "1"){
             priceEl.value = Number(p).toFixed(3);
             flagRow(tr); recountGrid(); saveGridDebounced();
           }
