@@ -142,9 +142,8 @@
   display: block;
 }
 
-/* View-count bubble, bottom-right of the card cover. Hidden until data loads
-   so no "0 views" flash — the listing script adds .is-ready once it has a
-   count to show. */
+/* View-count bubble, bottom-right of each card cover. Always visible so
+   even posts at 0 views show the eye+count pill. */
 .view-badge {
   position: absolute;
   bottom: 8px;
@@ -162,12 +161,9 @@
   line-height: 1;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  opacity: 0;
-  transition: opacity 180ms ease;
   pointer-events: none;
   z-index: 2;
 }
-.view-badge.is-ready { opacity: 1; }
 .view-badge::before {
   content: "";
   display: inline-block;

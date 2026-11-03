@@ -433,7 +433,7 @@ def render_cards(posts):
         href = "/blog/%s/" % p["slug"]
         thumb = '<img src="/thumb/%s.png" alt="" loading="lazy" />' % p["slug"]
         slug_attr = html.escape(p["slug"], quote=True)
-        badge = '<span class="view-badge" data-slug="%s" aria-hidden="true"></span>' % slug_attr
+        badge = '<span class="view-badge" data-slug="%s" aria-label="0 views">0</span>' % slug_attr
         card = (
             '      <a href="{href}" class="blog-card">\n'
             '        <div class="blog-card-thumb">{thumb}{badge}</div>\n'
