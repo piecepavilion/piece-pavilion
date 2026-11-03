@@ -441,10 +441,13 @@ Promise.race([bothLoaded, timeout]).then(revealBanner);
       if (!isFinite(t)) return;
       const ageHours = (Date.now() - t) / 3_600_000;
       if (ageHours < windowHours) {
-        if (nav) nav.classList.add('is-fresh');
-        // Also mark the whole page so the ticker's "Latest Blog" pill
-        // pulses for the same 6h window. CSS targets .blog-fresh.
-        document.body.classList.add('blog-fresh');
+        // BrickLink-guide posts pulse BLUE instead of red. Detect by
+        // slug prefix so any bricklink-seller-guide-* or bricklink-blog-*
+        // launch gets the blue variant.
+        const slug = (data.slug || '').toLowerCase();
+        const isBl = /^bricklink-(seller-guide|blog)/.test(slug);
+        if (nav) nav.classList.add(isBl ? 'is-fresh-bl' : 'is-fresh');
+        document.body.classList.add(isBl ? 'blog-fresh-bl' : 'blog-fresh');
       }
     })
     .catch(() => {});

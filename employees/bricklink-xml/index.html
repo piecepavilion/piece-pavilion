@@ -260,6 +260,7 @@
       <div class="row">
         <button class="btn copy" id="copyBtn" disabled>&#128203; Copy to clipboard</button>
         <button class="btn ghost" id="downloadBtn" disabled>&darr; Download .xml</button>
+        <button class="btn ghost" id="clearOutBtn" type="button">Clear output</button>
       </div>
       <div class="stats" id="stats" style="display:none">
         <span class="stat">Items <strong id="statItems">0</strong></span>
@@ -720,6 +721,14 @@
   });
 
   // Copy & download
+  $("#clearOutBtn").addEventListener("click", () => {
+    outEl.value = "";
+    copyBtn.disabled = true; dlBtn.disabled = true;
+    document.getElementById("stats").style.display = "none";
+    const om = document.getElementById("outMsg");
+    om.className = "msg hidden"; om.textContent = "";
+  });
+
   copyBtn.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(outEl.value);

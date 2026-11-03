@@ -225,13 +225,19 @@ img { display: block; max-width: 100%; }
 .nav-blog.is-fresh .nav-blog-new {
   animation: navBlogBlink 2.6s ease-in-out infinite;
 }
+/* BrickLink-guide variant: same blink, blue instead of red. */
+.nav-blog.is-fresh-bl .nav-blog-new {
+  color: #1c8ad6;
+  animation: navBlogBlink 2.6s ease-in-out infinite;
+}
 @keyframes navBlogBlink {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.3; }
 }
 /* Respect "I don't want motion" OS setting */
 @media (prefers-reduced-motion: reduce) {
-  .nav-blog.is-fresh .nav-blog-new { animation: none; }
+  .nav-blog.is-fresh .nav-blog-new,
+  .nav-blog.is-fresh-bl .nav-blog-new { animation: none; }
 }
 
 .header-nav a {
@@ -764,12 +770,21 @@ img { display: block; max-width: 100%; }
 body.blog-fresh .ticker-pill.blog {
   animation: tickerBlogBlink 2.6s ease-in-out infinite;
 }
+/* BrickLink-guide variant: same pulse, blue instead of red. */
+body.blog-fresh-bl .ticker-pill.blog {
+  animation: tickerBlogBlinkBl 2.6s ease-in-out infinite;
+}
 @keyframes tickerBlogBlink {
   0%, 100% { background: #15151f; }
   50%      { background: var(--red); }
 }
+@keyframes tickerBlogBlinkBl {
+  0%, 100% { background: #15151f; }
+  50%      { background: #1c8ad6; }
+}
 @media (prefers-reduced-motion: reduce) {
-  body.blog-fresh .ticker-pill.blog { animation: none; }
+  body.blog-fresh .ticker-pill.blog,
+  body.blog-fresh-bl .ticker-pill.blog { animation: none; }
 }
 /* "Just Added" — white chip for a clean "fresh listing" vibe */
 .ticker-pill:not(.hot):not(.blog) {
