@@ -56,7 +56,16 @@ def parse_post(slug_dir):
         title = html.unescape(full_title.split("|")[0].strip())
     else:
         title = slug_dir.replace("-", " ").title()
-    desc = html.unescape(m(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']') or "")
+    # Capture must stop at the SAME quote type that opened the attribute, so a
+    # description containing a raw apostrophe inside a double-quoted meta tag
+    # does not get truncated at the apostrophe.
+    desc_m = re.search(
+        r'<meta\s+name=["\']description["\']\s+content=(?:"([^"]*)"|\'([^\']*)\')',
+        html_txt, re.I | re.S,
+    )
+    desc = ""
+    if desc_m:
+        desc = html.unescape((desc_m.group(1) or desc_m.group(2) or "").strip())
 
     # datePublished from JSON-LD; fall back to today only as last resort.
     date_iso = None
@@ -289,6 +298,28 @@ def render_related(related):
     )
 
 
+def set_body_category(html_txt, category):
+    """Ensure the <body> tag carries data-category="<cat>" so the per-category
+    CSS theme (notably body[data-category="seller-guide"]) fires on this post.
+    Hand-crafted older posts had a bare <body>; template-generated future posts
+    get {{CATEGORY}} substituted at publish time. This sweep keeps both in sync.
+    Returns new html (unchanged if the tag already matches)."""
+    if not category:
+        return html_txt
+    # If body already has data-category, replace its value.
+    pat1 = re.compile(r'(<body\b[^>]*\bdata-category=)(["\'])([^"\']*)\2',
+                      re.I)
+    if pat1.search(html_txt):
+        return pat1.sub(lambda m: m.group(1) + m.group(2) + category + m.group(2),
+                        html_txt, count=1)
+    # Else inject the attribute into the opening <body> tag.
+    pat2 = re.compile(r'<body\b([^>]*)>', re.I)
+    def _inject(m):
+        existing_attrs = m.group(1) or ""
+        return '<body data-category="' + category + '"' + existing_attrs + '>'
+    return pat2.sub(_inject, html_txt, count=1)
+
+
 def strip_legacy_more_posts(html_txt):
     """Older blog posts had a hand-coded `<!-- ===== MORE POSTS ===== -->`
     section with the same two stale posts in every article. The new related-
@@ -425,26 +456,32 @@ def main():
     if generated:
         print("Generated %d thumbnails" % generated)
 
-    # Inject "You might also like" block at the bottom of every blog article.
-    # Same-category posts first, then recent other posts. Keeps readers inside
-    # the blog and helps Google see internal links between posts (SEO).
+    # Inject "You might also like" block at the bottom of every blog article,
+    # and backfill the <body data-category="..."> attribute so the per-category
+    # theme CSS can target the post.
     updated_related = 0
+    updated_cat = 0
     for p in posts:
         related = pick_related(posts, p["slug"])
         block = render_related(related)
-        if not block:
-            continue
         post_path = os.path.join(BLOG_DIR, p["slug"], "index.html")
         if not os.path.isfile(post_path):
             continue
         with open(post_path, "r", encoding="utf-8") as f:
             txt = f.read()
-        new_txt, changed = inject_related(txt, block)
-        if changed:
+        # 1. Set body data-category.
+        cat = thumb_category(p["title"])
+        new_txt_cat = set_body_category(txt, cat)
+        # 2. Inject or refresh related-posts block.
+        new_txt, changed_rel = inject_related(new_txt_cat, block) if block else (new_txt_cat, False)
+        changed_cat = (new_txt_cat != txt)
+        if new_txt != txt:
             with open(post_path, "w", encoding="utf-8") as f:
                 f.write(new_txt)
-            updated_related += 1
+            if changed_rel: updated_related += 1
+            if changed_cat: updated_cat += 1
     print("Updated related-posts block in %d articles" % updated_related)
+    print("Updated body data-category in %d articles" % updated_cat)
 
     # Rebuild blog/index.html card section.
     with open(LISTING, "r", encoding="utf-8") as f:
