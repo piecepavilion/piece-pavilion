@@ -142,6 +142,77 @@
   display: block;
 }
 
+/* Top 5 Most Viewed widget — sits above the search + card grid. Hidden by
+   default; the listing script reveals it only after it has real counts to
+   show. */
+.top-posts {
+  max-width: 1100px;
+  margin: 0 auto 24px;
+  padding: 20px 24px 22px;
+  background: linear-gradient(135deg, rgba(227,0,11,0.06), rgba(0,0,0,0.03));
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+}
+.top-posts h2 {
+  margin: 0 0 12px;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: 0.01em;
+}
+.top-posts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  counter-reset: top-posts;
+}
+.top-posts-list li {
+  counter-increment: top-posts;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.top-posts-list li:last-child { border-bottom: 0; }
+.top-posts-list li::before {
+  content: counter(top-posts);
+  flex: 0 0 22px;
+  min-width: 22px;
+  text-align: center;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #e3000b;
+}
+.top-posts-list a {
+  flex: 1 1 auto;
+  color: #111;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-posts-list a:hover { text-decoration: underline; }
+.top-posts-list .count {
+  flex: 0 0 auto;
+  color: #555;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@media (max-width: 540px) {
+  .top-posts { padding: 16px 18px; margin-left: 12px; margin-right: 12px; }
+  .top-posts h2 { font-size: 1rem; }
+  .top-posts-list a { font-size: 0.88rem; }
+}
+
 /* View-count bubble — tiny round circle, bottom-right of each card cover.
    Just the count. No icon, no stretch. */
 .view-badge {

@@ -35,7 +35,7 @@
 
   <style>.announcement-banner{visibility:hidden}.announcement-banner.is-ready{visibility:visible}</style>
   <link rel="stylesheet" href="../style.css?v=20261029x" />
-  <link rel="stylesheet" href="blog.css?v=20261103a" />
+  <link rel="stylesheet" href="blog.css?v=20261103b" />
   <!-- Favicon / tab identity -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/logo-white.png" />
@@ -190,6 +190,12 @@
     <h1>Piece Pavilion Blog</h1>
     <p>Tips, guides, and stories from our BrickLink store</p>
   </div>
+
+  <!-- ===== TOP 5 MOST VIEWED ===== -->
+  <aside class="top-posts" id="top-posts" aria-labelledby="top-posts-title" hidden>
+    <h2 id="top-posts-title">Top 5 Most Viewed</h2>
+    <ol class="top-posts-list" id="top-posts-list"></ol>
+  </aside>
 
   <!-- ===== BLOG SEARCH ===== -->
   <div class="blog-search">
@@ -723,7 +729,7 @@
   })();
   </script>
 
-  <!-- View-count bubbles: one fetch populates every card's badge. -->
+  <!-- View counts: fills each card's badge AND the Top 5 widget in one fetch. -->
   <script>
   (function(){
     try {
@@ -735,12 +741,46 @@
       }).then(function(j){
         if (!j || !j.views) return;
         const counts = j.views;
+
+        function fmt(n){
+          return n >= 1000 ? (Math.round(n/100)/10) + "k" : String(n);
+        }
+
+        // Badge each card.
         badges.forEach(function(el){
           const slug = el.getAttribute("data-slug");
           const n = parseInt(counts[slug] || 0, 10);
-          el.textContent = n >= 1000 ? (Math.round(n/100)/10) + "k" : String(n);
+          el.textContent = fmt(n);
           el.setAttribute("aria-label", n + " views");
         });
+
+        // Build Top 5 from the cards already on the page.
+        const cards = Array.from(document.querySelectorAll('.blog-cards > .blog-card'));
+        const posts = cards.map(function(a){
+          const badge = a.querySelector('.view-badge[data-slug]');
+          const h2 = a.querySelector('h2');
+          if (!badge || !h2) return null;
+          const slug = badge.getAttribute('data-slug');
+          const n = parseInt(counts[slug] || 0, 10);
+          return { slug: slug, href: a.getAttribute('href'), title: h2.textContent.trim(), n: n };
+        }).filter(Boolean).filter(function(p){ return p.n > 0; });
+
+        posts.sort(function(a, b){ return b.n - a.n; });
+        const top = posts.slice(0, 5);
+        if (!top.length) return; // nothing to show, keep widget hidden
+
+        const list = document.getElementById('top-posts-list');
+        const wrap = document.getElementById('top-posts');
+        if (!list || !wrap) return;
+        list.innerHTML = top.map(function(p){
+          const safeTitle = p.title.replace(/[<>&"']/g, function(c){
+            return ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c];
+          });
+          const safeHref = encodeURI(p.href);
+          return '<li><a href="' + safeHref + '">' + safeTitle + '</a>' +
+                 '<span class="count">' + fmt(p.n) + ' views</span></li>';
+        }).join('');
+        wrap.hidden = false;
       }).catch(function(){});
     } catch (e) {}
   })();
