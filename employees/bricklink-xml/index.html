@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piece Pavilion — BrickLink Bulk Add XML</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#e3000b" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00;
+      --ink:#15151f; --slate:#3a4150; --mid:#6b7280; --muted:#9ca3af;
+      --line:#e6e8ec; --bg:#f5f6f9; --surface:#fff;
+      --green:#16a34a; --amber:#d97706; --radius:14px;
+      --shadow-sm:0 2px 8px rgba(20,22,29,.05);
+      --shadow:0 6px 18px rgba(20,22,29,.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+    h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700;letter-spacing:-.01em}
+    a{color:var(--red);text-decoration:none}
+
+    .topbar{background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px}
+    .topbar img{height:44px;width:auto;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+    .topbar .brand-wrap{line-height:1.15}
+    .topbar .brand-wrap .sub{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:1px}
+    .topbar h1{font-size:1.45rem;color:#fff}
+    .topbar .back{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:.88rem;border:1.5px solid rgba(255,255,255,.4);border-radius:50px;padding:8px 16px}
+    .topbar .back:hover{background:rgba(255,255,255,.14);border-color:#fff}
+
+    .wrap{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+    .lead{color:var(--slate);margin-bottom:20px;font-size:1.02rem;line-height:1.5}
+    .lead strong{color:var(--ink)}
+
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);margin-bottom:20px}
+    .card h2{font-size:1.15rem;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+    .card h2 .step{background:var(--red);color:#fff;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;font-family:'Nunito'}
+
+    textarea{width:100%;min-height:220px;border:1.5px solid var(--line);border-radius:10px;padding:14px;font-family:'JetBrains Mono','Consolas',monospace;font-size:.86rem;line-height:1.5;background:#fafbfd;color:var(--ink);resize:vertical}
+    textarea:focus{outline:none;border-color:var(--red);background:#fff}
+
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+    .btn{background:var(--red);color:#fff;border:none;padding:11px 20px;border-radius:50px;font-weight:800;font-size:.95rem;cursor:pointer;font-family:'Nunito';transition:background .15s,transform .1s}
+    .btn:hover{background:var(--red-dark)}
+    .btn:active{transform:translateY(1px)}
+    .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+    .btn.ghost:hover{border-color:var(--red);color:var(--red);background:#fff}
+    .btn.copy{background:var(--green)}
+    .btn.copy:hover{background:#128a3f}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    .file-pick{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px dashed var(--line);padding:11px 18px;border-radius:50px;font-weight:700;color:var(--slate);cursor:pointer;font-size:.9rem}
+    .file-pick:hover{border-color:var(--red);color:var(--red)}
+    .file-pick input{display:none}
+
+    .msg{margin-top:12px;padding:10px 14px;border-radius:10px;font-size:.9rem;font-weight:600}
+    .msg.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+    .msg.warn{background:#fffbeb;color:#854d0e;border:1px solid #fde68a}
+    .msg.err{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+    .msg.hidden{display:none}
+
+    .stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;color:var(--slate);font-size:.88rem}
+    .stat{background:#f3f4f6;padding:6px 12px;border-radius:50px;font-weight:700}
+    .stat strong{color:var(--ink);font-size:1rem;margin-left:4px}
+
+    details{margin-top:14px;background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+    details summary{cursor:pointer;font-weight:700;color:var(--slate);font-size:.9rem}
+    details[open] summary{margin-bottom:10px;color:var(--ink)}
+    details p{font-size:.85rem;color:var(--slate);line-height:1.55;margin-bottom:6px}
+    details code{background:#eef1f5;padding:1px 6px;border-radius:4px;font-size:.82rem}
+
+    @media(max-width:620px){.topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}.wrap{padding:20px 14px 40px}.card{padding:16px}}
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
+    <div class="brand-wrap">
+      <div class="sub">Piece Pavilion</div>
+      <h1>BrickLink Bulk Add XML</h1>
+    </div>
+    <a class="back" href="/employees/">&larr; Back to staff</a>
+  </div>
+
+  <div class="wrap">
+    <p class="lead">
+      Paste the XML from your Google Sheet (or upload the file). This cleans it up into the format
+      BrickLink's <strong>Bulk Upload</strong> accepts, so you can drop it into
+      BrickLink's "Verify Items" box without the usual format errors.
+    </p>
+
+    <!-- STEP 1: INPUT -->
+    <div class="card">
+      <h2><span class="step">1</span> Paste or upload</h2>
+      <textarea id="in" placeholder="Paste your sheet's XML here, or click the Upload button to pick an .xml file..."></textarea>
+      <div class="row">
+        <button class="btn" id="convertBtn">Convert &rarr;</button>
+        <label class="file-pick">
+          &#128194; Upload .xml file
+          <input type="file" id="file" accept=".xml,.txt,text/xml,text/plain" />
+        </label>
+        <button class="btn ghost" id="sampleBtn" type="button">Load sample</button>
+        <button class="btn ghost" id="clearBtn" type="button">Clear</button>
+      </div>
+      <div id="inMsg" class="msg hidden"></div>
+    </div>
+
+    <!-- STEP 2: OUTPUT -->
+    <div class="card">
+      <h2><span class="step">2</span> BrickLink-ready XML</h2>
+      <textarea id="out" readonly placeholder="Your clean XML will appear here..."></textarea>
+      <div class="row">
+        <button class="btn copy" id="copyBtn" disabled>&#128203; Copy to clipboard</button>
+        <button class="btn ghost" id="downloadBtn" disabled>&darr; Download .xml</button>
+      </div>
+      <div class="stats" id="stats" style="display:none">
+        <span class="stat">Items <strong id="statItems">0</strong></span>
+        <span class="stat">Total qty <strong id="statQty">0</strong></span>
+        <span class="stat">Total value <strong id="statVal">$0.00</strong></span>
+      </div>
+      <div id="outMsg" class="msg hidden"></div>
+    </div>
+
+    <details>
+      <summary>Required fields &amp; valid values (click to expand)</summary>
+      <p><strong>Required per item:</strong> <code>ITEMTYPE</code>, <code>ITEMID</code>, <code>MINQTY</code>, <code>PRICE</code>, <code>CONDITION</code>. For parts and minifigs you also need <code>COLOR</code> (color ID).</p>
+      <p><strong>ITEMTYPE:</strong> <code>P</code> = Part, <code>M</code> = Minifig, <code>S</code> = Set, <code>G</code> = Gear, <code>B</code> = Book, <code>C</code> = Catalog, <code>I</code> = Instruction, <code>O</code> = Original Box</p>
+      <p><strong>CONDITION:</strong> <code>N</code> = New, <code>U</code> = Used</p>
+      <p><strong>Optional:</strong> <code>DESCRIPTION</code>, <code>REMARKS</code>, <code>MYCOST</code>, <code>BULK</code>, <code>SALE</code>, <code>STOCKROOM</code>, <code>RETAIN</code>, <code>SUBCONDITION</code>, <code>TIERQTY1..3</code>, <code>TIERPRICE1..3</code>, <code>BUYERUSERNAME</code>, <code>NOTIFY</code></p>
+    </details>
+  </div>
+
+<script>
+(function(){
+  // ========== FIELD DEFS ==========
+  // Order BrickLink expects. Only emit tags that have a value.
+  const FIELD_ORDER = [
+    "ITEMTYPE","ITEMID","COLOR","MINQTY","PRICE","CONDITION","SUBCONDITION",
+    "DESCRIPTION","REMARKS","MYCOST","BULK","SALE","STOCKROOM","RETAIN",
+    "TIERQTY1","TIERPRICE1","TIERQTY2","TIERPRICE2","TIERQTY3","TIERPRICE3",
+    "BUYERUSERNAME","NOTIFY"
+  ];
+  // Common aliases from spreadsheet column headers (upper-cased, no spaces).
+  const ALIASES = {
+    "TYPE":"ITEMTYPE","ITEM_TYPE":"ITEMTYPE","ITEMTYPECODE":"ITEMTYPE",
+    "ID":"ITEMID","ITEM":"ITEMID","PART":"ITEMID","PARTNO":"ITEMID","PARTNUMBER":"ITEMID","SET":"ITEMID","SETNO":"ITEMID","NO":"ITEMID",
+    "COLORID":"COLOR","COLOUR":"COLOR","COLOURID":"COLOR",
+    "QTY":"MINQTY","QUANTITY":"MINQTY","QUANTITYMIN":"MINQTY","MIN":"MINQTY",
+    "COST":"MYCOST","MYCOSTEACH":"MYCOST",
+    "COND":"CONDITION","NEW":"CONDITION","USED":"CONDITION",
+    "DESC":"DESCRIPTION","NOTES":"REMARKS","REMARK":"REMARKS",
+    "BIN":"REMARKS","LOCATION":"REMARKS"
+  };
+  // Numeric fields BrickLink wants without quotes/currency symbols.
+  const NUMERIC = {"PRICE":1,"MYCOST":1,"MINQTY":1,"BULK":1,"SALE":1,"TIERQTY1":1,"TIERQTY2":1,"TIERQTY3":1,"TIERPRICE1":1,"TIERPRICE2":1,"TIERPRICE3":1};
+  const BOOLS = {"RETAIN":1,"STOCKROOM":1,"NOTIFY":1};
+
+  // ========== HELPERS ==========
+  function escXML(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+  }
+  function unesc(s){
+    if (!s) return "";
+    return String(s)
+      .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+      .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#39;/g,"'")
+      .replace(/&#x27;/g,"'").replace(/&nbsp;/g," ");
+  }
+  function normKey(k){
+    const u = String(k||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+    return ALIASES[u] || u;
+  }
+  function normNumeric(v){
+    if (v == null) return "";
+    const s = String(v).replace(/[$,\s]/g,"").trim();
+    if (!s) return "";
+    const n = parseFloat(s);
+    return isFinite(n) ? String(n) : "";
+  }
+  function normCondition(v){
+    const s = String(v||"").trim().toUpperCase();
+    if (!s) return "";
+    if (s[0] === "N") return "N";
+    if (s[0] === "U") return "U";
+    return "";
+  }
+  function normItemType(v){
+    const s = String(v||"").trim().toUpperCase();
+    if (!s) return "";
+    const first = s[0];
+    if ("PMSBGCIO".indexOf(first) >= 0) return first;
+    // Spell-out fallbacks
+    if (s.startsWith("PART")) return "P";
+    if (s.startsWith("MINI")) return "M";
+    if (s.startsWith("SET"))  return "S";
+    if (s.startsWith("GEAR")) return "G";
+    if (s.startsWith("BOOK")) return "B";
+    if (s.startsWith("CAT"))  return "C";
+    if (s.startsWith("INS"))  return "I";
+    if (s.startsWith("BOX"))  return "O";
+    return "";
+  }
+  function normBool(v){
+    const s = String(v||"").trim().toUpperCase();
+    if (!s) return "";
+    if (s === "Y" || s === "YES" || s === "TRUE" || s === "1") return "Y";
+    if (s === "N" || s === "NO"  || s === "FALSE"|| s === "0") return "N";
+    return "";
+  }
+
+  // ========== PARSE: XML MODE ==========
+  function parseXmlItems(raw){
+    const items = [];
+    // Strip any XML prolog / BOM / Google wrapper
+    let txt = raw.replace(/^﻿/,"");
+    // Pull every <ITEM>...</ITEM> block (case-insensitive)
+    const itemRe = /<ITEM\b[^>]*>([\s\S]*?)<\/ITEM\s*>/gi;
+    let m;
+    while ((m = itemRe.exec(txt)) !== null){
+      const inner = m[1];
+      const rec = {};
+      const tagRe = /<([A-Za-z][A-Za-z0-9_]*)\s*[^>]*>([\s\S]*?)<\/\1\s*>/g;
+      let t;
+      while ((t = tagRe.exec(inner)) !== null){
+        rec[normKey(t[1])] = unesc(t[2]).trim();
+      }
+      if (Object.keys(rec).length) items.push(rec);
+    }
+    return items;
+  }
+
+  // ========== PARSE: TSV/CSV MODE ==========
+  function splitCsvLine(line){
+    // Simple CSV splitter supporting quoted fields with embedded commas
+    const out = [];
+    let cur = "", inQ = false;
+    for (let i=0;i<line.length;i++){
+      const c = line[i];
+      if (inQ){
+        if (c === '"'){
+          if (line[i+1] === '"'){ cur += '"'; i++; }
+          else { inQ = false; }
+        } else { cur += c; }
+      } else {
+        if (c === ','){ out.push(cur); cur = ""; }
+        else if (c === '"' && cur === ""){ inQ = true; }
+        else { cur += c; }
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+  function parseTable(raw){
+    const lines = raw.replace(/\r\n?/g,"\n").split("\n").filter(l=>l.trim().length);
+    if (lines.length < 2) return [];
+    const sep = (lines[0].indexOf("\t") >= 0) ? "\t" : ",";
+    const header = (sep === "\t") ? lines[0].split("\t") : splitCsvLine(lines[0]);
+    const keys = header.map(normKey);
+    const items = [];
+    for (let i=1;i<lines.length;i++){
+      const cells = (sep === "\t") ? lines[i].split("\t") : splitCsvLine(lines[i]);
+      const rec = {};
+      for (let k=0;k<keys.length;k++){
+        if (keys[k] && cells[k] != null) rec[keys[k]] = String(cells[k]).trim();
+      }
+      if (rec.ITEMID || rec.ITEMTYPE) items.push(rec);
+    }
+    return items;
+  }
+
+  // ========== BUILD CLEAN XML ==========
+  function cleanItem(rec){
+    const out = {};
+    if (rec.ITEMTYPE)    out.ITEMTYPE   = normItemType(rec.ITEMTYPE);
+    if (rec.ITEMID)      out.ITEMID     = String(rec.ITEMID).trim();
+    if (rec.COLOR)       out.COLOR      = String(parseInt(rec.COLOR,10) || rec.COLOR).trim();
+    if (rec.MINQTY)      out.MINQTY     = normNumeric(rec.MINQTY);
+    if (rec.PRICE)       out.PRICE      = normNumeric(rec.PRICE);
+    if (rec.CONDITION)   out.CONDITION  = normCondition(rec.CONDITION);
+    if (rec.SUBCONDITION)out.SUBCONDITION = String(rec.SUBCONDITION).trim().toUpperCase();
+    if (rec.DESCRIPTION) out.DESCRIPTION = String(rec.DESCRIPTION).trim();
+    if (rec.REMARKS)     out.REMARKS    = String(rec.REMARKS).trim();
+    if (rec.MYCOST)      out.MYCOST     = normNumeric(rec.MYCOST);
+    if (rec.BULK)        out.BULK       = normNumeric(rec.BULK);
+    if (rec.SALE)        out.SALE       = normNumeric(rec.SALE);
+    if (rec.STOCKROOM)   out.STOCKROOM  = normBool(rec.STOCKROOM);
+    if (rec.RETAIN)      out.RETAIN     = normBool(rec.RETAIN);
+    if (rec.NOTIFY)      out.NOTIFY     = normBool(rec.NOTIFY);
+    for (let i=1;i<=3;i++){
+      if (rec["TIERQTY"+i])   out["TIERQTY"+i]   = normNumeric(rec["TIERQTY"+i]);
+      if (rec["TIERPRICE"+i]) out["TIERPRICE"+i] = normNumeric(rec["TIERPRICE"+i]);
+    }
+    if (rec.BUYERUSERNAME) out.BUYERUSERNAME = String(rec.BUYERUSERNAME).trim();
+    // Strip empties
+    Object.keys(out).forEach(k=>{ if (out[k] === "" || out[k] == null) delete out[k]; });
+    return out;
+  }
+
+  function validate(items){
+    const warnings = [];
+    const errors = [];
+    items.forEach((it, idx) => {
+      const n = idx + 1;
+      if (!it.ITEMTYPE)  errors.push("Item "+n+": missing ITEMTYPE");
+      if (!it.ITEMID)    errors.push("Item "+n+": missing ITEMID");
+      if (!it.MINQTY)    errors.push("Item "+n+": missing MINQTY");
+      if (!it.PRICE)     errors.push("Item "+n+": missing PRICE");
+      if (!it.CONDITION) errors.push("Item "+n+": missing CONDITION");
+      if ((it.ITEMTYPE === "P" || it.ITEMTYPE === "M") && !it.COLOR){
+        warnings.push("Item "+n+" ("+it.ITEMID+"): no COLOR — BrickLink will reject parts/minifigs without one");
+      }
+    });
+    return { warnings, errors };
+  }
+
+  function buildXML(items){
+    const lines = ["<INVENTORY>"];
+    items.forEach(it => {
+      lines.push("  <ITEM>");
+      FIELD_ORDER.forEach(k => {
+        if (it[k] !== undefined && it[k] !== "") {
+          lines.push("    <"+k+">"+escXML(it[k])+"</"+k+">");
+        }
+      });
+      lines.push("  </ITEM>");
+    });
+    lines.push("</INVENTORY>");
+    return lines.join("\n");
+  }
+
+  // ========== UI ==========
+  const $ = (s) => document.querySelector(s);
+  const inEl = $("#in"), outEl = $("#out");
+  const inMsg = $("#inMsg"), outMsg = $("#outMsg");
+  const copyBtn = $("#copyBtn"), dlBtn = $("#downloadBtn");
+
+  function setMsg(el, kind, html){
+    el.className = "msg " + kind;
+    el.innerHTML = html;
+  }
+  function hideMsg(el){ el.className = "msg hidden"; el.innerHTML = ""; }
+
+  function convert(){
+    const raw = inEl.value.trim();
+    hideMsg(inMsg); hideMsg(outMsg);
+    outEl.value = "";
+    copyBtn.disabled = true; dlBtn.disabled = true;
+    $("#stats").style.display = "none";
+
+    if (!raw){
+      setMsg(inMsg, "err", "Nothing to convert &mdash; paste or upload first.");
+      return;
+    }
+
+    // Try XML parse first (works even if sheet exported broken XML, since we
+    // only need <ITEM> blocks). If no items, fall back to CSV/TSV.
+    let items = parseXmlItems(raw);
+    let mode = "XML";
+    if (items.length === 0){
+      items = parseTable(raw);
+      mode = "table (CSV/TSV)";
+    }
+    if (items.length === 0){
+      setMsg(inMsg, "err",
+        "Couldn't find any items. The paste needs either &lt;ITEM&gt;...&lt;/ITEM&gt; blocks, "+
+        "or a header row like <code>ITEMTYPE,ITEMID,COLOR,MINQTY,PRICE,CONDITION</code>."
+      );
+      return;
+    }
+
+    const cleaned = items.map(cleanItem);
+    const { warnings, errors } = validate(cleaned);
+    const xml = buildXML(cleaned);
+    outEl.value = xml;
+    copyBtn.disabled = false;
+    dlBtn.disabled = false;
+
+    // Stats
+    let totalQty = 0, totalVal = 0;
+    cleaned.forEach(it => {
+      const q = parseFloat(it.MINQTY) || 0;
+      const p = parseFloat(it.PRICE)  || 0;
+      totalQty += q;
+      totalVal += q * p;
+    });
+    $("#statItems").textContent = cleaned.length;
+    $("#statQty").textContent = totalQty;
+    $("#statVal").textContent = "$" + totalVal.toFixed(2);
+    $("#stats").style.display = "flex";
+
+    // Feedback
+    const parts = ["Found <strong>" + cleaned.length + "</strong> item"+(cleaned.length===1?"":"s")+" via "+mode+"."];
+    if (warnings.length) parts.push("<br/>&#9888; " + warnings.join("<br/>&#9888; "));
+    if (errors.length){
+      setMsg(outMsg, "err",
+        parts.join("") + "<br/><strong>Fix these before uploading:</strong><br/>" + errors.join("<br/>"));
+    } else if (warnings.length){
+      setMsg(outMsg, "warn", parts.join(""));
+    } else {
+      setMsg(outMsg, "ok", parts.join("") + "<br/>Ready to paste into BrickLink's Bulk Upload.");
+    }
+  }
+
+  // Wire buttons
+  $("#convertBtn").addEventListener("click", convert);
+  $("#clearBtn").addEventListener("click", () => {
+    inEl.value = ""; outEl.value = "";
+    hideMsg(inMsg); hideMsg(outMsg);
+    copyBtn.disabled = true; dlBtn.disabled = true;
+    $("#stats").style.display = "none";
+    inEl.focus();
+  });
+  $("#sampleBtn").addEventListener("click", () => {
+    inEl.value = [
+      "<INVENTORY>",
+      "<ITEM><ITEMTYPE>P</ITEMTYPE><ITEMID>3001</ITEMID><COLOR>5</COLOR><MINQTY>10</MINQTY><PRICE>0.08</PRICE><CONDITION>U</CONDITION><REMARKS>Bin A3</REMARKS></ITEM>",
+      "<ITEM><ITEMTYPE>P</ITEMTYPE><ITEMID>3003</ITEMID><COLOR>11</COLOR><MINQTY>25</MINQTY><PRICE>0.05</PRICE><CONDITION>U</CONDITION><REMARKS>Bin A4</REMARKS></ITEM>",
+      "<ITEM><ITEMTYPE>M</ITEMTYPE><ITEMID>sw0001a</ITEMID><MINQTY>1</MINQTY><PRICE>12.00</PRICE><CONDITION>N</CONDITION></ITEM>",
+      "</INVENTORY>"
+    ].join("\n");
+    convert();
+  });
+
+  // File upload
+  $("#file").addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      inEl.value = String(reader.result || "");
+      convert();
+    };
+    reader.onerror = () => setMsg(inMsg, "err", "Couldn't read that file.");
+    reader.readAsText(f);
+    e.target.value = ""; // allow re-selecting the same file
+  });
+
+  // Copy & download
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(outEl.value);
+      const old = copyBtn.innerHTML;
+      copyBtn.innerHTML = "&#10003; Copied!";
+      setTimeout(() => { copyBtn.innerHTML = old; }, 1600);
+    } catch (err) {
+      // Fallback
+      outEl.select();
+      document.execCommand && document.execCommand("copy");
+    }
+  });
+  dlBtn.addEventListener("click", () => {
+    const blob = new Blob([outEl.value], {type:"text/xml"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bricklink-bulk-" + new Date().toISOString().slice(0,10) + ".xml";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // Keyboard: Ctrl/Cmd+Enter to convert
+  inEl.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") convert();
+  });
+})();
+</script>
+</body>
+</html>
