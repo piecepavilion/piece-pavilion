@@ -80,20 +80,42 @@
     .grid-tab.on{color:var(--red);border-bottom-color:var(--red)}
     .mode-panel{display:none}
     .mode-panel.on{display:block}
+
+    /* Defaults bar — set once at top, applies to every new row. */
+    .defaults-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 14px;background:#fffbea;border:1px solid #fde68a;border-radius:10px;margin-bottom:14px;font-size:.88rem}
+    .defaults-bar .d-label{font-weight:800;color:#854d0e;letter-spacing:.03em;text-transform:uppercase;font-size:.78rem;margin-right:4px}
+    .defaults-bar .d-field{display:flex;gap:6px;align-items:center}
+    .defaults-bar .d-field label{font-weight:700;color:var(--slate);font-size:.84rem}
+    .defaults-bar input, .defaults-bar select{border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-family:'Nunito';font-size:.88rem;font-weight:700;background:#fff;color:var(--ink);min-width:70px}
+    .defaults-bar input:focus, .defaults-bar select:focus{outline:none;border-color:var(--red)}
+    .defaults-bar .d-note{color:var(--mid);font-size:.78rem;margin-left:auto}
+
     .bl-grid{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.88rem;table-layout:fixed}
     .bl-grid th{background:#15151f;color:#fff;padding:9px 10px;text-align:left;font-weight:800;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;border-right:1px solid #2a2a3a}
     .bl-grid th:last-child{border-right:none}
     .bl-grid td{padding:0;border-top:1px solid var(--line);border-right:1px solid var(--line);background:#fff}
     .bl-grid td:last-child{border-right:none}
     .bl-grid tbody tr:nth-child(odd) td{background:#fafbfd}
+    .bl-grid tbody tr.row-complete td{background:#f0fdf4!important}
+    .bl-grid tbody tr.row-err td{background:#fef2f2!important}
     .bl-grid td input, .bl-grid td textarea, .bl-grid td select{width:100%;border:none;background:transparent;padding:8px 10px;font-family:'Nunito';font-size:.88rem;color:var(--ink);resize:none;outline:none}
     .bl-grid td textarea{min-height:36px;line-height:1.3;font-family:'Nunito'}
     .bl-grid td input:focus, .bl-grid td textarea:focus, .bl-grid td select:focus{background:#fff8d6;box-shadow:inset 0 0 0 2px var(--yellow)}
     .bl-grid td.num input{text-align:right;font-family:'JetBrains Mono','Consolas',monospace}
     .bl-grid-wrap{overflow-x:auto;margin-top:4px}
     .grid-col-rownum{width:38px;background:#f3f4f6!important;color:var(--muted);text-align:center;font-weight:700;font-family:'JetBrains Mono','Consolas',monospace;font-size:.8rem;padding:6px 2px!important;user-select:none}
+    .grid-col-del{width:32px;text-align:center!important;padding:0!important}
+    .grid-col-del button{background:transparent;border:none;color:var(--muted);font-size:1.1rem;font-weight:700;width:100%;height:100%;padding:8px 0;cursor:pointer;line-height:1}
+    .grid-col-del button:hover{color:var(--red);background:#fef2f2}
     .row-tools{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
     .row-tools .hint-mono{font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;color:var(--muted)}
+
+    /* Running totals footer. */
+    .grid-totals{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;padding:12px 16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:.9rem;font-weight:700;color:var(--ink)}
+    .grid-totals .tot{display:flex;gap:6px;align-items:center}
+    .grid-totals .tot .label{color:var(--slate);font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.03em}
+    .grid-totals .tot .val{color:var(--red);font-weight:900;font-family:'JetBrains Mono','Consolas',monospace;font-size:1rem}
+    .grid-totals .saved{margin-left:auto;color:var(--mid);font-size:.78rem;font-weight:600;font-style:italic}
 
     @media(max-width:620px){.topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}.wrap{padding:20px 14px 40px}.card{padding:16px}}
   </style>
@@ -130,29 +152,64 @@
         <p style="color:var(--mid);font-size:.9rem;margin-bottom:12px">
           One part per row. <strong>Part ID</strong>, <strong>Color</strong>, <strong>Qty</strong>, and <strong>Price</strong> are required;
           Remarks and Description are optional. Press <kbd>Tab</kbd> to move across, <kbd>Enter</kbd> to drop a row.
+          Everything auto-saves to this browser.
         </p>
+
+        <!-- Defaults bar — apply once, fill every empty row. -->
+        <div class="defaults-bar">
+          <span class="d-label">Defaults:</span>
+          <span class="d-field">
+            <label>Color</label>
+            <input id="defColor" type="text" placeholder="e.g. 5 or red" size="10" />
+          </span>
+          <span class="d-field">
+            <label>Condition</label>
+            <select id="defCondition">
+              <option value="">—</option>
+              <option value="N">New</option>
+              <option value="U">Used</option>
+            </select>
+          </span>
+          <span class="d-field">
+            <label>Price</label>
+            <input id="defPrice" type="text" inputmode="decimal" placeholder="0.00" size="6" />
+          </span>
+          <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill empties</button>
+          <span class="d-note">Fills blank cells on every row at once.</span>
+        </div>
+
         <div class="bl-grid-wrap">
           <table class="bl-grid" id="blGrid">
             <thead>
               <tr>
                 <th class="grid-col-rownum">#</th>
-                <th style="width:14%">Part ID</th>
+                <th style="width:13%">Part ID</th>
                 <th style="width:10%">Color</th>
-                <th style="width:8%">Qty</th>
-                <th style="width:10%">Price</th>
-                <th style="width:10%">Condition</th>
-                <th style="width:24%">Description</th>
+                <th style="width:7%">Qty</th>
+                <th style="width:9%">Price</th>
+                <th style="width:9%">Condition</th>
+                <th style="width:22%">Description</th>
                 <th>My Remarks</th>
+                <th class="grid-col-del"></th>
               </tr>
             </thead>
             <tbody id="blGridBody"></tbody>
           </table>
         </div>
+
+        <!-- Running totals. -->
+        <div class="grid-totals" id="gridTotals">
+          <span class="tot"><span class="label">Rows</span><span class="val" id="totRows">0</span></span>
+          <span class="tot"><span class="label">Qty</span><span class="val" id="totQty">0</span></span>
+          <span class="tot"><span class="label">Value</span><span class="val" id="totValue">$0.00</span></span>
+          <span class="saved" id="totSaved">Auto-saved</span>
+        </div>
+
         <div class="row-tools">
           <button class="btn" id="buildFromGridBtn" type="button">Build XML &rarr;</button>
+          <button class="btn ghost" id="pasteRowsBtn" type="button">&#128203; Paste from spreadsheet</button>
           <button class="btn ghost" id="addRowsBtn" type="button">+ 25 more rows</button>
           <button class="btn ghost" id="clearGridBtn" type="button">Clear grid</button>
-          <span class="hint-mono" id="gridCount">0 filled rows</span>
         </div>
         <div id="gridMsg" class="msg hidden"></div>
       </div>
@@ -706,7 +763,11 @@
   // ========== GRID ==========
   const GRID_BODY = document.getElementById("blGridBody");
   const GRID_MSG  = document.getElementById("gridMsg");
-  const GRID_COUNT = document.getElementById("gridCount");
+  const T_ROWS   = document.getElementById("totRows");
+  const T_QTY    = document.getElementById("totQty");
+  const T_VALUE  = document.getElementById("totValue");
+  const T_SAVED  = document.getElementById("totSaved");
+  const SAVE_KEY = "pp_bl_grid_v2";
 
   function makeRow(n){
     const tr = document.createElement("tr");
@@ -722,8 +783,20 @@
         '<option value="U">Used</option>' +
       '</select></td>' +
       '<td><textarea data-k="DESCRIPTION" rows="1" placeholder="public description"></textarea></td>' +
-      '<td><textarea data-k="REMARKS" rows="1" placeholder="internal note"></textarea></td>';
+      '<td><textarea data-k="REMARKS" rows="1" placeholder="internal note"></textarea></td>' +
+      '<td class="grid-col-del"><button type="button" title="Delete this row">&times;</button></td>';
+    tr.querySelector(".grid-col-del button").addEventListener("click", () => {
+      tr.remove();
+      renumberRows();
+      recountGrid();
+      saveGrid();
+    });
     return tr;
+  }
+  function renumberRows(){
+    Array.from(GRID_BODY.children).forEach((tr, i) => {
+      tr.firstElementChild.textContent = String(i + 1);
+    });
   }
   function addRows(n){
     const start = GRID_BODY.children.length;
@@ -735,8 +808,8 @@
     // Press Enter on any cell to add a fresh row below if we're on the last one.
     GRID_BODY.querySelectorAll("input, textarea, select").forEach((el) => {
       if (el.__wired) return; el.__wired = true;
-      el.addEventListener("input", recountGrid);
-      el.addEventListener("change", recountGrid);
+      el.addEventListener("input", () => { recountGrid(); saveGridDebounced(); flagRow(el.closest("tr")); });
+      el.addEventListener("change", () => { recountGrid(); saveGridDebounced(); flagRow(el.closest("tr")); });
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey && el.tagName !== "TEXTAREA"){
           e.preventDefault();
@@ -748,22 +821,158 @@
       });
     });
   }
+  function flagRow(tr){
+    if (!tr) return;
+    const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
+    const partId = get("ITEMID");
+    if (!partId){
+      tr.classList.remove("row-complete"); tr.classList.remove("row-err");
+      return;
+    }
+    const ok = partId && get("QTY") && get("PRICE") && get("CONDITION");
+    tr.classList.toggle("row-complete", ok);
+    tr.classList.toggle("row-err", !ok);
+  }
   function recountGrid(){
-    let filled = 0;
+    let rows = 0, qty = 0, value = 0;
     GRID_BODY.querySelectorAll("tr").forEach((tr) => {
-      const v = tr.querySelector('[data-k="ITEMID"]').value.trim();
-      if (v) filled++;
+      const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
+      const id = get("ITEMID");
+      if (!id) return;
+      rows++;
+      const q = parseFloat(get("QTY")) || 0;
+      const p = parseFloat(get("PRICE")) || 0;
+      qty += q;
+      value += q * p;
     });
-    GRID_COUNT.textContent = filled + " filled row" + (filled === 1 ? "" : "s");
+    T_ROWS.textContent = rows;
+    T_QTY.textContent = qty.toLocaleString();
+    T_VALUE.textContent = "$" + value.toFixed(2);
   }
   function clearGrid(){
+    if (!confirm("Clear every row? This can't be undone.")) return;
     GRID_BODY.innerHTML = "";
     addRows(30);
     GRID_MSG.className = "msg hidden"; GRID_MSG.textContent = "";
+    saveGrid();
   }
   function gridMsg(kind, text){
     GRID_MSG.className = "msg " + kind;
     GRID_MSG.textContent = text;
+  }
+
+  // ========== AUTO-SAVE ==========
+  let saveTimer = null;
+  function saveGridDebounced(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveGrid, 400);
+  }
+  function saveGrid(){
+    try {
+      const rows = [];
+      GRID_BODY.querySelectorAll("tr").forEach((tr) => {
+        const r = {};
+        tr.querySelectorAll("[data-k]").forEach((el) => { r[el.dataset.k] = el.value || ""; });
+        rows.push(r);
+      });
+      // Only save if at least one field has content, so an empty grid doesn't clobber.
+      const hasContent = rows.some((r) => Object.values(r).some((v) => (v || "").trim() !== ""));
+      if (hasContent){
+        localStorage.setItem(SAVE_KEY, JSON.stringify({ rows, ts: Date.now() }));
+        T_SAVED.textContent = "Auto-saved · " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+      } else {
+        localStorage.removeItem(SAVE_KEY);
+        T_SAVED.textContent = "Auto-saved";
+      }
+    } catch(e){
+      T_SAVED.textContent = "Save failed";
+    }
+  }
+  function loadGrid(){
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data.rows || !Array.isArray(data.rows)) return false;
+      GRID_BODY.innerHTML = "";
+      data.rows.forEach((r, i) => {
+        const tr = makeRow(i + 1);
+        Object.entries(r).forEach(([k, v]) => {
+          const el = tr.querySelector('[data-k="'+k+'"]');
+          if (el) el.value = v;
+        });
+        GRID_BODY.appendChild(tr);
+        flagRow(tr);
+      });
+      wireGrid();
+      recountGrid();
+      return true;
+    } catch(e){ return false; }
+  }
+
+  // ========== DEFAULTS ==========
+  function applyDefaults(){
+    const dc = (document.getElementById("defColor").value || "").trim();
+    const dcond = (document.getElementById("defCondition").value || "").trim();
+    const dprice = (document.getElementById("defPrice").value || "").trim();
+    let touched = 0;
+    GRID_BODY.querySelectorAll("tr").forEach((tr) => {
+      const partId = (tr.querySelector('[data-k="ITEMID"]').value || "").trim();
+      if (!partId) return;  // only fill rows that have a Part ID
+      const fill = (k, v) => {
+        if (!v) return;
+        const el = tr.querySelector('[data-k="'+k+'"]');
+        if (el && !(el.value || "").trim()){ el.value = v; touched++; }
+      };
+      fill("COLOR", dc); fill("CONDITION", dcond); fill("PRICE", dprice);
+      flagRow(tr);
+    });
+    recountGrid(); saveGrid();
+    gridMsg("ok", "Filled " + touched + " empty cell" + (touched === 1 ? "" : "s") + " from defaults.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2500);
+  }
+  // Save defaults so they persist too.
+  ["defColor","defCondition","defPrice"].forEach((id) => {
+    const el = document.getElementById(id);
+    try { el.value = localStorage.getItem("pp_bl_" + id) || ""; } catch(e){}
+    el.addEventListener("change", () => {
+      try { localStorage.setItem("pp_bl_" + id, el.value); } catch(e){}
+    });
+  });
+
+  // ========== PASTE MULTI-ROW ==========
+  function pasteFromClipboard(){
+    const text = prompt("Paste rows here (tab/comma separated). Expected order: Part ID, Color, Qty, Price, Condition, Description, My Remarks");
+    if (!text) return;
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const KEYS = ["ITEMID","COLOR","QTY","PRICE","CONDITION","DESCRIPTION","REMARKS"];
+    let added = 0;
+    lines.forEach((line) => {
+      // Detect delimiter: tab preferred (Excel copy), then comma.
+      const cols = line.indexOf("\t") >= 0 ? line.split("\t") : line.split(",");
+      if (!cols[0] || !cols[0].trim()) return;
+      // Find first empty row, or append a new one.
+      let target = null;
+      GRID_BODY.querySelectorAll("tr").forEach((tr) => {
+        if (target) return;
+        const id = (tr.querySelector('[data-k="ITEMID"]').value || "").trim();
+        if (!id) target = tr;
+      });
+      if (!target){
+        addRows(1);
+        target = GRID_BODY.lastElementChild;
+      }
+      cols.forEach((v, i) => {
+        if (i >= KEYS.length) return;
+        const el = target.querySelector('[data-k="'+KEYS[i]+'"]');
+        if (el) el.value = v.trim();
+      });
+      flagRow(target);
+      added++;
+    });
+    recountGrid(); saveGrid();
+    gridMsg("ok", "Pasted " + added + " row" + (added === 1 ? "" : "s") + ".");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2500);
   }
 
   // Build XML from the grid rows, drop it in the #in textarea, run convert.
@@ -814,9 +1023,11 @@
   document.getElementById("buildFromGridBtn").addEventListener("click", buildFromGrid);
   document.getElementById("addRowsBtn").addEventListener("click", () => addRows(25));
   document.getElementById("clearGridBtn").addEventListener("click", clearGrid);
+  document.getElementById("applyDefaultsBtn").addEventListener("click", applyDefaults);
+  document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
 
-  // Start with 30 blank rows.
-  addRows(30);
+  // Try to restore from last session; otherwise start with 30 blank rows.
+  if (!loadGrid()) addRows(30);
 })();
 </script>
 </body>
