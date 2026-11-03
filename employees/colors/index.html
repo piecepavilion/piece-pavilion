@@ -250,57 +250,83 @@
     }
   }
 
+  // Static catalog loaded once per session from /employees/colors/catalog.json.
+  // 158 common reseller parts × their colors, straight from BrickLink Store API,
+  // baked at build time. Means Color Lookup works without the Worker.
+  let CATALOG = null;      // { parts: [...], colors: {id: {name, hex}} }
+  let CATALOG_PROMISE = null;
+  async function catalog(){
+    if (CATALOG) return CATALOG;
+    if (!CATALOG_PROMISE){
+      CATALOG_PROMISE = fetch("/employees/colors/catalog.json", { credentials: "include" })
+        .then((r) => r.ok ? r.json() : null)
+        .then((j) => { CATALOG = j; return j; })
+        .catch(() => null);
+    }
+    return CATALOG_PROMISE;
+  }
+
   async function lookupByNumber(no){
-    setMsg("info", "Looking up part "+esc(no)+" on BrickLink...");
-    const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(no), { credentials: "include" });
-    if (r.status === 404){
-      // Direct lookup missed -- if the input has no digits mixed with letters,
-      // it was probably a word, so fall back to name search.
-      setMsg("info", 'No part exactly matches "'+esc(no)+'". Trying a name search...');
-      await lookupByName(no);
-      return;
+    setMsg("info", "Looking up part "+esc(no)+"...");
+    const cat = await catalog();
+    if (cat && cat.parts){
+      // Case-insensitive match. BL part numbers are mixed-case ('3068b').
+      const noLc = no.toLowerCase();
+      const hit = cat.parts.find((p) => (p.no || "").toLowerCase() === noLc);
+      if (hit){
+        if (!hit.colors || !hit.colors.length){
+          setMsg("info", 'No color variants on record for "'+esc(hit.no)+'".');
+          return;
+        }
+        setMsg("ok", "Showing "+hit.colors.length+" color"+(hit.colors.length===1?"":"s")+" for "+esc(hit.no)+".");
+        renderPart({ no: hit.no, name: hit.name, colors: hit.colors });
+        setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
+        return;
+      }
     }
-    if (!r.ok){
-      const j = await r.json().catch(()=>({}));
-      setMsg("err", "Lookup failed: " + esc(j.error || r.statusText));
-      return;
-    }
-    const part = await r.json();
-    if (!part.colors || !part.colors.length){
-      setMsg("info", 'BrickLink has no color variants on record for "'+esc(part.no)+'".');
-      return;
-    }
-    setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+"." + (part.cached ? ' <small>(from cache)</small>' : ""));
-    renderPart(part);
-    setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
+    // Not in the static catalog — try the Worker as a fallback for exotic parts.
+    try {
+      const r = await fetch("/employees/api/colors/part?no=" + encodeURIComponent(no), { credentials: "include" });
+      if (r.ok){
+        const part = await r.json();
+        if (part && part.colors && part.colors.length){
+          setMsg("ok", "Showing "+part.colors.length+" color"+(part.colors.length===1?"":"s")+" for "+esc(part.no)+".");
+          renderPart(part);
+          setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
+          return;
+        }
+      }
+    } catch(_) {}
+    // Last resort: name search against the static catalog.
+    setMsg("info", '"'+esc(no)+'" is not in the baked-in catalog. Trying a name search...');
+    await lookupByName(no);
   }
 
   async function lookupByName(q){
-    setMsg("info", "Searching BrickLink for \""+esc(q)+"\"...");
-    const r = await fetch("/employees/api/colors/search?q=" + encodeURIComponent(q), { credentials: "include" });
-    if (!r.ok){
-      if (r.status === 404 || r.status === 501) {
-        setMsg("err",
-          'Name search is not live on the Worker yet. In PowerShell, paste this one line: '+
-          '<code style="background:#fff;padding:2px 6px;border-radius:4px;font-size:.82rem">'+
-          'cd C:\\Users\\dbrody\\piece-pavilion-ops\\partout-worker; npx.cmd wrangler deploy'+
-          '</code>'+
-          ' Until then, exact part numbers (3005, 3001, 2412b) still work.'
-        );
-      } else {
-        const j = await r.json().catch(()=>({}));
-        setMsg("err", "Search failed: " + esc(j.error || r.statusText));
-      }
+    setMsg("info", "Searching for \""+esc(q)+"\"...");
+    const cat = await catalog();
+    if (!cat || !cat.parts){
+      setMsg("err", 'Catalog file is missing. Refresh the page, or ask Dad to redeploy /employees/colors/catalog.json.');
       return;
     }
-    const j = await r.json();
-    const items = j.items || [];
-    if (!items.length){
-      setMsg("info", 'No parts matched "'+esc(q)+'". Try fewer words, or use spaces around <em>x</em> ("brick 1 x 1" not "brick 1x1").');
+    // Normalize: lowercase, collapse whitespace, strip "x" spacing variants so
+    // "brick 1x1" and "brick 1 x 1" both hit "brick 1 x 1".
+    const norm = (s) => (s || "").toLowerCase()
+      .replace(/\s+/g, " ")
+      .replace(/(\d)x(\d)/g, "$1 x $2")
+      .trim();
+    const needle = norm(q);
+    const terms = needle.split(" ").filter(Boolean);
+    const matches = cat.parts.filter((p) => {
+      const hay = norm(p.name) + " " + (p.no || "").toLowerCase();
+      return terms.every((t) => hay.includes(t));
+    }).slice(0, 25);
+    if (!matches.length){
+      setMsg("info", 'No parts in the catalog matched "'+esc(q)+'". Try fewer words — "brick 1 x 1", "tile 2 x 2".');
       return;
     }
-    setMsg("ok", "Found "+items.length+" match"+(items.length===1?"":"es")+" for \""+esc(q)+"\". Click any to see every color it comes in.");
-    renderSearchResults(items);
+    setMsg("ok", "Found "+matches.length+" match"+(matches.length===1?"":"es")+" for \""+esc(q)+"\". Click any to see every color.");
+    renderSearchResults(matches.map((p) => ({ no: p.no, name: p.name })));
     setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2400);
   }
 
@@ -442,26 +468,8 @@
     }
   });
 
-  // On load, ping the Worker endpoint to detect if it is already live.
-  // If not, show a persistent banner with the one-line deploy command so
-  // Dad sees it immediately instead of after a failed lookup.
-  (async () => {
-    try {
-      // Use HEAD on an impossible part to probe the endpoint cheaply.
-      const r = await fetch("/employees/api/colors/part?no=__ping__", { credentials: "include", method: "GET" });
-      // 404 with a JSON body meaning "part not found" = endpoint is deployed and healthy.
-      // 404 with the GitHub Pages HTML = endpoint not deployed yet.
-      const ct = r.headers.get("content-type") || "";
-      if (!ct.includes("application/json")) {
-        setMsg("err",
-          'The Worker needs to be redeployed before lookups work. In PowerShell paste: '+
-          '<code style="background:#fff;padding:2px 6px;border-radius:4px;font-size:.82rem">'+
-          'cd C:\\Users\\dbrody\\piece-pavilion-ops\\partout-worker; npx.cmd wrangler deploy'+
-          '</code>'
-        );
-      }
-    } catch (_) {}
-  })();
+  // Preload the catalog in the background so the first search is instant.
+  catalog();
 
   // Deep-link support: /employees/colors/#3005 or ?part=3005 pre-populates and runs.
   const q = new URLSearchParams(location.search).get("part") || location.hash.replace(/^#/, "");
