@@ -184,12 +184,14 @@
             <thead>
               <tr>
                 <th class="grid-col-rownum">#</th>
-                <th style="width:13%">Part ID</th>
-                <th style="width:10%">Color</th>
-                <th style="width:7%">Qty</th>
-                <th style="width:9%">Price</th>
-                <th style="width:9%">Condition</th>
-                <th style="width:22%">Description</th>
+                <th style="width:11%">Part ID</th>
+                <th style="width:9%">Color</th>
+                <th style="width:6%">Qty</th>
+                <th style="width:8%">Price</th>
+                <th style="width:8%">Condition</th>
+                <th style="width:7%" title="My Cost per unit — internal profit tracking, never shown to buyers">My Cost</th>
+                <th style="width:7%" title="Bulk Qty — if set, part only sells in multiples of this">Bulk</th>
+                <th style="width:18%">Description</th>
                 <th>My Remarks</th>
                 <th class="grid-col-del"></th>
               </tr>
@@ -783,6 +785,8 @@
         '<option value="N">New</option>' +
         '<option value="U">Used</option>' +
       '</select></td>' +
+      '<td class="num"><input type="text" inputmode="decimal" data-k="MYCOST" autocomplete="off" placeholder="0.00" /></td>' +
+      '<td class="num"><input type="text" inputmode="numeric" data-k="BULK" autocomplete="off" placeholder="" /></td>' +
       '<td><textarea data-k="DESCRIPTION" rows="1" placeholder="public description"></textarea></td>' +
       '<td><textarea data-k="REMARKS" rows="1" placeholder="internal note"></textarea></td>' +
       '<td class="grid-col-del"><button type="button" title="Delete this row">&times;</button></td>';
@@ -969,10 +973,10 @@
 
   // ========== PASTE MULTI-ROW ==========
   function pasteFromClipboard(){
-    const text = prompt("Paste rows here (tab/comma separated). Expected order: Part ID, Color, Qty, Price, Condition, Description, My Remarks");
+    const text = prompt("Paste rows here (tab/comma separated). Expected order: Part ID, Color, Qty, Price, Condition, My Cost, Bulk, Description, My Remarks");
     if (!text) return;
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const KEYS = ["ITEMID","COLOR","QTY","PRICE","CONDITION","DESCRIPTION","REMARKS"];
+    const KEYS = ["ITEMID","COLOR","QTY","PRICE","CONDITION","MYCOST","BULK","DESCRIPTION","REMARKS"];
     let added = 0;
     lines.forEach((line) => {
       // Detect delimiter: tab preferred (Excel copy), then comma.
@@ -1018,12 +1022,15 @@
       const cond = get("CONDITION");
       const remarks = get("REMARKS");
       const desc = get("DESCRIPTION");
+      const mycost = get("MYCOST");
+      const bulk = get("BULK");
       if (!qty) problems.push("Row " + n + ": Qty missing");
       if (!price) problems.push("Row " + n + ": Price missing");
       if (!cond) problems.push("Row " + n + ": Condition missing");
       if (colorRaw && !color) problems.push("Row " + n + ': Color "' + colorRaw + '" not recognized');
       rows.push({ ITEMTYPE:"P", ITEMID:itemid, COLOR:color, QTY:qty, PRICE:price,
-                  CONDITION:cond, REMARKS:remarks, DESCRIPTION:desc });
+                  CONDITION:cond, REMARKS:remarks, DESCRIPTION:desc,
+                  MYCOST:mycost, BULK:bulk });
     });
     if (!rows.length){ gridMsg("err", "No rows filled in. Type at least one Part ID."); return; }
     if (problems.length){ gridMsg("warn", "Fix these before BL will accept it:\n• " + problems.join("\n• ")); }
