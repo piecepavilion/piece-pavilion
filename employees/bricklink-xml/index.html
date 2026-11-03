@@ -277,8 +277,10 @@
   function normCondition(v){
     const s = String(v||"").trim().toUpperCase();
     if (!s) return "";
-    if (s[0] === "N") return "N";
-    if (s[0] === "U") return "U";
+    // Strict whitelist so "Not working", "Needs cleaning", "Unsure" don't
+    // silently become valid conditions.
+    if (s === "N" || s === "NEW")  return "N";
+    if (s === "U" || s === "USED") return "U";
     return "";
   }
   function normItemType(v){
@@ -493,7 +495,7 @@
     if (items.length === 0){
       setMsg(inMsg, "err",
         "Couldn't find any items. The paste needs either &lt;ITEM&gt;...&lt;/ITEM&gt; blocks, "+
-        "or a header row like <code>ITEMTYPE,ITEMID,COLOR,MINQTY,PRICE,CONDITION</code>."
+        "or a header row like <code>ITEMTYPE,ITEMID,COLOR,QTY,PRICE,CONDITION</code>."
       );
       return;
     }
@@ -507,7 +509,11 @@
     const autofilled = [];
     if (defColorId){
       cleaned.forEach((it, i) => {
-        if ((it.ITEMTYPE === "P" || it.ITEMTYPE === "M") && !it.COLOR){
+        // Only autofill when COLOR is genuinely missing. Skip rows where the
+        // sheet gave an unknown color name (_COLOR_UNKNOWN set in cleanItem)
+        // so Dad still sees the "typo in color" error instead of a silent
+        // default-color swap.
+        if ((it.ITEMTYPE === "P" || it.ITEMTYPE === "M") && !it.COLOR && !it._COLOR_UNKNOWN){
           it.COLOR = defColorId;
           autofilled.push((i+1) + " (" + (it.ITEMID||"?") + ")");
         }
@@ -577,7 +583,7 @@
       convert();
     };
     reader.onerror = () => setMsg(inMsg, "err", "Couldn't read that file.");
-    reader.readAsText(f);
+    reader.readAsText(f, "UTF-8");
     e.target.value = ""; // allow re-selecting the same file
   });
 

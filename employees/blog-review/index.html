@@ -556,12 +556,12 @@
       const canvas = document.getElementById('celebrate-fireworks');
       const ctx = canvas.getContext('2d');
       let W = 0, H = 0;
-      function sizeCanvas(){
+      const sizeCanvas = () => {
         W = canvas.width  = window.innerWidth * devicePixelRatio;
         H = canvas.height = window.innerHeight * devicePixelRatio;
         canvas.style.width = '100vw';
         canvas.style.height = '100vh';
-      }
+      };
       sizeCanvas();
       window.addEventListener('resize', sizeCanvas);
 
@@ -594,7 +594,7 @@
         }
       }
 
-      let running = true, lastLaunch = 0;
+      let running = true, lastLaunch = 0, rafId = 0;
       function frame(ts) {
         if (!running) return;
         ctx.fillStyle = 'rgba(10,8,20,0.22)';
@@ -628,9 +628,9 @@
           ctx.fillRect(p.x, p.y, 2*devicePixelRatio, 2*devicePixelRatio);
           if (p.age >= p.life) particles.splice(i, 1);
         }
-        requestAnimationFrame(frame);
+        rafId = requestAnimationFrame(frame);
       }
-      requestAnimationFrame(frame);
+      rafId = requestAnimationFrame(frame);
 
       // Immediate opening burst volley so the first bang isn't a 1-second wait
       for (let i = 0; i < 3; i++) {
@@ -639,6 +639,8 @@
 
       document.getElementById('celebrate-close').addEventListener('click', () => {
         running = false;
+        if (rafId) cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', sizeCanvas);
         overlay.remove();
       });
     }
