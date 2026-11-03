@@ -142,36 +142,26 @@
   display: block;
 }
 
-/* View-count bubble, bottom-right of each card cover. Always visible so
-   even posts at 0 views show the eye+count pill. */
+/* View-count bubble — tiny round circle, bottom-right of each card cover.
+   Just the count. No icon, no stretch. */
 .view-badge {
   position: absolute;
   bottom: 8px;
   right: 8px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 999px;
+  justify-content: center;
+  border-radius: 50%;
   background: rgba(0,0,0,0.68);
   color: #fff;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   line-height: 1;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  box-sizing: border-box;
   pointer-events: none;
   z-index: 2;
-}
-.view-badge::before {
-  content: "";
-  display: inline-block;
-  width: 11px;
-  height: 11px;
-  background: currentColor;
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 5c-6 0-10 7-10 7s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-2a2 2 0 100-4 2 2 0 000 4z'/></svg>") center/contain no-repeat;
-          mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 5c-6 0-10 7-10 7s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-2a2 2 0 100-4 2 2 0 000 4z'/></svg>") center/contain no-repeat;
 }
 
 .blog-card-body {
