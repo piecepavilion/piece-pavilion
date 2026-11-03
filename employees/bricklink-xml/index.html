@@ -822,6 +822,7 @@
         if (el.dataset.k === "ITEMID") autoFillOnPartId(tr);
         recountGrid(); saveGridDebounced(); flagRow(tr);
       });
+      el.addEventListener("focus", () => resetFillStepOnFocus(el.closest("tr")));
       el.addEventListener("change", () => { recountGrid(); saveGridDebounced(); flagRow(el.closest("tr")); });
       el.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey && el.tagName !== "TEXTAREA"){
@@ -867,6 +868,8 @@
     GRID_BODY.innerHTML = "";
     addRows(30);
     GRID_MSG.className = "msg hidden"; GRID_MSG.textContent = "";
+    FILL_ROW_STEP = 0;
+    updateFillButtonLabel();
     saveGrid();
   }
   function gridMsg(kind, text){
@@ -927,31 +930,63 @@
   // Fill every row's blank Color/Condition/Price with the defaults bar's
   // values. Works on EVERY row including empty ones — Dad can set the
   // defaults once, then just type Part IDs down the first column.
+  // Progressive row fill — each press fills ONE MORE row with every
+  // default set above. Press 1 = row 1, press 2 = row 2, ... Keeps
+  // going row by row; after the last existing row, adds a new one.
+  let FILL_ROW_STEP = 0;
+
+  function updateFillButtonLabel(){
+    const btn = document.getElementById("applyDefaultsBtn");
+    if (!btn) return;
+    const next = FILL_ROW_STEP + 1;
+    btn.textContent = "Fill row " + next;
+  }
+
   function applyDefaults(){
-    const dc = (document.getElementById("defColor").value || "").trim();
-    const dqty = (document.getElementById("defQty").value || "").trim();
-    const dcond = (document.getElementById("defCondition").value || "").trim();
-    const dprice = (document.getElementById("defPrice").value || "").trim();
-    const drem = (document.getElementById("defRemarks").value || "").trim();
-    if (!dc && !dqty && !dcond && !dprice && !drem){
-      gridMsg("warn", "Set at least one default (Color / Qty / Price / Condition / My Remarks) above, then click Fill blanks now.");
-      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3000);
+    const defs = [
+      { key: "COLOR",     id: "defColor" },
+      { key: "QTY",       id: "defQty" },
+      { key: "PRICE",     id: "defPrice" },
+      { key: "CONDITION", id: "defCondition" },
+      { key: "REMARKS",   id: "defRemarks" },
+    ];
+    const values = {};
+    defs.forEach((d) => { values[d.key] = (document.getElementById(d.id).value || "").trim(); });
+    const anyValueSet = Object.values(values).some((v) => v);
+    if (!anyValueSet){
+      gridMsg("warn", "Type a default value in the fields above first, then press this button.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2800);
       return;
     }
+
+    FILL_ROW_STEP++;
+    // Make sure the row exists — append new ones if we've run past the grid.
+    while (GRID_BODY.children.length < FILL_ROW_STEP) addRows(1);
+    const tr = GRID_BODY.children[FILL_ROW_STEP - 1];
+
     let touched = 0;
-    GRID_BODY.querySelectorAll("tr").forEach((tr) => {
-      const fill = (k, v) => {
-        if (!v) return;
-        const el = tr.querySelector('[data-k="'+k+'"]');
-        if (el && !(el.value || "").trim()){ el.value = v; touched++; }
-      };
-      fill("COLOR", dc); fill("QTY", dqty); fill("CONDITION", dcond);
-      fill("PRICE", dprice); fill("REMARKS", drem);
-      flagRow(tr);
+    defs.forEach((d) => {
+      const v = values[d.key];
+      if (!v) return;
+      const el = tr.querySelector('[data-k="'+d.key+'"]');
+      if (el && !(el.value || "").trim()){ el.value = v; touched++; }
     });
+    flagRow(tr);
     recountGrid(); saveGrid();
-    gridMsg("ok", "Filled " + touched + " blank cell" + (touched === 1 ? "" : "s") + " across every row.");
-    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2500);
+    gridMsg("ok", "Filled " + touched + " blank cell" + (touched === 1 ? "" : "s") + " on row " + FILL_ROW_STEP + ". Press again for the next row.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2800);
+    // Scroll the just-filled row into view.
+    tr.scrollIntoView({ behavior: "smooth", block: "center" });
+    updateFillButtonLabel();
+  }
+
+  // Reset the row counter if Dad clicks a specific row (so "Fill row N"
+  // starts counting from where he's working).
+  function resetFillStepOnFocus(tr){
+    const i = Array.from(GRID_BODY.children).indexOf(tr);
+    if (i < 0) return;
+    FILL_ROW_STEP = i;  // next press will fill i+1
+    updateFillButtonLabel();
   }
 
   // Auto-apply defaults to a row the moment a Part ID is typed in it —
@@ -1065,6 +1100,7 @@
   document.getElementById("addRowsBtn").addEventListener("click", () => addRows(25));
   document.getElementById("clearGridBtn").addEventListener("click", clearGrid);
   document.getElementById("applyDefaultsBtn").addEventListener("click", applyDefaults);
+  updateFillButtonLabel();
   document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
 
   // Try to restore from last session; otherwise start with 30 blank rows.
