@@ -213,19 +213,20 @@
   .top-posts-list a { font-size: 0.88rem; }
 }
 
-/* View-count bubble — tiny round circle, bottom-right of each card cover.
-   Just the count. No icon, no stretch. */
+/* View-count bubble — tiny round circle, bottom-right corner of each card.
+   Positioned on the whole card, not the cover image. */
+.blog-card { position: relative; }
 .view-badge {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: 10px;
+  right: 10px;
   width: 26px;
   height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(0,0,0,0.68);
+  background: rgba(0,0,0,0.78);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;

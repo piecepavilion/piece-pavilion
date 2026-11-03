@@ -436,13 +436,14 @@ def render_cards(posts):
         badge = '<span class="view-badge" data-slug="%s" aria-label="0 views">0</span>' % slug_attr
         card = (
             '      <a href="{href}" class="blog-card">\n'
-            '        <div class="blog-card-thumb">{thumb}{badge}</div>\n'
+            '        <div class="blog-card-thumb">{thumb}</div>\n'
             '        <div class="blog-card-body">\n'
             '          <span class="blog-card-date">{date}</span>\n'
             '          <h2>{title}</h2>\n'
             '          <p>{desc}</p>\n'
             '          <span class="blog-card-link">Read More &rarr;</span>\n'
             '        </div>\n'
+            '        {badge}\n'
             '      </a>\n\n'
         ).format(
             href=href,
