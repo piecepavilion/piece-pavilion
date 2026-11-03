@@ -361,10 +361,6 @@
     var slug = "how-to-use-product-finder";
     var readMin = 3;
     if (!slug || !/^[a-z0-9][a-z0-9-]{1,80}$/.test(slug)) return;
-    var dayKey = "pp_viewed:" + slug;
-    var last = 0;
-    try { last = parseInt(localStorage.getItem(dayKey) || "0", 10) || 0; } catch(e){}
-    if (Date.now() - last < 24*3600*1000) return;
     var fired = false;
     var start = Date.now();
     var halfSec = Math.max(30, Math.round(readMin * 60 * 0.5));
@@ -379,7 +375,6 @@
       if (fired) return;
       if (!qualifies()) return;
       fired = true;
-      try { localStorage.setItem(dayKey, String(Date.now())); } catch(e){}
       try { fetch("/api/views/track", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({slug: slug}), keepalive: true}); } catch(e){}
     }
     window.addEventListener("scroll", fire, {passive: true});

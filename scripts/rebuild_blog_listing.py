@@ -303,8 +303,8 @@ VIEW_TRACKER_MARK = "<!-- pp-view-tracker -->"
 
 def build_view_tracker(slug, reading_time_min):
     """Return the <script> block that lives at the bottom of each post. Fires
-    once when the reader qualifies (scroll-to-end, half the reading time, or
-    60s+), dedup'd per 24h in localStorage."""
+    once per page load when the reader qualifies (scroll-to-end, half the
+    reading time, or 60s+). Each refresh gets a fresh chance to count."""
     return (
         VIEW_TRACKER_MARK + "\n"
         "<script>\n"
@@ -313,10 +313,6 @@ def build_view_tracker(slug, reading_time_min):
         "    var slug = \"" + slug + "\";\n"
         "    var readMin = " + str(reading_time_min) + ";\n"
         "    if (!slug || !/^[a-z0-9][a-z0-9-]{1,80}$/.test(slug)) return;\n"
-        "    var dayKey = \"pp_viewed:\" + slug;\n"
-        "    var last = 0;\n"
-        "    try { last = parseInt(localStorage.getItem(dayKey) || \"0\", 10) || 0; } catch(e){}\n"
-        "    if (Date.now() - last < 24*3600*1000) return;\n"
         "    var fired = false;\n"
         "    var start = Date.now();\n"
         "    var halfSec = Math.max(30, Math.round(readMin * 60 * 0.5));\n"
@@ -331,7 +327,6 @@ def build_view_tracker(slug, reading_time_min):
         "      if (fired) return;\n"
         "      if (!qualifies()) return;\n"
         "      fired = true;\n"
-        "      try { localStorage.setItem(dayKey, String(Date.now())); } catch(e){}\n"
         "      try { fetch(\"/api/views/track\", {method:\"POST\", headers:{\"content-type\":\"application/json\"}, body: JSON.stringify({slug: slug}), keepalive: true}); } catch(e){}\n"
         "    }\n"
         "    window.addEventListener(\"scroll\", fire, {passive: true});\n"
