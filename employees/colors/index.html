@@ -33,7 +33,7 @@
     .wrap{max-width:1240px;margin:0 auto;padding:28px 24px 60px}
     .lead{color:var(--slate);margin-bottom:20px;font-size:1.02rem}
 
-    .search-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);margin-bottom:24px;position:sticky;top:0;z-index:30}
+    .search-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm);margin-bottom:24px}
     .search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .search-row label{font-weight:700;color:var(--slate);font-size:.95rem;white-space:nowrap}
     .search-row input{flex:1;min-width:200px;border:1.5px solid var(--line);border-radius:10px;padding:12px 16px;font-family:'Nunito';font-size:1.05rem;font-weight:700}
@@ -121,20 +121,8 @@
     .chip.clear-chip{margin-left:auto;background:transparent;border-color:transparent;color:var(--muted);font-weight:700;font-size:.82rem}
     .chip.clear-chip:hover{color:var(--red)}
 
-    /* Welcome state — big category cards shown when no filter is active. */
-    .welcome{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-top:20px}
-    .welcome .wc{background:#fff;border:2px solid var(--line);border-radius:14px;padding:22px 18px;cursor:pointer;transition:all .15s;text-align:center;position:relative;overflow:hidden}
-    .welcome .wc::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(227,0,11,.04),rgba(255,206,0,.03));opacity:0;transition:opacity .15s}
-    .welcome .wc:hover{border-color:var(--red);transform:translateY(-3px);box-shadow:var(--shadow)}
-    .welcome .wc:hover::before{opacity:1}
-    .welcome .wc .emoji{font-size:2.3rem;margin-bottom:8px;display:block;line-height:1}
-    .welcome .wc .wname{font-family:'Fredoka','Nunito';font-weight:700;color:var(--ink);font-size:1.05rem;letter-spacing:-.01em;margin-bottom:4px}
-    .welcome .wc .wsub{font-size:.78rem;color:var(--mid);font-weight:600}
-    .welcome-h{font-family:'Fredoka','Nunito';font-size:1.3rem;color:var(--ink);margin:14px 0 6px;letter-spacing:-.01em}
-    .welcome-lead{color:var(--mid);font-size:.95rem;margin-bottom:10px}
-
     /* Sub-filter row that appears when a main family is active. */
-    .sub-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding:10px 14px;background:#fff8ec;border:1px solid #ffe79b;border-radius:10px;max-height:260px;overflow-y:auto}
+    .sub-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding:10px 14px;background:#fff8ec;border:1px solid #ffe79b;border-radius:10px}
     .sub-row .sub-label{font-weight:800;color:var(--ink);font-size:.82rem;letter-spacing:.03em;text-transform:uppercase;margin-right:6px}
     .sub-row .sub-fam{font-weight:900;color:var(--red);text-transform:capitalize;margin-right:8px;font-size:.88rem}
     .sub-chip{background:#fff;border:1.5px solid #ffce00;color:var(--ink);padding:5px 12px;border-radius:50px;font-family:'Nunito';font-weight:700;font-size:.82rem;cursor:pointer;transition:all .12s}
@@ -243,34 +231,6 @@
     <div id="msg"></div>
     <div id="partHead"></div>
     <div id="grid" class="grid real"></div>
-
-    <!-- Welcome state: shown when nothing is filtered. Click a tile to activate. -->
-    <div id="welcome">
-      <h2 class="welcome-h">Browse by category</h2>
-      <p class="welcome-lead">Pick a category to start, or type a part number / name above.</p>
-      <div class="welcome">
-        <div class="wc" data-fam="brick">     <span class="emoji">&#129521;</span><div class="wname">Bricks</div><div class="wsub">Standard, Modified, Technic</div></div>
-        <div class="wc" data-fam="plate">     <span class="emoji">&#9641;</span><div class="wname">Plates</div><div class="wsub">All sizes &amp; shapes</div></div>
-        <div class="wc" data-fam="tile">      <span class="emoji">&#128997;</span><div class="wname">Tiles</div><div class="wsub">Flat tops &amp; grilles</div></div>
-        <div class="wc" data-fam="slope">     <span class="emoji">&#128441;</span><div class="wname">Slopes</div><div class="wsub">Sloped, curved, inverted</div></div>
-        <div class="wc" data-fam="round">     <span class="emoji">&#9679;</span><div class="wname">Round</div><div class="wsub">Round bricks, plates, tiles</div></div>
-        <div class="wc" data-fam="minifig">   <span class="emoji">&#129489;</span><div class="wname">Minifigs</div><div class="wsub">Whole figures</div></div>
-        <div class="wc" data-fam="body">      <span class="emoji">&#129492;</span><div class="wname">Minifig Bodies</div><div class="wsub">Heads &amp; body parts</div></div>
-        <div class="wc" data-fam="accessory"> <span class="emoji">&#127913;</span><div class="wname">Accessories</div><div class="wsub">Hats, weapons, tools</div></div>
-        <div class="wc" data-fam="technic">   <span class="emoji">&#9881;</span><div class="wname">Technic</div><div class="wsub">Beams, axles, pins</div></div>
-        <div class="wc" data-fam="vehicle">   <span class="emoji">&#128663;</span><div class="wname">Vehicles</div><div class="wsub">Cars, planes, trains, boats</div></div>
-        <div class="wc" data-fam="wheel">     <span class="emoji">&#127948;</span><div class="wname">Wheels</div><div class="wsub">Wheels &amp; tires</div></div>
-        <div class="wc" data-fam="window">    <span class="emoji">&#128682;</span><div class="wname">Windows / Doors</div><div class="wsub">Window, door, frame</div></div>
-        <div class="wc" data-fam="plant">     <span class="emoji">&#127807;</span><div class="wname">Plants</div><div class="wsub">Flowers, trees, leaves</div></div>
-        <div class="wc" data-fam="animal">    <span class="emoji">&#128052;</span><div class="wname">Animals</div><div class="wsub">Animals &amp; body parts</div></div>
-        <div class="wc" data-fam="tool">      <span class="emoji">&#128296;</span><div class="wname">Tools / Weapons</div><div class="wsub">Hammers, swords, saws</div></div>
-        <div class="wc" data-fam="container"> <span class="emoji">&#128230;</span><div class="wname">Containers</div><div class="wsub">Boxes, barrels, bottles</div></div>
-        <div class="wc" data-fam="flag">      <span class="emoji">&#127988;</span><div class="wname">Flags / Signs</div><div class="wsub">Flags, banners, signs</div></div>
-        <div class="wc" data-fam="baseplate"> <span class="emoji">&#128208;</span><div class="wname">Baseplates</div><div class="wsub">Roads &amp; bases</div></div>
-        <div class="wc" data-fam="projectile"><span class="emoji">&#127993;</span><div class="wname">Projectiles</div><div class="wsub">Darts, missiles, launchers</div></div>
-        <div class="wc" data-fam="electronic"><span class="emoji">&#128268;</span><div class="wname">Electronics</div><div class="wsub">Lights &amp; motors</div></div>
-      </div>
-    </div>
   </div>
 
 <script>
@@ -372,8 +332,6 @@
   }
 
   function renderPart(part){
-    const w = document.getElementById("welcome");
-    if (w) w.style.display = "none";
     const heroColor = heroColorFor(part);
     const heroSrc = imgUrlFor(heroColor, part.no);
     head.innerHTML =
@@ -570,17 +528,6 @@
   const SUB_CATS = {
     brick: [
       { label: "Standard",        ids: [11] },
-      { label: "1 x 1",           ids: [11,5], name: "1 x 1" },
-      { label: "1 x 2",           ids: [11,5], name: "1 x 2" },
-      { label: "1 x 3",           ids: [11,5], name: "1 x 3" },
-      { label: "1 x 4",           ids: [11,5], name: "1 x 4" },
-      { label: "1 x 6",           ids: [11,5], name: "1 x 6" },
-      { label: "1 x 8",           ids: [11,5], name: "1 x 8" },
-      { label: "2 x 2",           ids: [11,5], name: "2 x 2" },
-      { label: "2 x 3",           ids: [11,5], name: "2 x 3" },
-      { label: "2 x 4",           ids: [11,5], name: "2 x 4" },
-      { label: "2 x 6",           ids: [11,5], name: "2 x 6" },
-      { label: "2 x 8",           ids: [11,5], name: "2 x 8" },
       { label: "Modified",        ids: [5], name: "modified" },
       { label: "Headlight",       ids: [5], name: "headlight" },
       { label: "With Studs Side", ids: [5], name: "studs on" },
@@ -591,36 +538,16 @@
       { label: "With Fins",       ids: [5], name: "fins" },
       { label: "With Fork",       ids: [5], name: "fork" },
       { label: "With Wheel",      ids: [5], name: "wheel" },
-      { label: "With Handle",     ids: [5], name: "handle" },
-      { label: "With Bow",        ids: [5], name: "bow" },
       { label: "Arch",            ids: [5], name: "arch" },
       { label: "Corner",          ids: [5], name: "corner" },
       { label: "Masonry",         ids: [5], name: "masonry" },
-      { label: "Log",             ids: [5], name: "log" },
       { label: "Decorated",       ids: [11,5], name: "decorated" },
       { label: "Printed",         ids: [11,5], name: "printed" },
-      { label: "Patterned",       ids: [11,5], name: "pattern" },
       { label: "Other Special",   ids: [5] },
       { label: "Technic",         ids: [8] },
     ],
     plate: [
       { label: "Standard",      ids: [14] },
-      { label: "1 x 1",         ids: [14,9], name: "1 x 1" },
-      { label: "1 x 2",         ids: [14,9], name: "1 x 2" },
-      { label: "1 x 3",         ids: [14,9], name: "1 x 3" },
-      { label: "1 x 4",         ids: [14,9], name: "1 x 4" },
-      { label: "1 x 6",         ids: [14,9], name: "1 x 6" },
-      { label: "1 x 8",         ids: [14,9], name: "1 x 8" },
-      { label: "1 x 10",        ids: [14,9], name: "1 x 10" },
-      { label: "1 x 12",        ids: [14,9], name: "1 x 12" },
-      { label: "2 x 2",         ids: [14,9], name: "2 x 2" },
-      { label: "2 x 3",         ids: [14,9], name: "2 x 3" },
-      { label: "2 x 4",         ids: [14,9], name: "2 x 4" },
-      { label: "2 x 6",         ids: [14,9], name: "2 x 6" },
-      { label: "2 x 8",         ids: [14,9], name: "2 x 8" },
-      { label: "4 x 4",         ids: [14,9], name: "4 x 4" },
-      { label: "4 x 6",         ids: [14,9], name: "4 x 6" },
-      { label: "6 x 6",         ids: [14,9], name: "6 x 6" },
       { label: "Modified",      ids: [9], name: "modified" },
       { label: "With Clip",     ids: [9], name: "clip" },
       { label: "With Hole",     ids: [9], name: "hole" },
@@ -632,8 +559,6 @@
       { label: "With Door Rail",ids: [9], name: "door rail" },
       { label: "With Ladder",   ids: [9], name: "ladder" },
       { label: "With Fence",    ids: [9], name: "fence" },
-      { label: "With Shaft",    ids: [9], name: "shaft" },
-      { label: "With Groove",   ids: [9], name: "groove" },
       { label: "Rounded",       ids: [9], name: "round" },
       { label: "Decorated",     ids: [14,9], name: "decorated" },
       { label: "Printed",       ids: [14,9], name: "printed" },
@@ -642,14 +567,6 @@
     ],
     tile: [
       { label: "Standard",       ids: [19] },
-      { label: "1 x 1",          ids: [19,15], name: "1 x 1" },
-      { label: "1 x 2",          ids: [19,15], name: "1 x 2" },
-      { label: "1 x 3",          ids: [19,15], name: "1 x 3" },
-      { label: "1 x 4",          ids: [19,15], name: "1 x 4" },
-      { label: "1 x 6",          ids: [19,15], name: "1 x 6" },
-      { label: "1 x 8",          ids: [19,15], name: "1 x 8" },
-      { label: "2 x 2",          ids: [19,15], name: "2 x 2" },
-      { label: "2 x 4",          ids: [19,15], name: "2 x 4" },
       { label: "Modified",       ids: [15], name: "modified" },
       { label: "With Clip",      ids: [15], name: "clip" },
       { label: "With Handle",    ids: [15], name: "handle" },
@@ -760,90 +677,6 @@
       { label: "Saw",       ids: [56], name: "saw" },
       { label: "Shovel",    ids: [56], name: "shovel" },
       { label: "Pickaxe",   ids: [56], name: "pickaxe" },
-      { label: "Axe",       ids: [56], name: "axe" },
-      { label: "Screwdriver", ids: [56], name: "screwdriver" },
-      { label: "Magnifier", ids: [56], name: "magnifier" },
-      { label: "Light",     ids: [56], name: "light" },
-    ],
-    // Additional sub-cat menus for families that were single-cat before
-    window: [
-      { label: "Window",      ids: [16], name: "window" },
-      { label: "Door",        ids: [16], name: "door" },
-      { label: "Frame",       ids: [16], name: "frame" },
-      { label: "Pane / Glass",ids: [16], name: "pane" },
-      { label: "Shutter",     ids: [16], name: "shutter" },
-    ],
-    wheel: [
-      { label: "Wheels",      ids: [29], name: "wheel" },
-      { label: "Tires",       ids: [29], name: "tire" },
-      { label: "Hub",         ids: [29], name: "hub" },
-    ],
-    panel: [
-      { label: "Panels",      ids: [23], name: "panel" },
-      { label: "Wall Panel",  ids: [23], name: "wall" },
-      { label: "Corner Panel",ids: [23], name: "corner" },
-    ],
-    bar: [
-      { label: "Bars",        ids: [32], name: "bar" },
-      { label: "Ladders",     ids: [32], name: "ladder" },
-      { label: "Fences",      ids: [32], name: "fence" },
-      { label: "Railings",    ids: [32], name: "rail" },
-    ],
-    plant: [
-      { label: "Flowers",     ids: [76], name: "flower" },
-      { label: "Leaves",      ids: [76], name: "leaf" },
-      { label: "Trees",       ids: [76], name: "tree" },
-      { label: "Bushes",      ids: [76], name: "bush" },
-      { label: "Grass",       ids: [76], name: "grass" },
-      { label: "Palm",        ids: [76], name: "palm" },
-      { label: "Fruit",       ids: [76], name: "fruit" },
-      { label: "Stem",        ids: [76], name: "stem" },
-    ],
-    container: [
-      { label: "Boxes",       ids: [7], name: "box" },
-      { label: "Crates",      ids: [7], name: "crate" },
-      { label: "Barrels",     ids: [7], name: "barrel" },
-      { label: "Bottles",     ids: [7], name: "bottle" },
-      { label: "Cups/Mugs",   ids: [7], name: "cup" },
-      { label: "Baskets",     ids: [7], name: "basket" },
-      { label: "Buckets",     ids: [7], name: "bucket" },
-      { label: "Treasure",    ids: [7], name: "treasure" },
-    ],
-    hinge: [
-      { label: "Hinges",      ids: [18], name: "hinge" },
-      { label: "Arms",        ids: [18], name: "arm" },
-      { label: "Turntables",  ids: [18], name: "turntable" },
-      { label: "Brackets",    ids: [18], name: "bracket" },
-    ],
-    baseplate: [
-      { label: "Baseplates",     ids: [1], name: "baseplate" },
-      { label: "Road",           ids: [1], name: "road" },
-      { label: "Raised",         ids: [1], name: "raised" },
-      { label: "Printed",        ids: [1], name: "print" },
-    ],
-    flag: [
-      { label: "Flags",       ids: [38], name: "flag" },
-      { label: "Banners",     ids: [38], name: "banner" },
-      { label: "Signs",       ids: [38], name: "sign" },
-    ],
-    gear: [
-      { label: "Gear Parts",  ids: [17] },
-    ],
-    projectile: [
-      { label: "Projectiles", ids: [68], name: "projectile" },
-      { label: "Launchers",   ids: [68], name: "launcher" },
-      { label: "Dart",        ids: [68], name: "dart" },
-      { label: "Missile",     ids: [68], name: "missile" },
-    ],
-    support: [
-      { label: "Supports",    ids: [34], name: "support" },
-      { label: "Girders",     ids: [34], name: "girder" },
-      { label: "Cranes",      ids: [34], name: "crane" },
-    ],
-    buildable: [
-      { label: "Figures",     ids: [41] },
-      { label: "Armor",       ids: [41], name: "armor" },
-      { label: "Weapon",      ids: [41], name: "weapon" },
     ],
   };
 
@@ -969,8 +802,6 @@
   }
 
   function renderSearchResults(items, q){
-    const w = document.getElementById("welcome");
-    if (w) w.style.display = "none";
     // Group results by category, then WITHIN each category by size.
     const groups = {};
     const order = [];
@@ -1140,12 +971,6 @@
     } catch (_){ closeSuggest(); }
   }
 
-  const welcomeEl = document.getElementById("welcome");
-  function toggleWelcome(show){
-    if (!welcomeEl) return;
-    welcomeEl.style.display = show ? "" : "none";
-  }
-
   // Re-run the result list — called on every text change AND every filter change.
   let rerunTimer = null;
   function scheduleRerun(delay){
@@ -1154,34 +979,11 @@
       const v = partIn.value.trim();
       const hasText = v.length >= 2;
       const hasFilter = FILTERS.fams.size > 0 || FILTERS.verifiedOnly;
-      if (!hasText && !hasFilter){
-        head.innerHTML = ""; grid.innerHTML = ""; setMsg("", "");
-        toggleWelcome(true);
-        return;
-      }
-      toggleWelcome(false);
+      if (!hasText && !hasFilter){ head.innerHTML = ""; grid.innerHTML = ""; setMsg("", ""); return; }
+      // If text looks like an exact part number, do a direct lookup for colors.
       if (hasText && looksLikeNumber(v.replace(/\s+/g, "")) && !hasFilter){ lookup(); return; }
       lookupByName(v || "*", {silent:true});
     }, delay || 180);
-  }
-
-  // Welcome tiles: click = activate that family filter.
-  if (welcomeEl){
-    welcomeEl.addEventListener("click", (ev) => {
-      const tile = ev.target.closest(".wc");
-      if (!tile) return;
-      const fam = tile.dataset.fam;
-      const chip = document.querySelector('.filter-row .chip[data-fam="'+fam+'"]');
-      if (chip){
-        if (!chip.classList.contains("on")){
-          chip.classList.add("on");
-          FILTERS.fams.add(fam);
-          renderSubRow();
-          scheduleRerun(0);
-          chip.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }
-    });
   }
 
   partIn.addEventListener("input", () => {
