@@ -117,10 +117,52 @@
     .grid-totals .tot .val{color:var(--red);font-weight:900;font-family:'JetBrains Mono','Consolas',monospace;font-size:1rem}
     .grid-totals .saved{margin-left:auto;color:var(--mid);font-size:.78rem;font-weight:600;font-style:italic}
 
+    /* ========== SNIPPETS DROPDOWN ========== */
+    .snippets-toggle{position:fixed;top:14px;right:14px;z-index:60;background:var(--ink);color:#fff;border:none;border-radius:50px;padding:9px 16px;font-family:'Nunito';font-weight:800;font-size:.86rem;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.22);display:inline-flex;align-items:center;gap:8px;transition:background .15s, transform .12s}
+    .snippets-toggle:hover{background:var(--red)}
+    .snippets-toggle:active{transform:translateY(1px)}
+    .snippets-toggle .caret{transition:transform .2s cubic-bezier(.2,.8,.2,1);font-size:.72rem}
+    .snippets-toggle.open .caret{transform:rotate(180deg)}
+    .snippets-panel{position:fixed;top:60px;right:14px;z-index:60;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.18);width:340px;max-height:70vh;overflow:hidden;display:none;flex-direction:column}
+    .snippets-panel.open{display:flex;animation:snippetsIn .22s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes snippetsIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .snippets-panel h3{padding:14px 16px 10px;font-family:'Fredoka','Nunito';font-size:1rem;color:var(--ink);border-bottom:2px solid var(--yellow);margin:0}
+    .snippets-list{flex:1;overflow-y:auto;padding:8px;min-height:60px;max-height:50vh}
+    .snippet-row{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;transition:background .12s}
+    .snippet-row:hover{background:#fafbfd}
+    .snippet-text{flex:1;font-size:.86rem;color:var(--ink);line-height:1.35;word-wrap:break-word;min-width:0}
+    .snippet-copy, .snippet-del{background:transparent;border:none;cursor:pointer;width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;transition:background .12s, transform .12s;flex-shrink:0}
+    .snippet-copy{color:var(--slate)}
+    .snippet-copy:hover{background:var(--ink);color:#fff;transform:scale(1.08)}
+    .snippet-copy.copied{background:var(--green);color:#fff}
+    .snippet-del{color:var(--muted);font-size:1.1rem}
+    .snippet-del:hover{background:#fef2f2;color:var(--red)}
+    .snippets-empty{color:var(--muted);font-size:.86rem;text-align:center;padding:18px 10px;font-style:italic}
+    .snippets-add{padding:12px;border-top:1px solid var(--line);background:#fafbfd;display:flex;gap:6px;align-items:flex-start}
+    .snippets-add textarea{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-family:'Nunito';font-size:.86rem;color:var(--ink);background:#fff;min-height:36px;max-height:80px;resize:vertical;outline:none}
+    .snippets-add textarea:focus{border-color:var(--red)}
+    .snippets-add-btn{background:var(--red);color:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;font-weight:900;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s, transform .12s}
+    .snippets-add-btn:hover{background:var(--red-dark);transform:scale(1.08)}
+    .snippets-add-btn:active{transform:scale(.92)}
+    @media(max-width:620px){.snippets-panel{width:calc(100vw - 28px);right:14px}}
+
     @media(max-width:620px){.topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}.wrap{padding:20px 14px 40px}.card{padding:16px}}
   </style>
 </head>
 <body>
+
+  <!-- ===== SNIPPETS: saved phrases you can copy into Description / Remarks ===== -->
+  <button class="snippets-toggle" id="snippetsToggle" type="button" aria-expanded="false">
+    Phrases <span class="caret">&#9662;</span>
+  </button>
+  <div class="snippets-panel" id="snippetsPanel" role="dialog" aria-label="Saved phrases">
+    <h3>Saved phrases</h3>
+    <div class="snippets-list" id="snippetsList"></div>
+    <div class="snippets-add">
+      <textarea id="snippetInput" placeholder="Type a new phrase... e.g. From a smoke-free, pet-free home." rows="1"></textarea>
+      <button class="snippets-add-btn" id="snippetAddBtn" type="button" title="Save phrase" aria-label="Save phrase">+</button>
+    </div>
+  </div>
 
   <div class="topbar">
     <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
@@ -1114,6 +1156,118 @@
 
   // Try to restore from last session; otherwise start with 30 blank rows.
   if (!loadGrid()) addRows(30);
+
+  // ========== SNIPPETS (saved phrases) ==========
+  const SNIPPETS_KEY = "pp_bl_snippets_v1";
+  const snippetsToggle = document.getElementById("snippetsToggle");
+  const snippetsPanel  = document.getElementById("snippetsPanel");
+  const snippetsList   = document.getElementById("snippetsList");
+  const snippetInput   = document.getElementById("snippetInput");
+  const snippetAddBtn  = document.getElementById("snippetAddBtn");
+
+  function loadSnippets(){
+    try {
+      const raw = localStorage.getItem(SNIPPETS_KEY);
+      if (!raw) return defaultSnippets();
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : defaultSnippets();
+    } catch(e){ return defaultSnippets(); }
+  }
+  function defaultSnippets(){
+    return [
+      "From a smoke-free, pet-free home.",
+      "Lightly played, no visible wear.",
+      "Brand new, sealed in factory bag.",
+      "Cleaned and inspected before listing.",
+      "Combined shipping available — ask before paying.",
+      "Message me with questions — happy to help.",
+    ];
+  }
+  function saveSnippets(arr){
+    try { localStorage.setItem(SNIPPETS_KEY, JSON.stringify(arr)); } catch(e){}
+  }
+  function escHtml(s){
+    return String(s || "").replace(/[&<>"']/g, (c) =>
+      ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+  function renderSnippets(){
+    const arr = loadSnippets();
+    if (!arr.length){
+      snippetsList.innerHTML = '<div class="snippets-empty">No phrases yet. Add one below.</div>';
+      return;
+    }
+    snippetsList.innerHTML = arr.map((text, i) =>
+      '<div class="snippet-row" data-i="'+i+'">' +
+        '<span class="snippet-text">'+escHtml(text)+'</span>' +
+        '<button class="snippet-copy" type="button" title="Copy to clipboard" aria-label="Copy">&#128203;</button>' +
+        '<button class="snippet-del" type="button" title="Delete phrase" aria-label="Delete">&times;</button>' +
+      '</div>'
+    ).join("");
+
+    snippetsList.querySelectorAll(".snippet-copy").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const i = parseInt(btn.closest(".snippet-row").dataset.i, 10);
+        const text = arr[i];
+        try { await navigator.clipboard.writeText(text); }
+        catch(_){
+          const ta = document.createElement("textarea");
+          ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); } catch(_){}
+          document.body.removeChild(ta);
+        }
+        btn.classList.add("copied");
+        btn.innerHTML = "&check;";
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          btn.innerHTML = "&#128203;";
+        }, 1200);
+      });
+    });
+    snippetsList.querySelectorAll(".snippet-del").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const i = parseInt(btn.closest(".snippet-row").dataset.i, 10);
+        const cur = loadSnippets();
+        cur.splice(i, 1);
+        saveSnippets(cur);
+        renderSnippets();
+      });
+    });
+  }
+
+  function toggleSnippets(force){
+    const open = typeof force === "boolean" ? force : !snippetsPanel.classList.contains("open");
+    snippetsPanel.classList.toggle("open", open);
+    snippetsToggle.classList.toggle("open", open);
+    snippetsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) renderSnippets();
+  }
+  snippetsToggle.addEventListener("click", () => toggleSnippets());
+  // Close when clicking outside the panel.
+  document.addEventListener("click", (ev) => {
+    if (!snippetsPanel.classList.contains("open")) return;
+    if (snippetsPanel.contains(ev.target) || snippetsToggle.contains(ev.target)) return;
+    toggleSnippets(false);
+  });
+
+  snippetAddBtn.addEventListener("click", () => {
+    const text = (snippetInput.value || "").trim();
+    if (!text) return;
+    const cur = loadSnippets();
+    cur.push(text);
+    saveSnippets(cur);
+    snippetInput.value = "";
+    renderSnippets();
+  });
+  snippetInput.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && !ev.shiftKey){
+      ev.preventDefault();
+      snippetAddBtn.click();
+    }
+  });
+
+  // Prime the list once so defaults render even before the user opens the panel.
+  if (!localStorage.getItem(SNIPPETS_KEY)) saveSnippets(defaultSnippets());
 })();
 </script>
 </body>
