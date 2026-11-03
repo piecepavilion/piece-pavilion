@@ -159,7 +159,9 @@
     }
 
     /* Tile internals when it has a BL link + colors button. */
-    .tile .tile-link{display:block;color:inherit;text-decoration:none}
+    .tile .tile-link{display:block;color:inherit;text-decoration:none;-webkit-tap-highlight-color:rgba(227,0,11,.15)}
+    .tile .tile-link *{pointer-events:none}
+    .tile .tile-link{pointer-events:auto}
     .tile .colors-btn{position:absolute;top:8px;right:8px;background:rgba(227,0,11,.95);color:#fff;border:none;padding:5px 10px;border-radius:50px;font-family:'Nunito';font-weight:800;font-size:.72rem;cursor:pointer;letter-spacing:.03em;box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:2}
     .tile .colors-btn:hover{background:var(--red-dark)}
     .tile.verified{border-color:#86efac}
@@ -1140,6 +1142,20 @@
     return parts[0] * 10000 + parts[1] * 100 + parts[2];
   }
 
+  // Build the BrickLink catalog URL for a part. Minifigs use the M=
+  // parameter instead of P=; sets use S=. Everything else stays P=.
+  function buildBlUrl(it){
+    // Rebrickable cat_ids for minifigs: 13 whole minifigs, 59-64 body parts,
+    // 65 headwear, 70-73 hipwear/neckwear/head-acc/weapons, 27 minifig acc.
+    // Stricter: only cat 13 is a real "minifig" entry on BL (identifier like sh0001).
+    const noLc = (it.no || "").toLowerCase();
+    // Minifig part numbers typically start with sh / tlm / njo / col / cas / etc.
+    const looksLikeMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/.test(noLc) && it.cat_id === 13;
+    // Gear items: wrist watches, pens, non-system
+    const code = looksLikeMinifig ? "M" : "P";
+    return "https://www.bricklink.com/v2/catalog/catalogitem.page?" + code + "=" + encodeURIComponent(it.no);
+  }
+
   function renderSearchResults(items, q){
     const w = document.getElementById("welcome");
     if (w) w.style.display = "none";
@@ -1178,7 +1194,7 @@
       const subs = sizeOrder.map((sz) => {
         const srows = bySize[sz];
         const tiles = srows.map((it) => {
-        const bl = "https://www.bricklink.com/v2/catalog/catalogitem.page?P=" + encodeURIComponent(it.no);
+        const bl = buildBlUrl(it);
         // Image: if BL-verified, use the official BL image_url directly. If not,
         // walk a color chain: part's own color → white → light gray → black → red.
         let imgSrc, imgChainAttrs = "";
@@ -1211,6 +1227,16 @@
     }).join("");
 
     grid.innerHTML = sections;
+
+    // Guarantee the tile link opens — iPad Safari sometimes drops
+    // target="_blank" clicks on nested elements. Explicit window.open.
+    grid.querySelectorAll(".tile-link").forEach((a) => {
+      a.addEventListener("click", (ev) => {
+        if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button > 0) return;
+        ev.preventDefault();
+        window.open(a.href, "_blank", "noopener");
+      });
+    });
 
     // "colors" button on each tile → open the detail view in-place.
     grid.querySelectorAll(".colors-btn").forEach((btn) => {
