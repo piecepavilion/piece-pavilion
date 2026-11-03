@@ -132,7 +132,7 @@ THUMB_PALETTE = {
     "news":          ((255, 206,   0), (180, 142,   0), ( 21,  21,  31), ( 21,  21,  31, 220)),
     "minifig":       (( 28, 138, 214), ( 14,  82, 140), (255, 255, 255), (255, 255, 255, 230)),
     "sets":          (( 60, 158,  79), ( 36, 100,  48), (255, 255, 255), (255, 255, 255, 230)),
-    "parts":         (( 48,  48,  60), ( 21,  21,  31), (255, 255, 255), (255, 255, 255, 230)),
+    "parts":         ((139,  92, 246), ( 76,  29, 149), (255, 255, 255), (255, 255, 255, 230)),  # purple — swapped off near-black so only seller-guide reads as black
     # Seller Guide series — Dad's BrickLink-sellers' tips posts. Black
     # covers, simple, consistent across the whole series.
     "seller-guide":  (( 50,  50,  60), ( 10,  10,  15), (255, 255, 255), (255, 255, 255, 230)),
