@@ -226,6 +226,7 @@
             <input id="defRemarks" type="text" placeholder="e.g. BIN A3" size="12" />
           </span>
           <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill blanks now</button>
+          <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
           <span class="d-note">Also auto-fills whenever you type a Part ID.</span>
         </div>
 
@@ -1153,6 +1154,63 @@
   document.getElementById("applyDefaultsBtn").addEventListener("click", applyDefaults);
   updateFillButtonLabel();
   document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
+  document.getElementById("priceAvgBtn").addEventListener("click", priceAtBlAverage);
+
+  // ========== PRICE AT BRICKLINK 6-MONTH AVERAGE ==========
+  async function priceAtBlAverage(){
+    const rows = Array.from(GRID_BODY.querySelectorAll("tr"));
+    const targets = [];
+    rows.forEach((tr) => {
+      const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
+      const no = get("ITEMID");
+      const colorRaw = get("COLOR");
+      const cond = (get("CONDITION") || "N").toUpperCase();
+      if (!no || !colorRaw) return;
+      const color = colorNameToId(colorRaw);
+      if (!color) return;
+      targets.push({ tr, no, color, cond });
+    });
+    if (!targets.length){
+      gridMsg("warn", "No rows have both a Part ID and a Color — nothing to price.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3000);
+      return;
+    }
+
+    const priceBtn = document.getElementById("priceAvgBtn");
+    priceBtn.disabled = true;
+    priceBtn.textContent = "Fetching 0/" + targets.length + "...";
+
+    let updated = 0, failed = 0;
+    for (let i = 0; i < targets.length; i++){
+      const { tr, no, color, cond } = targets[i];
+      try {
+        const r = await fetch("/employees/api/colors/price?no=" + encodeURIComponent(no) +
+                              "&color_id=" + encodeURIComponent(color) +
+                              "&condition=" + encodeURIComponent(cond),
+                              { credentials: "include" });
+        if (r.ok){
+          const j = await r.json();
+          // qty_avg_price is the lot-weighted average — usually more accurate
+          // than the simple average when a small lot inflates min/max.
+          const price = j.qty_avg_price > 0 ? j.qty_avg_price : j.avg_price;
+          if (price > 0){
+            const el = tr.querySelector('[data-k="PRICE"]');
+            el.value = Number(price).toFixed(3);
+            flagRow(tr);
+            updated++;
+          } else failed++;
+        } else failed++;
+      } catch(_) { failed++; }
+      priceBtn.textContent = "Fetching " + (i + 1) + "/" + targets.length + "...";
+    }
+
+    priceBtn.disabled = false;
+    priceBtn.textContent = "Price at BL 6-mo avg";
+    recountGrid(); saveGrid();
+    gridMsg("ok", "Priced " + updated + " row" + (updated === 1 ? "" : "s") + " at BL 6-month average" +
+              (failed ? " (" + failed + " had no data)" : "") + ".");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3200);
+  }
 
   // Try to restore from last session; otherwise start with 30 blank rows.
   if (!loadGrid()) addRows(30);
