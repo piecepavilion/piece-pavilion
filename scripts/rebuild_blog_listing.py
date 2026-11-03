@@ -298,6 +298,81 @@ def render_related(related):
     )
 
 
+VIEW_TRACKER_MARK = "<!-- pp-view-tracker -->"
+
+
+def build_view_tracker(slug, reading_time_min):
+    """Return the <script> block that lives at the bottom of each post. Fires
+    once when the reader qualifies (scroll-to-end, half the reading time, or
+    60s+), dedup'd per 24h in localStorage."""
+    return (
+        VIEW_TRACKER_MARK + "\n"
+        "<script>\n"
+        "(function(){\n"
+        "  try {\n"
+        "    var slug = \"" + slug + "\";\n"
+        "    var readMin = " + str(reading_time_min) + ";\n"
+        "    if (!slug || !/^[a-z0-9][a-z0-9-]{1,80}$/.test(slug)) return;\n"
+        "    var dayKey = \"pp_viewed:\" + slug;\n"
+        "    var last = 0;\n"
+        "    try { last = parseInt(localStorage.getItem(dayKey) || \"0\", 10) || 0; } catch(e){}\n"
+        "    if (Date.now() - last < 24*3600*1000) return;\n"
+        "    var fired = false;\n"
+        "    var start = Date.now();\n"
+        "    var halfSec = Math.max(30, Math.round(readMin * 60 * 0.5));\n"
+        "    var hardSec = 60;\n"
+        "    function qualifies(){\n"
+        "      var sec = (Date.now() - start) / 1000;\n"
+        "      var doc = document.documentElement;\n"
+        "      var depth = (window.scrollY + window.innerHeight) / Math.max(doc.scrollHeight, 1);\n"
+        "      return depth >= 0.95 || sec >= halfSec || sec >= hardSec;\n"
+        "    }\n"
+        "    function fire(){\n"
+        "      if (fired) return;\n"
+        "      if (!qualifies()) return;\n"
+        "      fired = true;\n"
+        "      try { localStorage.setItem(dayKey, String(Date.now())); } catch(e){}\n"
+        "      try { fetch(\"/api/views/track\", {method:\"POST\", headers:{\"content-type\":\"application/json\"}, body: JSON.stringify({slug: slug}), keepalive: true}); } catch(e){}\n"
+        "    }\n"
+        "    window.addEventListener(\"scroll\", fire, {passive: true});\n"
+        "    setTimeout(fire, hardSec * 1000);\n"
+        "    setTimeout(fire, halfSec * 1000);\n"
+        "    document.addEventListener(\"visibilitychange\", function(){ if (document.visibilityState === \"hidden\") fire(); });\n"
+        "  } catch (e) {}\n"
+        "})();\n"
+        "</script>\n"
+    )
+
+
+def inject_view_tracker(html_txt, block):
+    """Insert the view-tracker <script> right before </body>, replacing any
+    prior one marked with VIEW_TRACKER_MARK. Idempotent."""
+    # Strip previous block if present.
+    strip_pat = re.compile(
+        r"\s*" + re.escape(VIEW_TRACKER_MARK) + r"\s*<script>[\s\S]*?</script>\s*",
+        re.I,
+    )
+    html_txt = strip_pat.sub("\n", html_txt)
+    close = re.compile(r"</body\s*>", re.I)
+    if not close.search(html_txt):
+        return html_txt
+    return close.sub("\n" + block + "\n</body>", html_txt, count=1)
+
+
+def extract_reading_time(html_txt):
+    """Pull '3 min read' out of the byline so the tracker uses the same number
+    the reader sees. Defaults to 3 when the line is missing."""
+    m = re.search(r"(\d+)\s*min\s*read", html_txt, re.I)
+    if m:
+        try:
+            n = int(m.group(1))
+            if 1 <= n <= 60:
+                return n
+        except ValueError:
+            pass
+    return 3
+
+
 def set_body_category(html_txt, category):
     """Ensure the <body> tag carries data-category="<cat>" so the per-category
     CSS theme (notably body[data-category="seller-guide"]) fires on this post.
@@ -362,9 +437,11 @@ def render_cards(posts):
     for p in posts:
         href = "/blog/%s/" % p["slug"]
         thumb = '<img src="/thumb/%s.png" alt="" loading="lazy" />' % p["slug"]
+        slug_attr = html.escape(p["slug"], quote=True)
+        badge = '<span class="view-badge" data-slug="%s" aria-hidden="true"></span>' % slug_attr
         card = (
             '      <a href="{href}" class="blog-card">\n'
-            '        <div class="blog-card-thumb">{thumb}</div>\n'
+            '        <div class="blog-card-thumb">{thumb}{badge}</div>\n'
             '        <div class="blog-card-body">\n'
             '          <span class="blog-card-date">{date}</span>\n'
             '          <h2>{title}</h2>\n'
@@ -375,6 +452,7 @@ def render_cards(posts):
         ).format(
             href=href,
             thumb=thumb,
+            badge=badge,
             date=html.escape(p["date_display"]),
             title=html.escape(p["title"]),
             desc=html.escape(p["desc"]),
@@ -461,6 +539,7 @@ def main():
     # theme CSS can target the post.
     updated_related = 0
     updated_cat = 0
+    updated_tracker = 0
     for p in posts:
         related = pick_related(posts, p["slug"])
         block = render_related(related)
@@ -474,14 +553,21 @@ def main():
         new_txt_cat = set_body_category(txt, cat)
         # 2. Inject or refresh related-posts block.
         new_txt, changed_rel = inject_related(new_txt_cat, block) if block else (new_txt_cat, False)
+        # 3. Inject view-tracker <script> right before </body>.
+        read_min = extract_reading_time(new_txt)
+        tracker = build_view_tracker(p["slug"], read_min)
+        new_txt_track = inject_view_tracker(new_txt, tracker)
         changed_cat = (new_txt_cat != txt)
-        if new_txt != txt:
+        changed_track = (new_txt_track != new_txt)
+        if new_txt_track != txt:
             with open(post_path, "w", encoding="utf-8") as f:
-                f.write(new_txt)
+                f.write(new_txt_track)
             if changed_rel: updated_related += 1
             if changed_cat: updated_cat += 1
+            if changed_track: updated_tracker += 1
     print("Updated related-posts block in %d articles" % updated_related)
     print("Updated body data-category in %d articles" % updated_cat)
+    print("Updated view-tracker in %d articles" % updated_tracker)
 
     # Rebuild blog/index.html card section.
     with open(LISTING, "r", encoding="utf-8") as f:

@@ -329,5 +329,42 @@
 
   <script async src="https://f.convertkit.com/ckjs/ck.5.js" integrity="sha384-jrPr3cryOobCciVpnyICbK0gXiRQxFQMYLwmA1ncyFPJg3m6jwTkIPWwOgJo2lPj" crossorigin="anonymous"></script>
   <script src="../script.js?v=20261029x"></script>
+
+<!-- pp-view-tracker -->
+<script>
+(function(){
+  try {
+    var slug = "how-much-is-your-lego-worth";
+    var readMin = 3;
+    if (!slug || !/^[a-z0-9][a-z0-9-]{1,80}$/.test(slug)) return;
+    var dayKey = "pp_viewed:" + slug;
+    var last = 0;
+    try { last = parseInt(localStorage.getItem(dayKey) || "0", 10) || 0; } catch(e){}
+    if (Date.now() - last < 24*3600*1000) return;
+    var fired = false;
+    var start = Date.now();
+    var halfSec = Math.max(30, Math.round(readMin * 60 * 0.5));
+    var hardSec = 60;
+    function qualifies(){
+      var sec = (Date.now() - start) / 1000;
+      var doc = document.documentElement;
+      var depth = (window.scrollY + window.innerHeight) / Math.max(doc.scrollHeight, 1);
+      return depth >= 0.95 || sec >= halfSec || sec >= hardSec;
+    }
+    function fire(){
+      if (fired) return;
+      if (!qualifies()) return;
+      fired = true;
+      try { localStorage.setItem(dayKey, String(Date.now())); } catch(e){}
+      try { fetch("/api/views/track", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({slug: slug}), keepalive: true}); } catch(e){}
+    }
+    window.addEventListener("scroll", fire, {passive: true});
+    setTimeout(fire, hardSec * 1000);
+    setTimeout(fire, halfSec * 1000);
+    document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "hidden") fire(); });
+  } catch (e) {}
+})();
+</script>
+
 </body>
 </html>
