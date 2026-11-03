@@ -121,6 +121,15 @@
     .chip.clear-chip{margin-left:auto;background:transparent;border-color:transparent;color:var(--muted);font-weight:700;font-size:.82rem}
     .chip.clear-chip:hover{color:var(--red)}
 
+    /* Sub-filter row that appears when a main family is active. */
+    .sub-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding:10px 14px;background:#fff8ec;border:1px solid #ffe79b;border-radius:10px}
+    .sub-row .sub-label{font-weight:800;color:var(--ink);font-size:.82rem;letter-spacing:.03em;text-transform:uppercase;margin-right:6px}
+    .sub-row .sub-fam{font-weight:900;color:var(--red);text-transform:capitalize;margin-right:8px;font-size:.88rem}
+    .sub-chip{background:#fff;border:1.5px solid #ffce00;color:var(--ink);padding:5px 12px;border-radius:50px;font-family:'Nunito';font-weight:700;font-size:.82rem;cursor:pointer;transition:all .12s}
+    .sub-chip:hover{border-color:var(--red);color:var(--red)}
+    .sub-chip.on{background:var(--red);border-color:var(--red);color:#fff}
+    .sub-chip.on:hover{background:var(--red-dark);border-color:var(--red-dark);color:#fff}
+
     /* Tile internals when it has a BL link + colors button. */
     .tile .tile-link{display:block;color:inherit;text-decoration:none}
     .tile .colors-btn{position:absolute;top:8px;right:8px;background:rgba(227,0,11,.95);color:#fff;border:none;padding:5px 10px;border-radius:50px;font-family:'Nunito';font-weight:800;font-size:.72rem;cursor:pointer;letter-spacing:.03em;box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:2}
@@ -197,6 +206,7 @@
         <button class="chip" data-fam="verified">Verified&check;</button>
         <button class="chip clear-chip" id="clearFilters">Clear all</button>
       </div>
+      <div class="sub-row" id="subRow" hidden></div>
       <div class="hint">
         Type a number for direct lookup, or type a name to see matches &mdash; click one to pull its colors.
         BrickLink's catalog uses spaces around <em>x</em> (so "<em>brick 1 x 1</em>", not "<em>brick 1x1</em>").
@@ -485,8 +495,80 @@
     baseplate:[1],
     sticker:  [58],
   };
-  // active filter state
-  const FILTERS = { fams: new Set(), verifiedOnly: false };
+  // When a family is picked, these are the sub-category choices that
+  // appear on the side so Dad can narrow (Bricks → Technic / Slope / Round...).
+  const SUB_CATS = {
+    brick: [
+      { label: "Standard", ids: [11] },
+      { label: "Special",  ids: [5]  },
+      { label: "Technic",  ids: [8]  },
+    ],
+    plate: [
+      { label: "Standard", ids: [14] },
+      { label: "Special",  ids: [9]  },
+      { label: "Wedged",   ids: [49] },
+    ],
+    tile: [
+      { label: "Standard", ids: [19] },
+      { label: "Special",  ids: [15] },
+    ],
+    slope: [
+      { label: "Sloped",   ids: [3]  },
+      { label: "Wedged",   ids: [6]  },
+      { label: "Curved",   ids: [37] },
+    ],
+    round: [
+      { label: "Bricks",   ids: [20] },
+      { label: "Plates",   ids: [21] },
+      { label: "Tiles",    ids: [67] },
+    ],
+    body: [
+      { label: "Minifig Heads", ids: [59] },
+      { label: "Minifig Upper", ids: [60] },
+      { label: "Minifig Lower", ids: [61] },
+      { label: "Minidoll Heads",ids: [62] },
+      { label: "Minidoll Upper",ids: [63] },
+      { label: "Minidoll Lower",ids: [64] },
+    ],
+    accessory: [
+      { label: "General",    ids: [27] },
+      { label: "Headwear",   ids: [65] },
+      { label: "Hipwear",    ids: [70] },
+      { label: "Neckwear",   ids: [71] },
+      { label: "Head Acc.",  ids: [72] },
+      { label: "Weapons",    ids: [73] },
+    ],
+    technic: [
+      { label: "Connectors", ids: [12] },
+      { label: "Beams",      ids: [51] },
+      { label: "Beams Special", ids: [55] },
+      { label: "Pins",       ids: [53] },
+      { label: "Axles",      ids: [46] },
+      { label: "Bushes",     ids: [54] },
+      { label: "Gears",      ids: [52] },
+      { label: "Panels",     ids: [40] },
+      { label: "Steering",   ids: [25] },
+      { label: "Special",    ids: [26] },
+    ],
+    vehicle: [
+      { label: "Sea & Air",    ids: [35] },
+      { label: "Land",         ids: [36] },
+      { label: "Windscreens",  ids: [47] },
+    ],
+    animal: [
+      { label: "Animals",       ids: [28] },
+      { label: "Accessories",   ids: [74] },
+      { label: "Body Parts",    ids: [75] },
+    ],
+    tool: [
+      { label: "Tools",   ids: [56] },
+      { label: "Weapons", ids: [73] },
+    ],
+  };
+
+  // active filter state. `subs` tracks per-family sub-selections, as a map
+  // family -> Set of allowed cat_ids (empty = all cats under that family).
+  const FILTERS = { fams: new Set(), subs: {}, verifiedOnly: false };
 
   function termMatches(hay, t){ return hay.includes(t); }
 
@@ -506,9 +588,17 @@
     const needle = (q === "*") ? "" : norm(q);
     const terms = needle ? needle.split(" ").filter(Boolean) : [];
 
-    // Collect allowed cat_ids from active family filters.
+    // Collect allowed cat_ids. If a family has sub-selections, use ONLY those.
+    // Otherwise use the family's full cat list.
     const famCats = new Set();
-    FILTERS.fams.forEach((f) => (FAMILIES[f] || []).forEach((c) => famCats.add(c)));
+    FILTERS.fams.forEach((f) => {
+      const sub = FILTERS.subs[f];
+      if (sub && sub.size){
+        sub.forEach((c) => famCats.add(c));
+      } else {
+        (FAMILIES[f] || []).forEach((c) => famCats.add(c));
+      }
+    });
     const useCat = famCats.size > 0;
 
     // Score each hit so the best matches float to the top.
@@ -774,13 +864,14 @@
     scheduleRerun(220);
   });
 
-  // Chip clicks toggle a filter, then rerun.
-  document.getElementById("filterRow").addEventListener("click", (ev) => {
+  // Chip clicks toggle a filter, then rerun. Delegated so any chip row works.
+  function handleChipClick(ev){
     const btn = ev.target.closest(".chip");
     if (!btn) return;
     if (btn.id === "clearFilters"){
-      FILTERS.fams.clear(); FILTERS.verifiedOnly = false;
-      document.querySelectorAll(".chip.on").forEach((c) => c.classList.remove("on"));
+      FILTERS.fams.clear(); FILTERS.subs = {}; FILTERS.verifiedOnly = false;
+      document.querySelectorAll(".chip.on, .sub-chip.on").forEach((c) => c.classList.remove("on"));
+      renderSubRow();
       scheduleRerun(0); return;
     }
     const fam = btn.dataset.fam;
@@ -788,10 +879,40 @@
     if (fam === "verified") FILTERS.verifiedOnly = btn.classList.contains("on");
     else {
       if (btn.classList.contains("on")) FILTERS.fams.add(fam);
-      else FILTERS.fams.delete(fam);
+      else { FILTERS.fams.delete(fam); delete FILTERS.subs[fam]; }
     }
+    renderSubRow();
     scheduleRerun(0);
-  });
+  }
+  document.querySelectorAll(".filter-row").forEach((r) => r.addEventListener("click", handleChipClick));
+
+  // Build the side sub-filter row for each active family that has sub-cats.
+  function renderSubRow(){
+    const row = document.getElementById("subRow");
+    const active = Array.from(FILTERS.fams).filter((f) => SUB_CATS[f]);
+    if (!active.length){ row.hidden = true; row.innerHTML = ""; return; }
+    row.hidden = false;
+    row.innerHTML = active.map((fam) => {
+      const selected = FILTERS.subs[fam] || new Set();
+      const chips = SUB_CATS[fam].map((sc) => {
+        const on = Array.from(selected).some((cid) => sc.ids.includes(cid));
+        return '<button class="sub-chip'+(on?" on":"")+'" data-fam="'+fam+'" data-ids="'+sc.ids.join(",")+'">'+esc(sc.label)+'</button>';
+      }).join("");
+      return '<span class="sub-fam">'+esc(fam)+'</span>' + chips;
+    }).join('<span class="sub-label" style="margin-left:14px">·</span>');
+
+    row.querySelectorAll(".sub-chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const fam = btn.dataset.fam;
+        const ids = btn.dataset.ids.split(",").map((x) => parseInt(x, 10));
+        FILTERS.subs[fam] = FILTERS.subs[fam] || new Set();
+        btn.classList.toggle("on");
+        if (btn.classList.contains("on")) ids.forEach((id) => FILTERS.subs[fam].add(id));
+        else ids.forEach((id) => FILTERS.subs[fam].delete(id));
+        scheduleRerun(0);
+      });
+    });
+  }
 
   goBtn.addEventListener("click", lookup);
   partIn.addEventListener("keydown", (e) => {
