@@ -87,6 +87,7 @@
     .tile:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
     .tile .img{aspect-ratio:1/1;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
     .tile .img img{max-width:88%;max-height:88%;object-fit:contain;transition:transform .2s}
+    .tile .img.failed::before{content:"no image";position:absolute;color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
     .tile:hover .img img{transform:scale(1.05)}
     .tile .img.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shim 1.3s linear infinite}
     @keyframes shim{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
@@ -212,6 +213,24 @@
     if (!text){ msg.innerHTML = ""; return; }
     msg.innerHTML = '<div class="msg '+kind+'">'+text+'</div>';
   }
+
+  // Image fallback walker — tried colors in order until one loads.
+  window.__ppImgNext = function(img){
+    try {
+      const chain = JSON.parse(img.dataset.chain || "[]");
+      let idx = parseInt(img.dataset.idx || "0", 10) + 1;
+      if (idx >= chain.length){
+        img.style.display = "none";
+        img.parentNode.classList.remove("loading");
+        img.parentNode.classList.add("failed");
+        return;
+      }
+      img.dataset.idx = String(idx);
+      img.src = "https://img.bricklink.com/ItemImage/PN/" +
+        encodeURIComponent(chain[idx]) + "/" +
+        encodeURIComponent(img.dataset.no) + ".png";
+    } catch(_){ img.style.display = "none"; }
+  };
 
   function hexFor(id){
     if (COLOR_HEX_BY_ID[id]) return COLOR_HEX_BY_ID[id];
@@ -448,6 +467,11 @@
       else if (nameLc.startsWith(needle)) score = 60;
       else if (nameLc.includes(needle))   score = 40;
       else if (catLc.includes(needle))    score = 20;
+      // Boost: short all-numeric IDs are the classic/common LEGO parts
+      // (3001, 3005, 3010). Give them +15 so they beat obscure variants.
+      if (/^\d{1,5}$/.test(noLc)) score += 15;
+      // Printed/decorated/sticker variants (long suffixed) should sink.
+      if (/p|pr|pat|c0\d|d\d/.test(noLc) && noLc.length > 6) score -= 5;
       scored.push({ score, row: { no: row.no, name: row.name, cat_id: row.cat_id, cat: catName, img_c: row.img_c } });
       if (scored.length > 1200) break;  // bound the sort cost
     }
@@ -488,11 +512,15 @@
       const rows = groups[catName];
       const tiles = rows.map((it) => {
         const bl = "https://www.bricklink.com/v2/catalog/catalogitem.page?P=" + encodeURIComponent(it.no);
-        const heroColor = it.img_c || 1;
+        // Image fallback chain: part's own first color → white → light gray →
+        // black → red. onerror walks the chain; "no image" placeholder shows
+        // only if every attempt fails.
+        const chain = [it.img_c || 1, 1, 9, 11, 5].filter((c, i, a) => a.indexOf(c) === i);
+        const chainJson = JSON.stringify(chain);
         return '<div class="tile" title="'+esc(it.name)+'">' +
           '<a class="tile-link" href="'+bl+'" target="_blank" rel="noopener">' +
             '<div class="img loading">' +
-              '<img alt="" loading="lazy" src="'+imgUrlFor(heroColor, it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="this.style.display=\'none\';this.parentNode.classList.remove(\'loading\')" />' +
+              '<img alt="" loading="lazy" data-no="'+esc(it.no)+'" data-chain=\''+chainJson+'\' data-idx="0" src="'+imgUrlFor(chain[0], it.no)+'" onload="this.parentNode.classList.remove(\'loading\')" onerror="window.__ppImgNext(this)" />' +
             '</div>' +
             '<div class="meta">' +
               '<div class="swatch-row"><span class="cname">'+esc(it.name)+'</span></div>' +
