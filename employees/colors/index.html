@@ -123,8 +123,29 @@
 
     /* Welcome tiles removed per Dad. */
 
-    /* Sub-filter row removed per Dad. */
-    .sub-row, .sub-chip, .sub-label, .sub-fam, #subRow, #welcome, .welcome, .welcome-h, .welcome-lead { display: none !important; }
+    /* Welcome tiles removed; keep for hard-cached browsers. */
+    #welcome, .welcome, .welcome-h, .welcome-lead { display: none !important; }
+
+    /* ========== LEFT SIDEBAR with detailed sub-filters ========== */
+    .results-wrap{display:flex;gap:18px;align-items:flex-start;margin-top:22px}
+    .side-panel{flex:0 0 240px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);position:sticky;top:18px;max-height:calc(100vh - 36px);overflow-y:auto}
+    .side-panel h3{font-family:'Fredoka','Nunito';font-size:1rem;color:var(--ink);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--yellow);display:flex;justify-content:space-between;align-items:center}
+    .side-panel h3 span{font-size:.72rem;color:var(--muted);font-weight:600;font-family:'JetBrains Mono','Consolas',monospace}
+    .side-sect{margin-bottom:14px}
+    .side-sect-h{font-weight:800;font-size:.78rem;color:var(--red);letter-spacing:.06em;text-transform:uppercase;margin:12px 0 6px;padding-top:8px;border-top:1px dashed var(--line)}
+    .side-sect-h:first-of-type{border-top:none;padding-top:0;margin-top:0}
+    .side-check{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:.86rem;color:var(--slate);transition:color .1s;border-radius:6px}
+    .side-check:hover{color:var(--red);background:#fff8ec}
+    .side-check input{accent-color:var(--red);width:15px;height:15px;cursor:pointer;flex-shrink:0}
+    .side-check.on{color:var(--red);font-weight:800}
+    .side-empty{color:var(--muted);font-size:.85rem;padding:14px 4px;line-height:1.5}
+    .main-results{flex:1 1 auto;min-width:0}
+    @media(max-width:860px){
+      .results-wrap{flex-direction:column}
+      .side-panel{flex:none;width:100%;position:static;max-height:none}
+      .side-panel.collapsed .side-sect{display:none}
+      .side-panel h3{cursor:pointer}
+    }
 
     /* Tile internals when it has a BL link + colors button. */
     .tile .tile-link{display:block;color:inherit;text-decoration:none}
@@ -223,9 +244,17 @@
       </div>
     </div>
 
-    <div id="msg"></div>
-    <div id="partHead"></div>
-    <div id="grid" class="grid real"></div>
+    <div class="results-wrap">
+      <aside class="side-panel" id="sidePanel" hidden>
+        <h3>Filters <span id="sideCount">0</span></h3>
+        <div id="sideBody"></div>
+      </aside>
+      <div class="main-results">
+        <div id="msg"></div>
+        <div id="partHead"></div>
+        <div id="grid" class="grid real"></div>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -1166,16 +1195,62 @@
   }
   document.querySelectorAll(".filter-row").forEach((r) => r.addEventListener("click", handleChipClick));
 
-  // Sub-filter row disabled per Dad (2026-11-03). Kept as a no-op so the
-  // existing calls from the chip handler still work.
+  // Left sidebar: builds a tall list of sub-filters, grouped per active
+  // main family. Shows checkboxes so Dad can pick several at once without
+  // the overwhelm of the old inline chip row.
   function renderSubRow(){
-    const row = document.getElementById("subRow");
-    if (row){ row.hidden = true; row.innerHTML = ""; }
-    return;
-    // dead code preserved below for easy re-enable
+    const panel = document.getElementById("sidePanel");
+    const body = document.getElementById("sideBody");
+    const countEl = document.getElementById("sideCount");
+    if (!panel || !body) return;
+
     const active = Array.from(FILTERS.fams).filter((f) => SUB_CATS[f]);
-    if (!active.length){ row.hidden = true; row.innerHTML = ""; return; }
-    row.hidden = false;
+    const totalChecked = Object.values(FILTERS.subs).reduce((n, s) => n + (s ? s.size : 0), 0);
+
+    if (!FILTERS.fams.size){
+      panel.hidden = true;
+      body.innerHTML = "";
+      return;
+    }
+    panel.hidden = false;
+    countEl.textContent = totalChecked ? totalChecked + " on" : "";
+
+    if (!active.length){
+      body.innerHTML = '<div class="side-empty">This category has no deeper options. Try adding another category above.</div>';
+      return;
+    }
+
+    body.innerHTML = active.map((fam) => {
+      const selected = FILTERS.subs[fam] || new Set();
+      const checks = SUB_CATS[fam].map((sc, i) => {
+        const on = selected.has(i);
+        return '<label class="side-check'+(on?" on":"")+'">' +
+          '<input type="checkbox" data-fam="'+fam+'" data-i="'+i+'"'+(on?' checked':'')+' />' +
+          '<span>'+esc(sc.label)+'</span>' +
+        '</label>';
+      }).join("");
+      return '<div class="side-sect">' +
+        '<div class="side-sect-h">'+esc(fam)+'</div>' +
+        checks +
+      '</div>';
+    }).join("");
+
+    body.querySelectorAll('input[type="checkbox"]').forEach((inp) => {
+      inp.addEventListener("change", () => {
+        const fam = inp.dataset.fam;
+        const i = parseInt(inp.dataset.i, 10);
+        FILTERS.subs[fam] = FILTERS.subs[fam] || new Set();
+        if (inp.checked) FILTERS.subs[fam].add(i);
+        else FILTERS.subs[fam].delete(i);
+        inp.closest(".side-check").classList.toggle("on", inp.checked);
+        countEl.textContent = (Object.values(FILTERS.subs).reduce((n, s) => n + (s ? s.size : 0), 0) || 0) + " on";
+        scheduleRerun(0);
+      });
+    });
+    return;
+    // dead code preserved below for easy re-enable (old inline row)
+    const row = document.getElementById("subRow");
+    if (!row) return;
     row.innerHTML = active.map((fam) => {
       const selected = FILTERS.subs[fam] || new Set();
       const chips = SUB_CATS[fam].map((sc, i) => {
