@@ -108,6 +108,16 @@
     .cat-h{font-size:1.08rem;color:var(--slate);margin:4px 0 12px;padding:8px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:10px;letter-spacing:-.005em}
     .cat-h span{color:var(--muted);font-weight:600;font-size:.85rem;font-family:'JetBrains Mono','Consolas',monospace}
 
+    /* Filter chips below the search box. */
+    .filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+    .filter-label{font-weight:800;color:var(--slate);font-size:.88rem;letter-spacing:.03em;text-transform:uppercase}
+    .chip{background:#fff;border:1.5px solid var(--line);color:var(--slate);padding:7px 14px;border-radius:50px;font-family:'Nunito';font-weight:800;font-size:.88rem;cursor:pointer;transition:all .14s}
+    .chip:hover{border-color:var(--red);color:var(--red)}
+    .chip.on{background:var(--red);border-color:var(--red);color:#fff}
+    .chip.on:hover{background:var(--red-dark);border-color:var(--red-dark);color:#fff}
+    .chip.clear-chip{margin-left:auto;background:transparent;border-color:transparent;color:var(--muted);font-weight:700;font-size:.82rem}
+    .chip.clear-chip:hover{color:var(--red)}
+
     /* Tile internals when it has a BL link + colors button. */
     .tile .tile-link{display:block;color:inherit;text-decoration:none}
     .tile .colors-btn{position:absolute;top:8px;right:8px;background:rgba(227,0,11,.95);color:#fff;border:none;padding:5px 10px;border-radius:50px;font-family:'Nunito';font-weight:800;font-size:.72rem;cursor:pointer;letter-spacing:.03em;box-shadow:0 2px 6px rgba(0,0,0,.18);z-index:2}
@@ -142,12 +152,28 @@
 
     <div class="search-card">
       <div class="search-row">
-        <label for="partNo">Part or name:</label>
+        <label for="partNo">Search:</label>
         <div style="flex:1;min-width:200px;position:relative">
-          <input id="partNo" type="text" autocomplete="off" placeholder="e.g. 3005  or  brick 1 x 1" autofocus style="width:100%" />
+          <input id="partNo" type="text" autocomplete="off" placeholder="e.g. 3005  or  1 x 2" autofocus style="width:100%" />
           <div id="suggest" class="suggest" aria-live="polite"></div>
         </div>
-        <button class="btn" id="goBtn">Look up &rarr;</button>
+        <button class="btn" id="goBtn">Go &rarr;</button>
+      </div>
+      <div class="filter-row" id="filterRow">
+        <span class="filter-label">Show:</span>
+        <button class="chip" data-fam="brick">Bricks</button>
+        <button class="chip" data-fam="plate">Plates</button>
+        <button class="chip" data-fam="tile">Tiles</button>
+        <button class="chip" data-fam="slope">Slopes</button>
+        <button class="chip" data-fam="round">Round</button>
+        <button class="chip" data-fam="minifig">Minifig</button>
+        <button class="chip" data-fam="technic">Technic</button>
+        <button class="chip" data-fam="wheel">Wheels</button>
+        <button class="chip" data-fam="window">Windows</button>
+        <button class="chip" data-fam="panel">Panels</button>
+        <button class="chip" data-fam="animal">Animal</button>
+        <button class="chip" data-fam="verified">Verified&check;</button>
+        <button class="chip clear-chip" id="clearFilters">Clear</button>
       </div>
       <div class="hint">
         Type a number for direct lookup, or type a name to see matches &mdash; click one to pull its colors.
@@ -409,40 +435,27 @@
     setTimeout(() => { if (msg.querySelector(".msg.ok")) msg.innerHTML = ""; }, 2200);
   }
 
-  // "brick" means more than just the Brick category — it's a reseller's
-  // mental grouping of brick-SHAPED things. Searching one group name ORs
-  // the search across every member category.
-  const GROUPS = {
-    "brick":   ["brick","slope","arch","cone","panel","wedge","bracket"],
-    "bricks":  ["brick","slope","arch","cone","panel","wedge","bracket"],
-    "slope":   ["slope","wedge","arch"],
-    "slopes":  ["slope","wedge","arch"],
-    "plate":   ["plate"],
-    "plates":  ["plate"],
-    "tile":    ["tile"],
-    "tiles":   ["tile"],
-    "technic": ["technic","beam","pin","axle","liftarm","gear"],
-    "minifig": ["minifig","head","torso","leg","hair","hat","headgear","hand","arm"],
-    "minifigure": ["minifig","head","torso","leg","hair","hat","headgear","hand","arm"],
-    "mini":    ["minifig","head","torso","leg","hair","hat"],
-    "wheel":   ["wheel","tire","tyre","wheel accessory"],
-    "wheels":  ["wheel","tire","tyre"],
-    "window":  ["window","windscreen","glass"],
-    "windows": ["window","windscreen","glass"],
-    "door":    ["door"],
-    "doors":   ["door"],
-    "round":   ["round"],
-    "flower":  ["flower","plant"],
-    "plant":   ["plant","flower"],
-    "food":    ["food"],
-    "weapon":  ["weapon","sword","gun","shield"],
-    "tool":    ["tool","equipment"],
+  // Family filters — explicit chips the user picks instead of "brick"
+  // auto-expanding to slopes. Each family maps to a set of Rebrickable
+  // category IDs. Search text is now just a text filter; broadening is
+  // the chips' job.
+  const FAMILIES = {
+    brick:   [11, 5, 8, 20],       // Bricks, Bricks Special, Technic Bricks, Round & Cones
+    plate:   [14, 9, 21, 49],      // Plates, Plates Special, Round & Dishes, Wedged
+    tile:    [19, 15, 67],         // Tiles, Tiles Special, Round & Curved
+    slope:   [3, 6, 37],           // Bricks Sloped, Wedged, Curved
+    round:   [20, 21, 67],         // Round bricks, round plates, round tiles
+    minifig: [13, 27, 59, 60, 61, 65, 70, 71, 72, 73],
+    technic: [8, 12, 25, 26, 40, 46, 51, 52, 53, 54, 55],
+    wheel:   [29, 35, 36, 47],
+    window:  [16],
+    panel:   [23, 32, 38],
+    animal:  [28, 74, 75, 76],
   };
+  // active filter state
+  const FILTERS = { fams: new Set(), verifiedOnly: false };
 
-  function termMatches(hay, t){
-    if (GROUPS[t]) return GROUPS[t].some((syn) => hay.includes(syn));
-    return hay.includes(t);
-  }
+  function termMatches(hay, t){ return hay.includes(t); }
 
   async function lookupByName(q, opts){
     const silent = opts && opts.silent;
@@ -457,24 +470,33 @@
       .replace(/\s+/g, " ")
       .replace(/(\d)x(\d)/g, "$1 x $2")
       .trim();
-    const needle = norm(q);
-    const terms = needle.split(" ").filter(Boolean);
+    const needle = (q === "*") ? "" : norm(q);
+    const terms = needle ? needle.split(" ").filter(Boolean) : [];
+
+    // Collect allowed cat_ids from active family filters.
+    const famCats = new Set();
+    FILTERS.fams.forEach((f) => (FAMILIES[f] || []).forEach((c) => famCats.add(c)));
+    const useCat = famCats.size > 0;
 
     // Score each hit so the best matches float to the top.
     const scored = [];
     const needleLc = needle.replace(/\s+/g, "");
     const BL = await blParts();  // non-blocking, resolves fast after first call
+    const seen = new Set();  // dedupe part numbers
     for (let i = 0; i < p.length; i++){
       const row = p[i];
+      if (seen.has(row.no)) continue;
+      seen.add(row.no);
       const blData = BL[row.no];
+      if (FILTERS.verifiedOnly && !blData) continue;
+      if (useCat && !famCats.has(row.cat_id)) continue;
       const catName = (blData && blData.name && CATS[blData.cat_id]) || CATS[row.cat_id] || "";
-      // Prefer official BL name when we have it (often clearer than Rebrickable's).
       const displayName = (blData && blData.name) || row.name;
       const nameLc = norm(displayName);
       const noLc = (row.no || "").toLowerCase();
       const catLc = norm(catName);
       const hay = nameLc + " " + noLc + " " + catLc;
-      if (!terms.every((t) => termMatches(hay, t))) continue;
+      if (terms.length && !terms.every((t) => termMatches(hay, t))) continue;
       // Rank:
       //  - exact part-number match → 100
       //  - name starts with query  → 60
@@ -666,16 +688,43 @@
     } catch (_){ closeSuggest(); }
   }
 
-  // Live search: as soon as the input has 2+ chars that aren't a bare
-  // part number, fire the full search into the main grid. No button needed.
+  // Re-run the result list — called on every text change AND every filter change.
+  let rerunTimer = null;
+  function scheduleRerun(delay){
+    clearTimeout(rerunTimer);
+    rerunTimer = setTimeout(() => {
+      const v = partIn.value.trim();
+      const hasText = v.length >= 2;
+      const hasFilter = FILTERS.fams.size > 0 || FILTERS.verifiedOnly;
+      if (!hasText && !hasFilter){ head.innerHTML = ""; grid.innerHTML = ""; setMsg("", ""); return; }
+      // If text looks like an exact part number, do a direct lookup for colors.
+      if (hasText && looksLikeNumber(v.replace(/\s+/g, "")) && !hasFilter){ lookup(); return; }
+      lookupByName(v || "*", {silent:true});
+    }, delay || 180);
+  }
+
   partIn.addEventListener("input", () => {
-    const v = partIn.value.trim();
-    closeSuggest();  // old dropdown no longer used
-    if (!v){ head.innerHTML = ""; grid.innerHTML = ""; setMsg("", ""); return; }
-    if (looksLikeNumber(v.replace(/\s+/g, ""))) return;  // Enter / Go handles exact IDs
-    if (v.length < 2) return;
-    clearTimeout(suggestTimer);
-    suggestTimer = setTimeout(() => lookupByName(v, {silent:true}), 220);
+    closeSuggest();
+    scheduleRerun(220);
+  });
+
+  // Chip clicks toggle a filter, then rerun.
+  document.getElementById("filterRow").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".chip");
+    if (!btn) return;
+    if (btn.id === "clearFilters"){
+      FILTERS.fams.clear(); FILTERS.verifiedOnly = false;
+      document.querySelectorAll(".chip.on").forEach((c) => c.classList.remove("on"));
+      scheduleRerun(0); return;
+    }
+    const fam = btn.dataset.fam;
+    btn.classList.toggle("on");
+    if (fam === "verified") FILTERS.verifiedOnly = btn.classList.contains("on");
+    else {
+      if (btn.classList.contains("on")) FILTERS.fams.add(fam);
+      else FILTERS.fams.delete(fam);
+    }
+    scheduleRerun(0);
   });
 
   goBtn.addEventListener("click", lookup);
