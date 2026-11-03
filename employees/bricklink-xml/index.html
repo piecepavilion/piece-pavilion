@@ -227,6 +227,7 @@
           </span>
           <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill blanks now</button>
           <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
+          <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in this yellow defaults bar">Clear defaults</button>
           <span class="d-note">Also auto-fills whenever you type a Part ID.</span>
         </div>
 
@@ -1200,6 +1201,18 @@
   updateFillButtonLabel();
   document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
   document.getElementById("priceAvgBtn").addEventListener("click", priceAtBlAverage);
+  document.getElementById("clearDefaultsBtn").addEventListener("click", () => {
+    ["defColor","defQty","defPrice","defCondition","defRemarks"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = "";
+      try { localStorage.removeItem("pp_bl_" + id); } catch(_){}
+    });
+    FILL_ROW_STEP = 0;
+    updateFillButtonLabel();
+    gridMsg("ok", "Defaults cleared.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 1600);
+  });
 
   // ========== PRICE AT BRICKLINK 6-MONTH AVERAGE ==========
   async function priceAtBlAverage(){
