@@ -201,6 +201,36 @@
 <p>You can read our other posts on <a href="/blog/">the main blog</a>, and if you buy from us you can see how we apply all five habits on our <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop">BrickLink store page</a>.</p>
   </article>
 
+  <!-- RELATED-START -->
+  <section class="related-posts" aria-labelledby="related-heading">
+    <div class="related-posts-inner">
+      <h2 id="related-heading">You might also like</h2>
+      <div class="related-grid">
+      <a href="/blog/how-to-check-used-lego-set-complete/" class="related-card">
+        <div class="related-card-thumb"><img src="/thumb/how-to-check-used-lego-set-complete.png" alt="" loading="lazy" /></div>
+        <div class="related-card-body">
+          <h3>How to Check a Used LEGO Set Is Actually Complete Before You Buy It</h3>
+          <span class="related-card-link">Read &rarr;</span>
+        </div>
+      </a>
+      <a href="/blog/how-to-store-lego-long-term/" class="related-card">
+        <div class="related-card-thumb"><img src="/thumb/how-to-store-lego-long-term.png" alt="" loading="lazy" /></div>
+        <div class="related-card-body">
+          <h3>How to Store LEGO Long-Term: Stop Yellowing, Warping and Lost Pieces</h3>
+          <span class="related-card-link">Read &rarr;</span>
+        </div>
+      </a>
+      <a href="/blog/how-to-spot-fake-lego-minifigures/" class="related-card">
+        <div class="related-card-thumb"><img src="/thumb/how-to-spot-fake-lego-minifigures.png" alt="" loading="lazy" /></div>
+        <div class="related-card-body">
+          <h3>How to Spot a Fake LEGO Minifigure: 5 Checks Before You Buy</h3>
+          <span class="related-card-link">Read &rarr;</span>
+        </div>
+      </a>
+      </div>
+    </div>
+  </section>
+  <!-- RELATED-END -->
   <!-- ===== NEWSLETTER ===== -->
   <section class="newsletter section" id="newsletter">
     <div class="container newsletter-inner">
@@ -248,5 +278,37 @@
 
   <script async src="https://f.convertkit.com/ckjs/ck.5.js" integrity="sha384-jrPr3cryOobCciVpnyICbK0gXiRQxFQMYLwmA1ncyFPJg3m6jwTkIPWwOgJo2lPj" crossorigin="anonymous"></script>
   <script src="../script.js?v=20261029x"></script>
+
+<!-- pp-view-tracker -->
+<script>
+(function(){
+  try {
+    var slug = "bricklink-seller-guide-1-store-setup";
+    var readMin = 5;
+    if (!slug || !/^[a-z0-9][a-z0-9-]{1,80}$/.test(slug)) return;
+    var fired = false;
+    var start = Date.now();
+    var halfSec = Math.max(30, Math.round(readMin * 60 * 0.5));
+    var hardSec = 60;
+    function qualifies(){
+      var sec = (Date.now() - start) / 1000;
+      var doc = document.documentElement;
+      var depth = (window.scrollY + window.innerHeight) / Math.max(doc.scrollHeight, 1);
+      return depth >= 0.95 || sec >= halfSec || sec >= hardSec;
+    }
+    function fire(){
+      if (fired) return;
+      if (!qualifies()) return;
+      fired = true;
+      try { fetch("/api/views/track", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({slug: slug}), keepalive: true}); } catch(e){}
+    }
+    window.addEventListener("scroll", fire, {passive: true});
+    setTimeout(fire, hardSec * 1000);
+    setTimeout(fire, halfSec * 1000);
+    document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "hidden") fire(); });
+  } catch (e) {}
+})();
+</script>
+
 </body>
 </html>
