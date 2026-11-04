@@ -195,10 +195,21 @@
     .tile.verified{border-color:#86efac}
     .tile .verified{color:#16a34a;font-weight:900;margin-left:auto;font-size:1rem;line-height:1}
 
+    @media(max-width:860px){
+      .results-wrap{flex-direction:column}
+    }
     @media(max-width:620px){
       .topbar{padding:14px 16px}.topbar h1{font-size:1.1rem}
-      .wrap{padding:20px 14px 40px}
-      .search-card{padding:16px}
+      .wrap{padding:16px 10px 40px}
+      .search-card{padding:14px}
+      .filter-row{gap:6px;margin-top:10px;padding-top:10px}
+      .filter-label{display:none}
+      .chip{padding:5px 11px;font-size:.8rem}
+      .chip.clear-chip{font-size:.74rem}
+      .lead{font-size:.95rem;margin-bottom:14px}
+      .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+      .cat-h{font-size:.95rem;padding:7px 10px}
+      .top-tabs{max-width:none}
     }
   </style>
 </head>
@@ -220,87 +231,45 @@
     </div>
 
     <p class="lead">
-      Type a part number (like <strong>3005</strong>) OR describe the brick in words
-      (<strong>brick 1 x 1</strong>, <strong>plate 2 x 4</strong>, <strong>slope 45</strong>).
-      You'll see every color BrickLink lists for it.
+      Type a part number like <strong>3005</strong> or describe it: <strong>brick 1 x 1</strong>, <strong>plate 2 x 4</strong>. Click any result to open it on BrickLink.
     </p>
 
     <div class="search-card">
       <div class="search-row">
         <label for="partNo">Search:</label>
         <div style="flex:1;min-width:200px;position:relative">
-          <input id="partNo" type="text" autocomplete="off" placeholder="e.g. 3005  or  1 x 2" autofocus style="width:100%" />
+          <input id="partNo" type="text" autocomplete="off" placeholder="e.g. 3005  or  brick 2 x 4" autofocus style="width:100%" />
           <div id="suggest" class="suggest" aria-live="polite"></div>
         </div>
         <button class="btn" id="goBtn">Go &rarr;</button>
       </div>
       <div class="filter-row" id="filterRow">
-        <span class="filter-label">Shape:</span>
+        <span class="filter-label">Type:</span>
         <button class="chip" data-fam="brick">Bricks</button>
         <button class="chip" data-fam="plate">Plates</button>
         <button class="chip" data-fam="tile">Tiles</button>
         <button class="chip" data-fam="slope">Slopes</button>
         <button class="chip" data-fam="round">Round</button>
-        <button class="chip" data-fam="panel">Panels</button>
-        <button class="chip" data-fam="bar">Bars/Fences</button>
-        <button class="chip" data-fam="hinge">Hinges</button>
-        <button class="chip" data-fam="baseplate">Baseplates</button>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Minifig:</span>
-        <button class="chip" data-fam="minifig">Whole figs</button>
-        <button class="chip" data-fam="body">Heads &amp; Body</button>
-        <button class="chip" data-fam="hair">Hair / Hats</button>
-        <button class="chip" data-fam="accessory">Accessories</button>
-        <button class="chip" data-fam="tool">Tools / Weapons</button>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">World:</span>
-        <button class="chip" data-fam="vehicle">Vehicles</button>
+        <button class="chip" data-fam="minifig">Minifigs</button>
+        <button class="chip" data-fam="technic">Technic</button>
         <button class="chip" data-fam="wheel">Wheels</button>
         <button class="chip" data-fam="window">Windows / Doors</button>
         <button class="chip" data-fam="plant">Plants</button>
         <button class="chip" data-fam="animal">Animals</button>
-        <button class="chip" data-fam="flag">Flags / Signs</button>
-        <button class="chip" data-fam="container">Containers</button>
-        <button class="chip" data-fam="rock">Rock</button>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Mechanics:</span>
-        <button class="chip" data-fam="technic">Technic</button>
-        <button class="chip" data-fam="gear">Gears</button>
-        <button class="chip" data-fam="pneumatic">Pneumatics</button>
-        <button class="chip" data-fam="electronic">Electronics</button>
-        <button class="chip" data-fam="support">Supports / Cranes</button>
-        <button class="chip" data-fam="projectile">Projectiles</button>
-        <button class="chip" data-fam="magnet">Magnets</button>
-        <button class="chip" data-fam="tube">Tubes / Hoses</button>
-        <button class="chip" data-fam="rope">String / Rope</button>
-        <button class="chip" data-fam="buildable">Big Figures</button>
-        <button class="chip" data-fam="sticker">Stickers</button>
-        <button class="chip" data-fam="other">Other</button>
-      </div>
-      <div class="filter-row">
         <button class="chip" data-fam="verified">Verified&check;</button>
         <button class="chip clear-chip" id="clearFilters">Clear all</button>
       </div>
+      <div class="filter-row">
       <div class="hint">
-        Type a number for direct lookup, or type a name to see matches &mdash; click one to pull its colors.
-        BrickLink's catalog uses spaces around <em>x</em> (so "<em>brick 1 x 1</em>", not "<em>brick 1x1</em>").
+        BrickLink's catalog uses spaces around <em>x</em>: type "<em>brick 1 x 1</em>", not "<em>brick 1x1</em>".
       </div>
     </div>
 
     <div id="partsView">
-      <div class="results-wrap">
-        <aside class="side-panel" id="sidePanel" hidden>
-          <h3>Filters <span id="sideCount">0</span></h3>
-          <div id="sideBody"></div>
-        </aside>
-        <div class="main-results">
-          <div id="msg"></div>
-          <div id="partHead"></div>
-          <div id="grid" class="grid real"></div>
-        </div>
+      <div class="main-results">
+        <div id="msg"></div>
+        <div id="partHead"></div>
+        <div id="grid" class="grid real"></div>
       </div>
     </div>
 
@@ -1159,7 +1128,8 @@
     const matches = scored.slice(0, 300).map((s) => s.row);
 
     if (!matches.length){
-      if (!silent) setMsg("info", 'No parts matched "'+esc(q)+'". Try "brick", "slope", "minifig", or "3001".');
+      const blSearch = "https://www.bricklink.com/catalogList.asp?catType=P&v=0&catString=&q=" + encodeURIComponent(q);
+      if (!silent) setMsg("info", 'No parts matched "'+esc(q)+'". <a href="'+blSearch+'" target="_blank" rel="noopener" style="color:var(--red);font-weight:800">Search BrickLink directly &rarr;</a>');
       head.innerHTML = ""; grid.innerHTML = "";
       return;
     }
@@ -1221,25 +1191,12 @@
         '<span class="count">tap any to open on BrickLink</span>' +
       '</div>';
 
+    // Flatter structure: category heading + grid of tiles. No more size
+    // sub-sections — they splintered results into too many tiny groups.
     const sections = order.map((catName) => {
       const rows = groups[catName];
-      // Sub-group within this category by size.
-      const bySize = {};
-      rows.forEach((r) => {
-        const sz = extractSize(r.name);
-        (bySize[sz] = bySize[sz] || []).push(r);
-      });
-      const sizeOrder = Object.keys(bySize).sort((a, b) => {
-        if (!a) return 1; if (!b) return -1;         // "Other" (no size) last
-        return sizeSortKey(a) - sizeSortKey(b);
-      });
-
-      const subs = sizeOrder.map((sz) => {
-        const srows = bySize[sz];
-        const tiles = srows.map((it) => {
+      const tiles = rows.map((it) => {
         const bl = buildBlUrl(it);
-        // Image: if BL-verified, use the official BL image_url directly. If not,
-        // walk a color chain: part's own color → white → light gray → black → red.
         let imgSrc, imgChainAttrs = "";
         if (it.img_url){
           imgSrc = it.img_url;
@@ -1263,11 +1220,8 @@
           '<button class="colors-btn" data-no="'+esc(it.no)+'" title="See every color">colors</button>' +
           '<button class="copy-btn" data-no="'+esc(it.no)+'" title="Copy part ID '+esc(it.no)+'" aria-label="Copy part ID">&#128203;</button>' +
         '</div>';
-        }).join("");
-        const sizeLabel = sz ? sz : "Other";
-        return '<div class="size-sub"><h4 class="size-h">'+esc(sizeLabel)+' <span>&middot; '+srows.length+'</span></h4><div class="grid">'+tiles+'</div></div>';
       }).join("");
-      return '<section class="cat-section animate-sect-in"><h3 class="cat-h">'+esc(catName)+' <span>&middot; '+rows.length+'</span></h3>'+subs+'</section>';
+      return '<section class="cat-section animate-sect-in"><h3 class="cat-h">'+esc(catName)+' <span>&middot; '+rows.length+'</span></h3><div class="grid">'+tiles+'</div></section>';
     }).join("");
 
     grid.innerHTML = sections;
