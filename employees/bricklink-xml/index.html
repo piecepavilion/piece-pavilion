@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-scan-alts" />
+  <meta name="pp-build" content="v2026-11-04-scan-colors" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -232,7 +232,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-alts</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-colors</span>
   </div>
 
   <div class="wrap">
@@ -1455,6 +1455,69 @@
     }
   }
 
+  // Lazy-loaded BL color catalog (id -> {name, hex}) used to pick the
+  // closest BL color from a cell's dominant pixels.
+  let BL_COLORS = null, BL_COLORS_P = null;
+  async function blColors(){
+    if (BL_COLORS) return BL_COLORS;
+    if (!BL_COLORS_P){
+      BL_COLORS_P = fetch("/employees/colors/catalog.json", { credentials: "include" })
+        .then((r) => r.ok ? r.json() : null)
+        .then((j) => {
+          const map = {};
+          if (j && j.colors){
+            Object.values(j.colors).forEach((c) => {
+              const hex = (c.hex || "").replace("#", "");
+              if (hex.length === 6){
+                const r = parseInt(hex.slice(0,2),16);
+                const g = parseInt(hex.slice(2,4),16);
+                const b = parseInt(hex.slice(4,6),16);
+                map[c.id] = { id: c.id, name: c.name, r, g, b, type: c.type || "" };
+              }
+            });
+          }
+          BL_COLORS = map;
+          return map;
+        }).catch(() => ({}));
+    }
+    return BL_COLORS_P;
+  }
+
+  // Sample the center ~50% of a canvas, return average RGB of non-background
+  // pixels (filters near-white/near-black backgrounds that drag the average).
+  function dominantRgbFromCanvas(canvas){
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    const sx = Math.round(w * 0.25), sy = Math.round(h * 0.25);
+    const sw = Math.round(w * 0.5),  sh = Math.round(h * 0.5);
+    const data = ctx.getImageData(sx, sy, sw, sh).data;
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < data.length; i += 4){
+      const R = data[i], G = data[i+1], B = data[i+2];
+      // Skip background: near-white and near-black pixels
+      const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+      if (mn > 230 || mx < 25) continue;
+      r += R; g += G; b += B; n++;
+    }
+    if (!n) return null;
+    return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+  }
+
+  // Pick the BL color_id with the closest RGB distance to a sampled pixel.
+  function closestBlColor(rgb, colorMap){
+    if (!rgb) return null;
+    let best = null, bestD = Infinity;
+    Object.values(colorMap).forEach((c) => {
+      // Skip exotic types where false-matches cause pain (speckle, glitter)
+      const t = (c.type || "").toLowerCase();
+      if (/speckle|glitter|modulex/.test(t)) return;
+      const dr = c.r - rgb[0], dg = c.g - rgb[1], db = c.b - rgb[2];
+      const d = dr*dr + dg*dg + db*db;
+      if (d < bestD){ bestD = d; best = c; }
+    });
+    return best;
+  }
+
   // ========== BULK SCAN (grid of parts in one photo) ==========
   const scanOverlay = document.getElementById("scanManyOverlay");
   const scanGridEl  = document.getElementById("scanManyGrid");
@@ -1479,9 +1542,13 @@
     const altsNote = (r.options && r.options.length > 1)
       ? ' <span style="color:var(--muted);font-weight:600">&middot; tap for ' + r.options.length + ' alts</span>'
       : "";
+    const colorBit = r.detectedColor
+      ? '<br><span style="font-family:\'Nunito\';color:var(--slate);display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgb('+r.detectedColor.r+','+r.detectedColor.g+','+r.detectedColor.b+');border:1px solid rgba(0,0,0,.2)"></span>' + r.detectedColor.name + '</span>'
+      : "";
     tileEl.querySelector(".sc-label").innerHTML =
       '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong> &middot; ' + pct + '%' + altsNote +
-      '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>';
+      '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>' +
+      colorBit;
     const inp = tileEl.querySelector(".sc-manual");
     if (inp){ inp.style.display = "block"; inp.value = r.manual ? r.id : ""; }
   }
@@ -1525,6 +1592,9 @@
       scanGridEl.appendChild(d);
     }
 
+    // Preload color catalog so dominant-color detection has something to match against.
+    const colorMap = await blColors();
+
     // Slice each cell → blob → POST to /api/colors/scan in parallel, max 6 at a time.
     let done = 0, errors = 0;
     const queue = Array.from({length: nCells}, (_, i) => i);
@@ -1537,6 +1607,12 @@
         sub.width = cellW; sub.height = cellH;
         sub.getContext("2d").drawImage(canvas, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
         const blob = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.85));
+        // Sample the dominant color from the center of this cell.
+        let detectedColor = null;
+        try {
+          const rgb = dominantRgbFromCanvas(sub);
+          detectedColor = closestBlColor(rgb, colorMap);
+        } catch(_){}
         const previewUrl = URL.createObjectURL(blob);
         const tileEl = scanGridEl.children[i];
         if (tileEl){
@@ -1556,10 +1632,10 @@
             if (!options.find((o) => o.id === it.id)) options.push(it);
           });
           if (top && top.id){
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: top.id, name: top.name, score: top.score, options, optIdx: 0 };
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: top.id, name: top.name, score: top.score, options, optIdx: 0, detectedColor };
             renderScanTile(i);
           } else {
-            SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0 };
+            SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor };
             errors++;
             if (tileEl){ tileEl.querySelector(".sc-label").textContent = "no match — type ID below"; tileEl.style.borderColor = "#fecaca"; tileEl.querySelector(".sc-manual").style.display = "block"; }
           }
@@ -1618,17 +1694,20 @@
     const dcond  = (document.getElementById("defCondition").value || "").trim();
     const ddesc  = (document.getElementById("defDescription").value || "").trim();
     const drem   = (document.getElementById("defRemarks").value || "").trim();
-    let addedCount = 0;
+    let addedCount = 0, autoColorCount = 0;
     ok.forEach((r) => {
       while (GRID_BODY.children.length < FILL_ROW_STEP + 1) addRows(1);
       FILL_ROW_STEP++;
       const tr = GRID_BODY.children[FILL_ROW_STEP - 1];
       const set = (k, v) => {
         const el = tr.querySelector('[data-k="'+k+'"]');
-        if (el && v) el.value = v;
+        if (el && v != null && v !== "") el.value = String(v);
       };
+      // Color priority: detected from photo > template default.
+      let rowColor = dcolor;
+      if (r.detectedColor){ rowColor = r.detectedColor.name; autoColorCount++; }
       set("ITEMID", r.id);
-      set("COLOR", dcolor);
+      set("COLOR", rowColor);
       set("QTY", dqty);
       set("PRICE", dprice);
       set("CONDITION", dcond);
@@ -1642,8 +1721,11 @@
     updateFillButtonLabel();
     recountGrid(); saveGrid();
     scanOverlay.style.display = "none";
-    gridMsg("ok", "Scanned and added " + addedCount + " rows. Auto-pricing each in the background.");
-    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
+    const msg = "Added " + addedCount + " row" + (addedCount === 1 ? "" : "s") +
+      (autoColorCount ? " — " + autoColorCount + " got colors from the photo" : "") +
+      ". Auto-pricing in the background.";
+    gridMsg("ok", msg);
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4500);
   });
 
   // (Old scanFile handler replaced by live-camera processSinglePhoto.)
