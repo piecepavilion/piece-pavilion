@@ -2285,7 +2285,11 @@
 
           const chosen = options[0];
           if (chosen && chosen.id){
-            const blValid = partsSet.has((chosen.id || "").toLowerCase());
+            // Only report blValid when the catalog actually loaded.
+            // Otherwise an empty set would mark every part as "not in BL".
+            const blValid = partsSet && partsSet.size > 0
+              ? partsSet.has((chosen.id || "").toLowerCase())
+              : null;  // unknown
             SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid };
             renderScanTile(i);
           } else {
