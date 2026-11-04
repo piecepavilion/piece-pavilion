@@ -2018,31 +2018,41 @@
     const W = canvas.width, H = canvas.height;
     const img = ctx.getImageData(0, 0, W, H).data;
 
-    // Estimate background from the full border perimeter in Lab space.
-    // This tolerates uneven lighting + off-white backgrounds better than
-    // averaging just 8 corner samples.
-    let bL = 0, bA = 0, bB = 0, bN = 0;
-    const walkBorder = (x, y) => {
-      const p = (y * W + x) * 4;
-      const lab = rgb2lab(img[p], img[p+1], img[p+2]);
-      bL += lab[0]; bA += lab[1]; bB += lab[2]; bN++;
-    };
+    // Estimate background from the border, excluding outlier pixels.
+    // If a part touches the border, those pixels would skew bgLab. Two-pass:
+    //   pass 1: unfiltered mean (reasonable first approximation)
+    //   pass 2: exclude pixels > 2x the mean ΔE and recompute. Also measure
+    //           variance on the clean subset for the adaptive threshold.
+    const borderLabs = [];
     const step = Math.max(1, Math.floor(Math.min(W, H) / 60));
-    for (let x = 0; x < W; x += step){ walkBorder(x, 0); walkBorder(x, H-1); }
-    for (let y = 0; y < H; y += step){ walkBorder(0, y); walkBorder(W-1, y); }
-    const bgLab = [bL/bN, bA/bN, bB/bN];
-
-    // Also compute per-pixel variance of the border to set the FG threshold
-    // adaptively (noisy border = higher threshold).
-    let varSum = 0;
-    const walkVar = (x, y) => {
+    const collect = (x, y) => {
       const p = (y * W + x) * 4;
-      const lab = rgb2lab(img[p], img[p+1], img[p+2]);
-      varSum += labDist(lab, bgLab);
+      borderLabs.push(rgb2lab(img[p], img[p+1], img[p+2]));
     };
-    for (let x = 0; x < W; x += step){ walkVar(x, 0); walkVar(x, H-1); }
-    for (let y = 0; y < H; y += step){ walkVar(0, y); walkVar(W-1, y); }
-    const bgNoise = varSum / bN;
+    for (let x = 0; x < W; x += step){ collect(x, 0); collect(x, H-1); }
+    for (let y = 0; y < H; y += step){ collect(0, y); collect(W-1, y); }
+
+    // Pass 1 — crude mean
+    let bL0 = 0, bA0 = 0, bB0 = 0;
+    borderLabs.forEach((l) => { bL0 += l[0]; bA0 += l[1]; bB0 += l[2]; });
+    const n0 = borderLabs.length;
+    const bgLab0 = [bL0/n0, bA0/n0, bB0/n0];
+    // Mean distance from the first estimate
+    let dSum = 0;
+    borderLabs.forEach((l) => { dSum += labDist(l, bgLab0); });
+    const meanD = dSum / n0;
+    const OUTLIER_CUTOFF = Math.max(15, meanD * 2);
+
+    // Pass 2 — recompute mean and variance from inliers only
+    let bL = 0, bA = 0, bB = 0, bN = 0, varSum = 0;
+    borderLabs.forEach((l) => {
+      const d = labDist(l, bgLab0);
+      if (d > OUTLIER_CUTOFF) return;  // part touching border, skip
+      bL += l[0]; bA += l[1]; bB += l[2]; bN++;
+      varSum += d;
+    });
+    const bgLab = bN > 0 ? [bL/bN, bA/bN, bB/bN] : bgLab0;
+    const bgNoise = bN > 0 ? varSum / bN : meanD;
     // Threshold = baseline + 2x the border noise. 1000-test harness swept
     // 10/8/6/5/4/3 and found 6 the sweet spot: 95.5% combined vs 92% at 10,
     // with zero false positives on synthetic. Adaptive bgNoise component
