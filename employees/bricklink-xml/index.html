@@ -1759,6 +1759,25 @@
     const tileEl = ev.target.closest("[data-i]");
     if (!tileEl) return;
     if (ev.target.classList.contains("sc-manual")) return;
+    // Drop-tile X button: mark the result as dropped so grouping skips it.
+    if (ev.target.classList.contains("sc-drop")){
+      const i = parseInt(tileEl.dataset.i, 10);
+      if (SCAN_RESULTS[i]){
+        SCAN_RESULTS[i].dropped = true;
+        tileEl.style.opacity = "0.3";
+        tileEl.style.filter = "grayscale(1)";
+        tileEl.style.pointerEvents = "none";
+      }
+      // Re-count remaining
+      const nCells = SCAN_RESULTS.length;
+      const good = SCAN_RESULTS.filter((r) => r && r.status === "ok" && !r.dropped).length;
+      scanSummary.textContent = good + " of " + nCells + " ready. Click any tile to try the next guess.";
+      scanAddBtn.disabled = good === 0;
+      const checkBtn = document.getElementById("scanManyCheck");
+      if (checkBtn) checkBtn.disabled = good === 0;
+      ev.stopPropagation();
+      return;
+    }
     const i = parseInt(tileEl.dataset.i, 10);
     const r = SCAN_RESULTS[i];
     if (!r || !r.options || r.options.length < 2) return;
@@ -2145,6 +2164,7 @@
       d.dataset.i = String(i);
       d.style.cssText = "background:#fafbfd;border:2px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem;cursor:pointer;transition:border-color .15s;position:relative";
       d.innerHTML = '<div style="position:absolute;top:4px;left:6px;background:var(--red);color:#fff;font-weight:900;font-size:.7rem;padding:1px 6px;border-radius:50px;z-index:1">'+(i+1)+'</div>' +
+                    '<button type="button" class="sc-drop" title="Drop this tile from the batch" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border:none;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-weight:700;font-size:.75rem;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;padding:0">&times;</button>' +
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">' +
                       '<div style="aspect-ratio:1;background:#eee;border-radius:6px;overflow:hidden;position:relative" title="your photo"><img class="sc-your" style="width:100%;height:100%;object-fit:cover" alt=""><div style="position:absolute;bottom:2px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:.56rem;padding:1px 4px;border-radius:3px;font-weight:700">YOUR PHOTO</div></div>' +
                       '<div style="aspect-ratio:1;background:#fff;border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--line)" title="BrickLink reference"><img class="sc-ref" style="width:100%;height:100%;object-fit:contain" alt=""><div style="position:absolute;bottom:2px;left:3px;background:rgba(14,165,233,.9);color:#fff;font-size:.56rem;padding:1px 4px;border-radius:3px;font-weight:700">BL REF</div></div>' +
@@ -2290,7 +2310,7 @@
     const drem   = (document.getElementById("defRemarks").value || "").trim();
     const groups = new Map();
     SCAN_RESULTS.forEach((r, idx) => {
-      if (!r || r.status !== "ok" || r.dropped) return;
+      if (!r || r.status !== "ok" || r.dropped) return;  // drop honors sc-drop click
       const colorName = r.detectedColor ? r.detectedColor.name : dcolor;
       const key = [r.id, colorName, dcond, drem, ddesc].join("\u0001");
       if (groups.has(key)){
