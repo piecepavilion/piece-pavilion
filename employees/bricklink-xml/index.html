@@ -2850,15 +2850,36 @@
           //   - Both pick the same ID  -> boost score with the sum
           //   - PP catalog >= 0.70 and Brickognize's top is weaker -> PP wins
           //   - Otherwise keep Brickognize's rank
+          //
+          // Client-side cache keyed on phash: if Dad re-scans the same
+          // tray (same blobs = same phashes), re-use the stored CLIP
+          // response instead of re-hitting Workers AI. 24h TTL.
           let customMatched = null;
           try {
-            const mFd = new FormData();
-            mFd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
-            const mResp = await fetch("/employees/api/colors/match?top_k=5", {
-              method: "POST", credentials: "include", body: mFd,
-            });
-            if (mResp.ok){
-              const mJ = await mResp.json();
+            let mJ = null;
+            const cacheKey = phash ? ("pp_match_" + phash) : null;
+            if (cacheKey){
+              try {
+                const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+                if (cached && Date.now() - cached.ts < 24 * 3600 * 1000){
+                  mJ = cached.data;
+                }
+              } catch(_){}
+            }
+            if (!mJ){
+              const mFd = new FormData();
+              mFd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
+              const mResp = await fetch("/employees/api/colors/match?top_k=5", {
+                method: "POST", credentials: "include", body: mFd,
+              });
+              if (mResp.ok){
+                mJ = await mResp.json();
+                if (cacheKey && mJ){
+                  try { localStorage.setItem(cacheKey, JSON.stringify({ data: mJ, ts: Date.now() })); } catch(_){}
+                }
+              }
+            }
+            if (mJ){
               const nearest = (mJ && mJ.nearest) || [];
               const n0 = nearest[0];
               if (n0 && n0.similarity >= 0.70){
