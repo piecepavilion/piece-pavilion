@@ -2011,7 +2011,15 @@
           if (py > 0 && closed[p-sw] && !visited[p-sw]) stack.push(p-sw);
           if (py < sh-1 && closed[p+sw] && !visited[p+sw]) stack.push(p+sw);
         }
-        if (area >= minAreaPx){
+        // Quality gates — reject likely false positives (shadows, noise):
+        //  * Aspect ratio: extreme long/thin blobs are usually shadows.
+        //  * Fill density: foreground-pixels / bbox-area < 0.25 means the
+        //    blob is mostly empty space — a shadow or a ring-shaped artifact.
+        const boxW = (maxX - minX + 1), boxH = (maxY - minY + 1);
+        const aspect = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
+        const fillDensity = area / (boxW * boxH);
+        const isLikelyShadow = aspect > 6 || fillDensity < 0.25;
+        if (area >= minAreaPx && !isLikelyShadow){
           const pad = 10;
           const bx = Math.max(0, minX * scale - pad);
           const by = Math.max(0, minY * scale - pad);
