@@ -1803,8 +1803,14 @@
     const checkBtn = document.getElementById("scanManyCheck");
     if (checkBtn) checkBtn.disabled = good === 0;
   });
+  // Track object URLs we created this scan so we can revoke them on close.
+  // Each object URL holds a reference to a blob in memory; leaking them
+  // accumulates across repeat scans in a long session on iPad Safari.
+  let SCAN_OBJ_URLS = [];
   document.getElementById("scanManyClose").addEventListener("click", () => {
     scanOverlay.style.display = "none";
+    SCAN_OBJ_URLS.forEach((u) => { try { URL.revokeObjectURL(u); } catch(_){} });
+    SCAN_OBJ_URLS = [];
   });
 
   // Render a single scan tile from SCAN_RESULTS[i].
@@ -2131,7 +2137,9 @@
 
     // Load the image into a canvas so we can analyze it.
     const img = new Image();
-    img.src = URL.createObjectURL(file);
+    const imgObjUrl = URL.createObjectURL(file);
+    SCAN_OBJ_URLS.push(imgObjUrl);
+    img.src = imgObjUrl;
     await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
     const canvas = document.createElement("canvas");
     canvas.width = img.naturalWidth;
@@ -2233,6 +2241,7 @@
         const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
         const blobPad = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
         const previewUrl = URL.createObjectURL(blobTight);
+        SCAN_OBJ_URLS.push(previewUrl);
         const tileEl = scanGridEl.children[i];
         if (tileEl){
           tileEl.querySelector(".sc-your").src = previewUrl;
