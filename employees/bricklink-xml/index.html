@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v15-rotcatalog-sheet" />
+  <meta name="pp-build" content="v2026-11-04-vision-v16-dualscan" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v15</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v16</span>
   </div>
 
   <div class="wrap">
@@ -2841,45 +2841,47 @@
           options.length = 0;
           biasedOptions.forEach((o) => options.push(o));
 
-          // Custom catalog matcher. Dad's own CLIP-embedded inventory
-          // catalog (project #2, 2026-11-04). Only fires when Brickognize
-          // is unsure OR when its top guess is outside Dad's inventory --
-          // a second opinion that's cheap to ignore when Brickognize is
-          // confident. On a confident catalog hit we promote the match
-          // to the top of options with a "PP MATCH" tag.
-          const topScoreSoFar = (options[0] && options[0].score) || 0;
-          const topId = (options[0] && options[0].id || "").toLowerCase();
-          const topInStock = INVENTORY_BIAS.parts && INVENTORY_BIAS.parts.has(topId);
+          // Custom catalog matcher. Dad's own rotation-augmented CLIP
+          // catalog (project #2, 2026-11-04, build v15). Fires on EVERY
+          // blob -- previous gating missed the "Brickognize confident but
+          // wrong" case which is the most important failure mode to catch.
+          // Signals are combined so a Brickognize + PP catalog agreement
+          // nets the highest confidence:
+          //   - Both pick the same ID  -> boost score with the sum
+          //   - PP catalog >= 0.70 and Brickognize's top is weaker -> PP wins
+          //   - Otherwise keep Brickognize's rank
           let customMatched = null;
-          if (topScoreSoFar < 0.70 || !topInStock){
-            try {
-              const mFd = new FormData();
-              mFd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
-              const mResp = await fetch("/employees/api/colors/match?top_k=5", {
-                method: "POST", credentials: "include", body: mFd,
-              });
-              if (mResp.ok){
-                const mJ = await mResp.json();
-                const n0 = mJ && mJ.nearest && mJ.nearest[0];
-                if (n0 && n0.similarity >= 0.70){
-                  // Catalog's top-1 at a strong similarity. If it's in
-                  // Brickognize's top-5, promote it; otherwise inject it
-                  // as an alternative without displacing Brickognize's
-                  // top entirely (we still show it as the chosen but mark
-                  // it as a PP-Catalog pick so Dad can audit).
-                  const idx = options.findIndex((o) => (o.id || "").toLowerCase() === n0.item_id.toLowerCase());
-                  const promoted = { id: n0.item_id, name: "(PP catalog match)", score: n0.similarity };
-                  if (idx >= 0){
-                    const [v] = options.splice(idx, 1);
-                    options.unshift({ ...v, score: Math.max(v.score || 0, n0.similarity) });
-                  } else {
-                    options.unshift(promoted);
-                  }
+          try {
+            const mFd = new FormData();
+            mFd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
+            const mResp = await fetch("/employees/api/colors/match?top_k=5", {
+              method: "POST", credentials: "include", body: mFd,
+            });
+            if (mResp.ok){
+              const mJ = await mResp.json();
+              const nearest = (mJ && mJ.nearest) || [];
+              const n0 = nearest[0];
+              if (n0 && n0.similarity >= 0.70){
+                const idx = options.findIndex((o) => (o.id || "").toLowerCase() === n0.item_id.toLowerCase());
+                if (idx >= 0){
+                  // Agreement -- boost the matched option with the best
+                  // of the two scores and move it to the top.
+                  const [v] = options.splice(idx, 1);
+                  options.unshift({ ...v, score: Math.max(v.score || 0, n0.similarity) });
                   customMatched = n0;
+                } else {
+                  // Brickognize doesn't rank this ID at all. Only inject
+                  // over Brickognize's top-1 if Brickognize is weak
+                  // (<0.60) OR PP catalog is very confident (>=0.85).
+                  const bScore = (options[0] && options[0].score) || 0;
+                  if (bScore < 0.60 || n0.similarity >= 0.85){
+                    options.unshift({ id: n0.item_id, name: "(PP catalog match)", score: n0.similarity });
+                    customMatched = n0;
+                  }
                 }
               }
-            } catch(_){ /* catalog match is a bonus; failures don't block the scan */ }
-          }
+            }
+          } catch(_){ /* catalog match is a bonus; failures don't block the scan */ }
           let chosen = options[0];
           // Learning-layer lookup. If Dad has corrected a visually similar
           // blob of the same color before, promote that correction to the
