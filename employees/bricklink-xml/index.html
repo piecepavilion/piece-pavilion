@@ -2497,6 +2497,10 @@
     updateFillButtonLabel();
     recountGrid(); saveGrid();
     scanOverlay.style.display = "none";
+    // Release the scan's Object URLs — Add succeeded, we don't need the
+    // preview photos in memory anymore.
+    SCAN_OBJ_URLS.forEach((u) => { try { URL.revokeObjectURL(u); } catch(_){} });
+    SCAN_OBJ_URLS = [];
     gridMsg("ok", "Added " + addedCount + " grouped row" + (addedCount === 1 ? "" : "s") + ". Auto-pricing in the background.");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4500);
   });
