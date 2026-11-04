@@ -178,7 +178,7 @@
       document.getElementById('cards').innerHTML = sets.length
         ? sets.map(card).join('')
         : '<div class="empty">' + (DATA.sets.length
-            ? 'No sets match “' + q + '”.'
+            ? 'No sets match “' + escHtml(q) + '”.'
             : 'No sets tracked yet. Add rows to the <strong>Part-Out</strong> Google Sheet (Sets + Lots tabs); they appear here after the next hourly refresh.') + '</div>';
     }
 
