@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v7-flipretry-qty" />
+  <meta name="pp-build" content="v2026-11-04-vision-v8-revertflip" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v7</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v8</span>
   </div>
 
   <div class="wrap">
@@ -2452,19 +2452,6 @@
 
         const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
         const blobPad = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
-        // A 180-degree rotated copy of the tight crop. Used only when the
-        // first scan returns low confidence — Brickognize is trained on
-        // catalog views (studs up for bricks/plates, printed face up for
-        // tiles and minifig parts), so a face-down tile scans poorly.
-        // Dad's 2026-11-04 test specifically called out upside-down parts
-        // as the remaining accuracy gap. See flip-retry below.
-        const flipCanvas = document.createElement("canvas");
-        flipCanvas.width = sub.width; flipCanvas.height = sub.height;
-        const fctx = flipCanvas.getContext("2d");
-        fctx.translate(sub.width, sub.height);
-        fctx.rotate(Math.PI);
-        fctx.drawImage(sub, 0, 0);
-        const blobFlip = await new Promise((res) => flipCanvas.toBlob(res, "image/jpeg", 0.9));
         const previewUrl = URL.createObjectURL(blobTight);
         SCAN_OBJ_URLS.push(previewUrl);
         const tileEl = scanGridEl.children[i];
@@ -2498,24 +2485,17 @@
             });
             j = resp.ok ? await resp.json() : j;
           }
-          // Upside-down retry. If the first pass returned low confidence,
-          // the part may be face-down. Send the 180-rotated crop and keep
-          // whichever scan came back stronger. Doubles the API cost on
-          // low-confidence blobs ONLY — high-confidence blobs skip this.
-          {
-            const topScore = (j && j.top && j.top.score) || 0;
-            if (topScore < 0.60){
-              try {
-                const fresp = await fetch("/employees/api/colors/scan", {
-                  method: "POST", credentials: "include",
-                  body: buildFd([{blob: blobFlip, name: "flip"}]),
-                });
-                const fj = fresp.ok ? await fresp.json() : null;
-                const fScore = (fj && fj.top && fj.top.score) || 0;
-                if (fScore > topScore){ j = fj; }
-              } catch(_){ /* flip retry is best-effort; a network blip shouldn't kill the scan */ }
-            }
-          }
+          // NOTE: v7 added a 180-rotated retry here on low-confidence blobs,
+          // intending to catch face-down parts. It made accuracy WORSE on
+          // Dad's 23-part retest (16/23 -> ~10/23). A 2D rotation does not
+          // reveal the hidden face of a 3D LEGO part — it just mirrors the
+          // silhouette, which lets Brickognize latch onto an unrelated
+          // part at a slightly higher score and OVERWRITE a correct but
+          // merely-uncertain first-pass answer. Removed. Face-down parts
+          // need a physical flip from the person doing the scan; there's
+          // no image-space trick that recovers the other side. The scan
+          // summary now warns about low-confidence tiles so Dad knows
+          // which ones to flip and re-shoot.
           const top = j && j.top;
           const allItems = (j && j.items) || [];
           const bgColors = (j && j.colors) || [];  // Brickognize's own color guesses
@@ -2587,8 +2567,12 @@
     const hi = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) >= 0.70).length;
     const mid = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) >= 0.40 && (r.score || 0) < 0.70).length;
     const low = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) < 0.40).length;
-    scanSummary.textContent = good + " of " + nCells + " identified — " +
-      hi + " high, " + mid + " mid, " + low + " low confidence. Click Check & group next.";
+    const lowMidTotal = low + mid;
+    scanSummary.innerHTML = good + " of " + nCells + " identified &mdash; " +
+      hi + " high, " + mid + " mid, " + low + " low confidence. Click Check &amp; group next." +
+      (lowMidTotal >= 3
+        ? '<br><span style="color:#92400e;font-size:.78rem;font-weight:600">Tip: the pink/yellow tiles were low confidence &mdash; often that\'s a piece sitting face-down. Flip those physical pieces so the studs or printed face is up, then re-shoot the tray. Brickognize is trained on catalog views; a 2D image rotation can\'t show the hidden side, only a physical flip can.</span>'
+        : '');
     document.getElementById("scanManyCheck").disabled = good === 0;
     scanAddBtn.disabled = good === 0;
   }
