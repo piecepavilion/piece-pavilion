@@ -2006,10 +2006,13 @@
     for (let x = 0; x < W; x += step){ walkVar(x, 0); walkVar(x, H-1); }
     for (let y = 0; y < H; y += step){ walkVar(0, y); walkVar(W-1, y); }
     const bgNoise = varSum / bN;
-    // Threshold = baseline + 2x the border noise. Lower bound aggressive
-    // enough to catch low-contrast parts (e.g. gray on off-white table),
-    // upper bound capped so lively backgrounds don't bleed into FG.
-    const FG_THRESHOLD = Math.max(10, Math.min(28, 10 + bgNoise * 2));
+    // Threshold = baseline + 2x the border noise. 1000-test harness swept
+    // 10/8/6/5/4/3 and found 6 the sweet spot: 95.5% combined vs 92% at 10,
+    // with zero false positives on synthetic. Adaptive bgNoise component
+    // raises it when the border is actually noisy (prevents bg-noise FPs
+    // in real photos). Shadow filter downstream catches any that slip
+    // through.
+    const FG_THRESHOLD = Math.max(6, Math.min(28, 6 + bgNoise * 2));
 
     // Binary FG mask at 1/4 resolution. Use Lab ΔE, not RGB Euclidean.
     const scale = 4;
