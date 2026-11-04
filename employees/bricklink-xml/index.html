@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v8-revertflip" />
+  <meta name="pp-build" content="v2026-11-04-vision-v9-crossref" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v8</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v9</span>
   </div>
 
   <div class="wrap">
@@ -2562,14 +2562,75 @@
     const workers = Array.from({length: Math.min(6, nCells)}, () => worker());
     await Promise.all(workers);
 
+    // Cross-reference pass. A face-down tile often has the correct part
+    // somewhere in its top-10, just not at position 0. If a RIGHT-SIDE-UP
+    // tile of the same color in the same photo landed on that same ID at
+    // high confidence, trust the high-confidence neighbor and promote the
+    // low-confidence match. This is the "all 4 are the same piece, 2 are
+    // upside down" case Dad called out: the 2 studs-up ones nail Tile 1x2
+    // Blue; the 2 studs-down ones end up with Tile 1x2 in options[3] or
+    // thereabouts. Promoting them lets all four group into one row.
+    //
+    // Guardrails:
+    // - Only consider high-confidence IDs (>= 0.65) as anchors.
+    // - Only promote low-confidence blobs (< 0.55).
+    // - Must match on detected color name — a wrong-color ID shouldn't
+    //   steal a blob that pixel-sampled a different color.
+    // - Only scan options for the SAME color anchor set, computed per blob
+    //   from its own detectedColor.
+    {
+      const ANCHOR_CONF = 0.65;
+      const PROMOTE_MAX_CONF = 0.55;
+      const anchorsByColor = new Map(); // colorName (lowercased) -> Set of part ids
+      SCAN_RESULTS.forEach((r) => {
+        if (!r || r.status !== "ok" || r.dropped) return;
+        if ((r.score || 0) < ANCHOR_CONF) return;
+        const cname = (r.detectedColor && r.detectedColor.name || "").toLowerCase();
+        if (!cname || !r.id) return;
+        if (!anchorsByColor.has(cname)) anchorsByColor.set(cname, new Set());
+        anchorsByColor.get(cname).add(r.id);
+      });
+      if (anchorsByColor.size){
+        SCAN_RESULTS.forEach((r, i) => {
+          if (!r || r.status !== "ok" || r.dropped) return;
+          if ((r.score || 0) >= PROMOTE_MAX_CONF) return;
+          const cname = (r.detectedColor && r.detectedColor.name || "").toLowerCase();
+          if (!cname) return;
+          const anchors = anchorsByColor.get(cname);
+          if (!anchors || !anchors.size) return;
+          const opts = r.options || [];
+          for (let k = 0; k < opts.length; k++){
+            const o = opts[k];
+            if (o && o.id && anchors.has(o.id)){
+              // Promote this option. Keep original score but mark the
+              // cross-ref so the preview/tile can show the tag, and push
+              // score to the mid-confidence floor so grouping treats it
+              // as a legitimate merge candidate with its anchor friends.
+              r.id = o.id;
+              r.name = o.name || r.name;
+              r.score = Math.max(r.score || 0, 0.60);
+              r.crossRefMatched = true;
+              r.optIdx = k;
+              try { renderScanTile(i); } catch(_){}
+              break;
+            }
+          }
+        });
+      }
+    }
+
     const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
     // Confidence breakdown
     const hi = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) >= 0.70).length;
     const mid = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) >= 0.40 && (r.score || 0) < 0.70).length;
     const low = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) < 0.40).length;
+    const crossref = SCAN_RESULTS.filter((r) => r && r.crossRefMatched).length;
     const lowMidTotal = low + mid;
     scanSummary.innerHTML = good + " of " + nCells + " identified &mdash; " +
       hi + " high, " + mid + " mid, " + low + " low confidence. Click Check &amp; group next." +
+      (crossref > 0
+        ? '<br><span style="color:#065f46;font-size:.78rem;font-weight:600">' + crossref + ' tile' + (crossref === 1 ? '' : 's') + ' promoted via same-color cross-reference (upside-down matches merged with their studs-up neighbors).</span>'
+        : '') +
       (lowMidTotal >= 3
         ? '<br><span style="color:#92400e;font-size:.78rem;font-weight:600">Tip: the pink/yellow tiles were low confidence &mdash; often that\'s a piece sitting face-down. Flip those physical pieces so the studs or printed face is up, then re-shoot the tray. Brickognize is trained on catalog views; a 2D image rotation can\'t show the hidden side, only a physical flip can.</span>'
         : '');
