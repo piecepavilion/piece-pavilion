@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v17-nomatchfallback" />
+  <meta name="pp-build" content="v2026-11-04-vision-v18-preflight" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v17</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v18</span>
   </div>
 
   <div class="wrap">
@@ -2622,6 +2622,31 @@
     // if this is still loading; applyInventoryBias is a no-op when the
     // index isn't ready yet.
     loadInventoryBias();
+    // PP catalog preflight. On modal open, check whether /api/colors/match
+    // is actually serving. Workers AI CLIP has been pulled from CF's
+    // catalog; the first blob's call would discover this on every scan.
+    // One probe here (sends an empty form, expects a 400 or 503 based on
+    // the server's state) lets us skip all per-blob attempts up front.
+    if (!window.PP_MATCH_DISABLED && !window.PP_MATCH_CHECKED) {
+      window.PP_MATCH_CHECKED = true;
+      (async () => {
+        try {
+          // 1x1 transparent PNG -- enough to let the server try its
+          // Workers AI CLIP call and return 503 if the model is gone.
+          const PX1 = atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
+          const bytes = new Uint8Array(PX1.length);
+          for (let i = 0; i < PX1.length; i++) bytes[i] = PX1.charCodeAt(i);
+          const blob = new Blob([bytes], { type: "image/png" });
+          const fd = new FormData(); fd.append("query_image", blob, "preflight.png");
+          const r = await fetch("/employees/api/colors/match", {
+            method: "POST", credentials: "include", body: fd,
+          });
+          // 503 = Workers AI CLIP missing; disable the per-blob calls.
+          // 200 = catalog + CLIP both working.
+          if (r.status === 503) window.PP_MATCH_DISABLED = true;
+        } catch(_) { window.PP_MATCH_DISABLED = true; }
+      })();
+    }
     // Clear the Check & group preview — stale data from a prior scan would
     // confuse Dad if left visible.
     const prevBox = document.getElementById("scanCheckPreview");
