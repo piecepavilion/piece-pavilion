@@ -1077,18 +1077,48 @@
                  "&condition=" + encodeURIComponent(cond) +
                  (color ? "&color_id=" + encodeURIComponent(color) : "");
       fetch("/employees/api/colors/price?" + qs, { credentials: "include" })
-        .then((r) => r.ok ? r.json() : null)
-        .then((j) => {
+        .then(async (r) => {
+          const text = await r.text();
+          let j = null;
+          try { j = JSON.parse(text); } catch(_){}
           priceEl.placeholder = "0.00";
-          if (!j) return;
-          const p = j.qty_avg_price > 0 ? j.qty_avg_price : j.avg_price;
-          // Override unless Dad has flagged this row's price as manual.
-          if (p > 0 && tr.dataset.priceManual !== "1"){
+          if (!r.ok){
+            // Show the error visibly so we know what went wrong.
+            priceEl.style.background = "#fef2f2";
+            priceEl.title = "BL: HTTP " + r.status + " — " + text.slice(0, 180);
+            console.warn("Price fetch failed", r.status, text.slice(0, 300), "for", qs);
+            setTimeout(() => { priceEl.style.background = ""; }, 3000);
+            return;
+          }
+          if (!j){
+            priceEl.style.background = "#fff8d6";
+            priceEl.title = "BL returned non-JSON: " + text.slice(0, 180);
+            setTimeout(() => { priceEl.style.background = ""; }, 3000);
+            return;
+          }
+          const p = Number(j.qty_avg_price) > 0 ? Number(j.qty_avg_price) : Number(j.avg_price);
+          if (!(p > 0)){
+            // BL has zero sold data for this part+color+condition in the last 6 months.
+            priceEl.style.background = "#fff8d6";
+            priceEl.title = "No 6-mo sold data on BrickLink (sold_qty=" + (j.sold_qty || 0) + "). Using NEW? try Used.";
+            setTimeout(() => { priceEl.style.background = ""; }, 3500);
+            return;
+          }
+          if (tr.dataset.priceManual !== "1"){
             priceEl.value = Number(p).toFixed(3);
+            priceEl.style.background = "#f0fdf4";
+            priceEl.title = "BL 6-mo avg (" + j.sold_qty + " sold)";
+            setTimeout(() => { priceEl.style.background = ""; }, 1500);
             flagRow(tr); recountGrid(); saveGridDebounced();
           }
         })
-        .catch(() => { priceEl.placeholder = "0.00"; });
+        .catch((err) => {
+          priceEl.placeholder = "0.00";
+          priceEl.style.background = "#fef2f2";
+          priceEl.title = "Network error: " + String(err).slice(0, 180);
+          console.error("Price fetch network error", err);
+          setTimeout(() => { priceEl.style.background = ""; }, 3000);
+        });
     }, 600);
     ROW_TIMERS.set(tr, t);
   }
