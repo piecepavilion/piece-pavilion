@@ -1459,6 +1459,8 @@
     if (dbg) dbg.textContent = "scan: uploading " + Math.round(fileOrBlob.size/1024) + " KB to Brickognize...";
     const fd = new FormData();
     fd.append("query_image", fileOrBlob, "scan.jpg");
+    fd.append("predict_color", "true");
+    fd.append("top_k_colors", "5");
     try {
       const r = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
       const text = await r.text();
@@ -1469,9 +1471,33 @@
         return;
       }
       const top = j.top;
-      document.getElementById("defItemId").value = top.id;
-      if (dbg) dbg.textContent = "scan: " + top.id + " — " + top.name + " (" + Math.round(top.score * 100) + "% confidence)";
-      try { localStorage.setItem("pp_bl_defItemId", top.id); } catch(e){}
+      // Normalize the part ID against BL's catalog (Brickognize sometimes
+      // returns variant suffixes like 3811A that BL doesn't actually list).
+      let fixedId = top.id;
+      try {
+        const partsSet = await blPartsSet();
+        fixedId = fixPartId(top.id, partsSet);
+      } catch(_){}
+      document.getElementById("defItemId").value = fixedId;
+      // Also fill the template Color field from Brickognize's color guess.
+      let colorBit = "";
+      const bgColors = j.colors || [];
+      if (bgColors.length){
+        const bgPick = bgColors[0];
+        try {
+          const colorMap = await blColors();
+          const match = Object.values(colorMap).find((c) =>
+            String(c.id) === String(bgPick.id) ||
+            c.name.toLowerCase() === (bgPick.name || "").toLowerCase()
+          );
+          if (match){
+            document.getElementById("defColor").value = match.name;
+            colorBit = " | color: " + match.name + " (" + Math.round(bgPick.score * 100) + "%)";
+          }
+        } catch(_){}
+      }
+      if (dbg) dbg.textContent = "scan: " + fixedId + " — " + top.name + " (" + Math.round(top.score * 100) + "%)" + colorBit;
+      try { localStorage.setItem("pp_bl_defItemId", fixedId); } catch(e){}
     } catch (e) {
       if (dbg) dbg.textContent = "scan: network error — " + String(e);
     }
