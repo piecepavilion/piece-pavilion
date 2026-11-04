@@ -1162,15 +1162,22 @@
       const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
       const no = get("ITEMID"); if (!no) return;
       if (tr.dataset.priceManual === "1" && (get("PRICE") || "").trim()) return;
+      const dbg = document.getElementById("priceDebug");
       // Require EXPLICIT condition selection — don't guess "New" and
       // overwrite before Dad picks.
       const condRaw = get("CONDITION");
-      if (!condRaw) return;
+      if (!condRaw){
+        if (dbg) dbg.textContent = "price: " + no + " waiting for Condition (set it in the yellow template bar)";
+        return;
+      }
       const cond = condRaw.toUpperCase();
       const colorRaw = get("COLOR");
       const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(no);
       const color = colorRaw ? colorNameToId(colorRaw) : "";
-      if (!isMinifig && !color) return;  // non-minifig still needs a color
+      if (!isMinifig && !color){
+        if (dbg) dbg.textContent = "price: " + no + " waiting for Color (couldn't resolve '" + colorRaw + "')";
+        return;
+      }
       const type = isMinifig ? "M" : "P";
       const priceEl = tr.querySelector('[data-k="PRICE"]');
       priceEl.placeholder = "fetching...";
