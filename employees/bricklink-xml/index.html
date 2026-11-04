@@ -1083,41 +1083,38 @@
           try { j = JSON.parse(text); } catch(_){}
           priceEl.placeholder = "0.00";
           if (!r.ok){
-            // Show the error visibly so we know what went wrong.
-            priceEl.style.background = "#fef2f2";
-            priceEl.title = "BL: HTTP " + r.status + " — " + text.slice(0, 180);
-            console.warn("Price fetch failed", r.status, text.slice(0, 300), "for", qs);
-            setTimeout(() => { priceEl.style.background = ""; }, 3000);
+            gridMsg("err", "BL API error (HTTP " + r.status + ") for " + no + ": " + text.slice(0, 200));
+            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 6000);
             return;
           }
           if (!j){
-            priceEl.style.background = "#fff8d6";
-            priceEl.title = "BL returned non-JSON: " + text.slice(0, 180);
-            setTimeout(() => { priceEl.style.background = ""; }, 3000);
+            gridMsg("warn", "BL returned non-JSON for " + no + " — Access login may have redirected. First 100 chars: " + text.slice(0, 100));
+            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 6000);
+            return;
+          }
+          if (j.error){
+            gridMsg("warn", "BL for " + no + ": " + j.error);
+            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
             return;
           }
           const p = Number(j.qty_avg_price) > 0 ? Number(j.qty_avg_price) : Number(j.avg_price);
           if (!(p > 0)){
-            // BL has zero sold data for this part+color+condition in the last 6 months.
-            priceEl.style.background = "#fff8d6";
-            priceEl.title = "No 6-mo sold data on BrickLink (sold_qty=" + (j.sold_qty || 0) + "). Using NEW? try Used.";
-            setTimeout(() => { priceEl.style.background = ""; }, 3500);
+            gridMsg("warn", "No 6-mo sold data on BrickLink for " + no + " color=" + (color || "n/a") + " cond=" + cond + " (sold_qty=" + (j.sold_qty || 0) + ")");
+            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
             return;
           }
           if (tr.dataset.priceManual !== "1"){
             priceEl.value = Number(p).toFixed(3);
-            priceEl.style.background = "#f0fdf4";
-            priceEl.title = "BL 6-mo avg (" + j.sold_qty + " sold)";
-            setTimeout(() => { priceEl.style.background = ""; }, 1500);
+            priceEl.style.background = "#d1fae5";
             flagRow(tr); recountGrid(); saveGridDebounced();
+            gridMsg("ok", "Priced " + no + " at $" + Number(p).toFixed(3) + " (BL 6-mo avg, " + (j.sold_qty || 0) + " sold)");
+            setTimeout(() => { priceEl.style.background = ""; GRID_MSG.className = "msg hidden"; }, 2500);
           }
         })
         .catch((err) => {
           priceEl.placeholder = "0.00";
-          priceEl.style.background = "#fef2f2";
-          priceEl.title = "Network error: " + String(err).slice(0, 180);
-          console.error("Price fetch network error", err);
-          setTimeout(() => { priceEl.style.background = ""; }, 3000);
+          gridMsg("err", "Network error fetching BL price for " + no + ": " + String(err).slice(0, 200));
+          setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 5000);
         });
     }, 600);
     ROW_TIMERS.set(tr, t);
