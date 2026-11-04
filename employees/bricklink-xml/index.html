@@ -229,6 +229,7 @@
           <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
           <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in this yellow defaults bar">Clear defaults</button>
           <span class="d-note">Also auto-fills whenever you type a Part ID.</span>
+          <div id="priceDebug" style="flex-basis:100%;font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;color:var(--mid);padding-top:6px;border-top:1px dashed #fde68a;margin-top:4px;word-break:break-all">price: idle</div>
         </div>
 
         <div class="bl-grid-wrap">
@@ -1076,6 +1077,11 @@
                  "&type=" + encodeURIComponent(type) +
                  "&condition=" + encodeURIComponent(cond) +
                  (color ? "&color_id=" + encodeURIComponent(color) : "");
+      // Persistent status line in the yellow defaults bar so Dad can SEE
+      // what's happening even without devtools. Updates live per fetch.
+      const dbg = document.getElementById("priceDebug");
+      if (dbg) dbg.textContent = "price: fetching " + no + " color=" + (color || "n/a") + " cond=" + cond + "...";
+
       fetch("/employees/api/colors/price?" + qs, { credentials: "include" })
         .then(async (r) => {
           const text = await r.text();
@@ -1083,38 +1089,35 @@
           try { j = JSON.parse(text); } catch(_){}
           priceEl.placeholder = "0.00";
           if (!r.ok){
-            gridMsg("err", "BL API error (HTTP " + r.status + ") for " + no + ": " + text.slice(0, 200));
-            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 6000);
+            if (dbg) dbg.textContent = "price: HTTP " + r.status + " for " + no + ". " + text.slice(0, 80);
             return;
           }
           if (!j){
-            gridMsg("warn", "BL returned non-JSON for " + no + " — Access login may have redirected. First 100 chars: " + text.slice(0, 100));
-            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 6000);
+            if (dbg) dbg.textContent = "price: non-JSON response (" + text.length + " chars). First 80: " + text.slice(0, 80);
             return;
           }
           if (j.error){
-            gridMsg("warn", "BL for " + no + ": " + j.error);
-            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
+            if (dbg) dbg.textContent = "price: BL said '" + j.error + "' for " + no;
             return;
           }
           const p = Number(j.qty_avg_price) > 0 ? Number(j.qty_avg_price) : Number(j.avg_price);
           if (!(p > 0)){
-            gridMsg("warn", "No 6-mo sold data on BrickLink for " + no + " color=" + (color || "n/a") + " cond=" + cond + " (sold_qty=" + (j.sold_qty || 0) + ")");
-            setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
+            if (dbg) dbg.textContent = "price: BL has 0 sold data for " + no + " color=" + (color || "n/a") + " cond=" + cond + " (sold_qty=" + (j.sold_qty || 0) + ")";
             return;
           }
           if (tr.dataset.priceManual !== "1"){
             priceEl.value = Number(p).toFixed(3);
             priceEl.style.background = "#d1fae5";
             flagRow(tr); recountGrid(); saveGridDebounced();
-            gridMsg("ok", "Priced " + no + " at $" + Number(p).toFixed(3) + " (BL 6-mo avg, " + (j.sold_qty || 0) + " sold)");
-            setTimeout(() => { priceEl.style.background = ""; GRID_MSG.className = "msg hidden"; }, 2500);
+            if (dbg) dbg.textContent = "price: " + no + " → $" + Number(p).toFixed(3) + " (" + (j.sold_qty || 0) + " sold)";
+            setTimeout(() => { priceEl.style.background = ""; }, 1800);
+          } else {
+            if (dbg) dbg.textContent = "price: skipped " + no + " (you typed it manually)";
           }
         })
         .catch((err) => {
           priceEl.placeholder = "0.00";
-          gridMsg("err", "Network error fetching BL price for " + no + ": " + String(err).slice(0, 200));
-          setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 5000);
+          if (dbg) dbg.textContent = "price: NETWORK ERROR for " + no + " — " + String(err).slice(0, 180);
         });
     }, 600);
     ROW_TIMERS.set(tr, t);
