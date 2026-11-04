@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v13-ppcatalog" />
+  <meta name="pp-build" content="v2026-11-04-vision-v14-shadow-color" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v13</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v14</span>
   </div>
 
   <div class="wrap">
@@ -1737,6 +1737,32 @@
       }
     }
     if (pxR.length < 30) return null;
+
+    // Shadow-pixel filtering. On a tray with uneven light (phone shadow
+    // across the frame), the shadowed side of a part has significantly
+    // lower L* than the sunny side but the SAME underlying hue. Keeping
+    // only the brighter 70% of pixels biases the color toward the
+    // well-lit face, which is what Brickognize/BL thinks the colour is.
+    // If the blob is uniformly dark (dark bluish gray, trans black) the
+    // filter still keeps 70% of pixels -- we're just dropping the
+    // darkest tail, not everything below a global threshold.
+    if (pxR.length >= 100){
+      const idxByL = pxLab.map((lab, i) => ({ i, L: lab[0] }))
+                           .sort((a, b) => a.L - b.L);
+      const cut = Math.floor(idxByL.length * 0.3);
+      const keep = new Set(idxByL.slice(cut).map((x) => x.i));
+      const filtR = [], filtG = [], filtB = [], filtLab = [];
+      for (let i = 0; i < pxR.length; i++){
+        if (keep.has(i)){
+          filtR.push(pxR[i]); filtG.push(pxG[i]); filtB.push(pxB[i]);
+          filtLab.push(pxLab[i]);
+        }
+      }
+      if (filtR.length >= 30){
+        pxR.length = 0; pxG.length = 0; pxB.length = 0; pxLab.length = 0;
+        filtR.forEach((v, i) => { pxR.push(v); pxG.push(filtG[i]); pxB.push(filtB[i]); pxLab.push(filtLab[i]); });
+      }
+    }
 
     const K = Math.min(3, pxR.length);
     // 3 trials with different seeds — pick the one with the largest dominant
