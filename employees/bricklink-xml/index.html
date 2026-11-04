@@ -1811,11 +1811,13 @@
     if (!bgColors || !bgColors.length) return pixelTop;
 
     const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
-    // Build bg score map by both id and normalized name.
+    // Build bg score map by both id and normalized name. Clamp score to
+    // [0,1] — a malformed response with score > 1 would otherwise let the
+    // bg-weighted bonus override a clear pixel winner.
     const bgScoreById = new Map();
     const bgScoreByName = new Map();
     bgColors.forEach((c) => {
-      const s = Number(c.score) || 0;
+      const s = Math.max(0, Math.min(1, Number(c.score) || 0));
       if (c.id != null) bgScoreById.set(String(c.id), Math.max(s, bgScoreById.get(String(c.id)) || 0));
       if (c.name) bgScoreByName.set(norm(c.name), Math.max(s, bgScoreByName.get(norm(c.name)) || 0));
     });
@@ -2058,14 +2060,19 @@
           if (py > 0 && closed[p-sw] && !visited[p-sw]) stack.push(p-sw);
           if (py < sh-1 && closed[p+sw] && !visited[p+sw]) stack.push(p+sw);
         }
-        // Quality gates — reject likely false positives (shadows, noise):
-        //  * Aspect ratio: extreme long/thin blobs are usually shadows.
-        //  * Fill density: foreground-pixels / bbox-area < 0.25 means the
-        //    blob is mostly empty space — a shadow or a ring-shaped artifact.
+        // Quality gates — reject likely false positives (shadows, noise)
+        // WITHOUT rejecting legitimate long parts (Technic axles, 1x8+
+        // bricks, antennas) OR hollow parts (window frames, wheel rims,
+        // picture-frame tiles). A shadow has BOTH extreme aspect AND low
+        // fill. A real long part has high aspect but fills its bbox. A
+        // real hollow part has normal aspect but low fill. Reject only
+        // when BOTH are suspicious.
         const boxW = (maxX - minX + 1), boxH = (maxY - minY + 1);
         const aspect = Math.max(boxW, boxH) / Math.max(1, Math.min(boxW, boxH));
         const fillDensity = area / (boxW * boxH);
-        const isLikelyShadow = aspect > 6 || fillDensity < 0.25;
+        // Reject only when BOTH signals indicate shadow/noise: very long AND
+        // very sparse. Or when ultra-low fill (clear noise).
+        const isLikelyShadow = (aspect > 8 && fillDensity < 0.3) || fillDensity < 0.1;
         if (area >= minAreaPx && !isLikelyShadow){
           const pad = 10;
           const bx = Math.max(0, minX * scale - pad);
