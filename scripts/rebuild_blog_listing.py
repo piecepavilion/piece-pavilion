@@ -507,9 +507,30 @@ def main():
         if parsed is None:
             print("  SKIP %s: unparseable" % entry)
             continue
-        posts.append(parsed[1])
+        post = parsed[1]
+        # First-publication git time -- when the blog/<slug>/index.html was
+        # first ADDED to the repo, not when it was last edited. Dad's
+        # 2026-11-04 issue: editing the Godzilla post's images AFTER the
+        # Seller Guide #2 published made Godzilla look newer by commit
+        # time, so latest.json pointed at Godzilla and the homepage
+        # pulsed red instead of blue. Pinning on FIRST commit means an
+        # image swap, typo fix or SEO tweak on an old post does not
+        # bump it ahead of a newer one.
+        rel = "blog/" + entry + "/index.html"
+        try:
+            first_ts = subprocess.check_output(
+                ["git", "log", "--diff-filter=A", "-1", "--format=%aI", "--", rel],
+                cwd=ROOT, text=True,
+            ).strip()
+        except Exception:
+            first_ts = ""
+        post["first_commit_at"] = first_ts
+        posts.append(post)
 
-    posts.sort(key=lambda p: p["date_iso"], reverse=True)
+    # Sort newest-first by date_iso, and break ties by first-publication
+    # commit time so two posts with the same datePublished still land in
+    # the right order and later edits never shuffle the ranking.
+    posts.sort(key=lambda p: (p["date_iso"], p.get("first_commit_at") or ""), reverse=True)
     print("Found %d posts, newest = %s" % (len(posts), posts[0]["slug"] if posts else "(none)"))
 
     # Generate thumbnails for any post without a hand-made /thumb/<slug>.png.
@@ -600,9 +621,12 @@ def main():
 def write_latest_json(slug):
     out_path = os.path.join(BLOG_DIR, "latest.json")
     rel = "blog/" + slug + "/index.html"
+    # Use the FIRST-ADD commit as the published timestamp. An edit to
+    # an older post (image swap, typo fix) must not reset the 6h
+    # freshness window on that older post.
     try:
         ts = subprocess.check_output(
-            ["git", "log", "-1", "--format=%aI", "--", rel],
+            ["git", "log", "--diff-filter=A", "-1", "--format=%aI", "--", rel],
             cwd=ROOT, text=True,
         ).strip()
     except Exception as e:
