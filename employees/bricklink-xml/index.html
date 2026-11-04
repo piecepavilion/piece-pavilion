@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v23-defensive-clip" />
+  <meta name="pp-build" content="v2026-11-04-vision-v24-white-and-split" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v23</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v24</span>
   </div>
 
   <div class="wrap">
@@ -1807,6 +1807,12 @@
   // most "obvious" color). Also returns a confidence estimate.
   function dominantRgbInMask(sourceImg, W, blob, mask, sw, sh, scale){
     const pxR = [], pxG = [], pxB = [], pxLab = [];
+    // A separate bucket for near-white/near-black pixels. On a WHITE part
+    // every pixel is MN>240, so the "skip specular" rule starves the
+    // main k-means of input and the function returns null. Collect them
+    // here as a last-resort so an all-white blob still produces a
+    // dominant colour (Dad's 2026-11-04 white-part miscount bug).
+    const wR = [], wG = [], wB = [], wLab = [];
     const bx0 = blob.x, by0 = blob.y, bw = blob.w, bh = blob.h;
     const step = Math.max(1, Math.floor(Math.min(bw, bh) / 80));
     for (let y = by0; y < by0 + bh; y += step){
@@ -1816,12 +1822,27 @@
         if (!mask[my * sw + mx]) continue;
         const p = (y * W + x) * 4;
         const R = sourceImg[p], G = sourceImg[p+1], B = sourceImg[p+2];
-        // Skip near-white (specular) and near-black (deep shadow) outliers.
         const MX = Math.max(R, G, B), MN = Math.min(R, G, B);
-        if (MN > 240 || MX < 15) continue;
+        // Blown-out specular: push into the whites bucket.
+        if (MN > 240){
+          wR.push(R); wG.push(G); wB.push(B);
+          wLab.push(rgb2lab(R, G, B));
+          continue;
+        }
+        if (MX < 15) continue;  // deep shadow -- still skip
         pxR.push(R); pxG.push(G); pxB.push(B);
         pxLab.push(rgb2lab(R, G, B));
       }
+    }
+    // If the non-white bucket is empty-ish but we have plenty of near-white
+    // pixels, the part itself is white. Return the average of the white
+    // samples so rankBlColors can match BL White / Very Light Bluish Gray /
+    // Trans Clear from the actual sampled tone. Threshold 30 matches the
+    // old min pixel count; raise to require a strong white-majority.
+    if (pxR.length < 30 && wR.length >= 60){
+      let aR=0, aG=0, aB=0;
+      for (let i = 0; i < wR.length; i++){ aR += wR[i]; aG += wG[i]; aB += wB[i]; }
+      return [Math.round(aR/wR.length), Math.round(aG/wR.length), Math.round(aB/wR.length)];
     }
     if (pxR.length < 30) return null;
 
@@ -1962,6 +1983,36 @@
     // more to Brickognize's trained model.
     const sampleIsGray = (Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2])) < 20;
     const BG_WEIGHT = sampleIsGray ? 40 : 25;
+    // Near-white sample: minimum channel >= 210, channel spread <= 25.
+    // Dad's 2026-11-04 bug: real white parts were resolving to Very Light
+    // Bluish Gray / Light Bluish Gray / Trans Clear because the pixel
+    // distance in Lab between BL White and those near-whites is tiny.
+    // When the sample is unambiguously white, lock the pick to BL White
+    // (color id 1) unless Brickognize strongly disagrees. A 0.80 bg
+    // score on another near-white colour would still override.
+    const sampleIsWhite = (Math.min(rgb[0], rgb[1], rgb[2]) >= 210) &&
+                          (Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]) <= 25);
+    if (sampleIsWhite){
+      const blWhite = Object.values(colorMap).find((c) => String(c.id) === "1");
+      if (blWhite){
+        const whiteBgScore = Math.max(
+          bgScoreById.get("1") || 0,
+          bgScoreByName.get("white") || 0
+        );
+        // Check if any OTHER color has a very strong Brickognize score
+        // (0.80+). If so, let the normal reconcile decide.
+        let anyStrongOther = false;
+        bgColors.forEach((c) => {
+          const s = Math.max(0, Math.min(1, Number(c.score) || 0));
+          if (s >= 0.80 && String(c.id || "") !== "1" && norm(c.name || "") !== "white") {
+            anyStrongOther = true;
+          }
+        });
+        if (!anyStrongOther){
+          return { ...blWhite, _whiteLock: true, _bgScore: whiteBgScore };
+        }
+      }
+    }
     let best = { color: pixelTop, combined: ranked[0].dist };
     ranked.forEach((r) => {
       const idStr = String(r.color.id);
@@ -2713,14 +2764,18 @@
       const MAX_DEPTH = 4;
       const splitRecursive = (b, depth) => {
         if (depth >= MAX_DEPTH) return [b];
-        if (b.area <= median * 2.0) return [b];
+        if (b.area <= median * 1.6) return [b];
         const splits = pinchSplit(b, closed, sw, sh, scale, W, H);
         if (!splits || splits.length <= 1) return [b];
         const out = [];
         splits.forEach((s) => { out.push(...splitRecursive(s, depth + 1)); });
         return out;
       };
-      const splitable = blobs.filter(b => b.area > median * 2.0);
+      // Splitable factor dropped 2.0 -> 1.6: two 1x2 bricks touching
+      // make a combined blob only ~1.8x the median, which was below the
+      // old gate and never got checked. 1.6 covers that case without
+      // false-splitting a single 1x4 that happens to run large.
+      const splitable = blobs.filter(b => b.area > median * 1.6);
       if (splitable.length){
         const extraBlobs = [];
         splitable.forEach((b) => {
@@ -2779,8 +2834,11 @@
         for (let j = i+1; j < n; j++) if (hist[j] > rMax) rMax = hist[j];
         const neighbourMax = Math.min(lMax, rMax);
         if (!neighbourMax) continue;
-        // Require pinch < 35% of the smaller neighbour peak.
-        if (hist[i] >= neighbourMax * 0.35) continue;
+        // Require pinch < 50% of the smaller neighbour peak. Was 35% but
+        // morphology-closed white-on-white touches rarely dip that far --
+        // Dad's 2026-11-04 merge bug ("combining multiple at once") needs
+        // a looser cut to catch touching parts of the same colour family.
+        if (hist[i] >= neighbourMax * 0.50) continue;
         const ratio = (neighbourMax - hist[i]) / neighbourMax;
         if (ratio > bestRatio){ bestRatio = ratio; bestIdx = i; }
       }
