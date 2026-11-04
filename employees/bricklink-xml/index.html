@@ -1717,7 +1717,10 @@
       const isWeird = /trans|chrome|metallic|pearl|milky|glow/.test(t);
       const cLab = rgb2lab(c.r, c.g, c.b);
       let d = labDist(lab, cLab);
-      if (isWeird) d += 15;  // penalty — only wins if clearly better
+      // Trans/chrome/pearl/metallic rarely match a photo of a plain plastic
+      // part. Big penalty so a solid color almost always wins unless the
+      // weird one is visibly much closer.
+      if (isWeird) d += 30;
       // Hue gate: if sample is saturated and candidate is a different hue
       // family by >60°, add a penalty
       if (!sampleIsGray){
