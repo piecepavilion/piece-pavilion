@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v21-vote-progress" />
+  <meta name="pp-build" content="v2026-11-04-vision-v22-xdevice-corrections" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v21</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v22</span>
   </div>
 
   <div class="wrap">
@@ -2182,6 +2182,55 @@
       ts: Date.now(),
     });
     writeCorrections(filtered);
+    // Mirror to the server (Phase D-lite). Fire-and-forget: a failed
+    // mirror doesn't corrupt the local correction, the server is just
+    // a cross-device backup + a training-set staging area.
+    try {
+      fetch("/employees/api/scan/correction", {
+        method: "POST", credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          phash: entry.phash,
+          color: (entry.color || "").toLowerCase(),
+          correct_id: entry.correctId,
+          original_id: entry.originalId || "",
+        }),
+      }).catch(() => {});
+    } catch(_){}
+  }
+
+  // Pull the server-side correction store once per scan modal open so
+  // corrections Dad made on his laptop two weeks ago still apply when he
+  // scans on the iPad today. Merge by (phash, color) keeping the fresher
+  // timestamp on conflicts.
+  async function mergeServerCorrections(){
+    try {
+      const r = await fetch("/employees/api/scan/corrections", { credentials: "include" });
+      if (!r.ok) return;
+      const j = await r.json();
+      const remote = (j && j.items) || [];
+      if (!remote.length) return;
+      const local = loadCorrections();
+      const bySig = new Map();
+      const sig = (x) => (x.phash || "") + "|" + ((x.color || "").toLowerCase());
+      local.forEach((c) => bySig.set(sig(c), c));
+      remote.forEach((c) => {
+        const key = sig(c);
+        const current = bySig.get(key);
+        const normalised = {
+          phash: c.phash,
+          color: (c.color || "").toLowerCase(),
+          correctId: c.correct_id || c.correctId || "",
+          originalId: c.original_id || c.originalId || "",
+          ts: Number(c.ts || 0),
+        };
+        if (!current || (current.ts || 0) < normalised.ts){
+          bySig.set(key, normalised);
+        }
+      });
+      const merged = Array.from(bySig.values()).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      writeCorrections(merged);
+    } catch(_){}
   }
   // 64-bit average perceptual hash: resize to 32x32 greyscale, tile into
   // 8x8 blocks, each bit = block mean > global mean. Cheap and good enough
@@ -2876,6 +2925,9 @@
     // Clear the old Workers-AI disable flag so the vector path can run
     // even if a previous session hit the legacy 503.
     window.PP_MATCH_DISABLED = false;
+    // Pull any corrections saved from another device so this iPad
+    // benefits from a correction Dad made on the laptop last night.
+    mergeServerCorrections();
     // Clear the Check & group preview — stale data from a prior scan would
     // confuse Dad if left visible.
     const prevBox = document.getElementById("scanCheckPreview");
