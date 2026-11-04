@@ -1410,6 +1410,12 @@
     camStatus.textContent = "";
     camError.style.display = "none";
     camOverlay.style.display = "flex";
+    // Stop any previously-active stream before starting a new one. Prevents
+    // leaking video tracks if openCamera is called twice in a row.
+    if (CAM_STREAM){
+      try { CAM_STREAM.getTracks().forEach((t) => t.stop()); } catch(_){}
+      CAM_STREAM = null;
+    }
     try {
       CAM_STREAM = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } },
