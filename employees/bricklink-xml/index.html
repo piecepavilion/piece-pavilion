@@ -1867,8 +1867,10 @@
     for (let x = 0; x < W; x += step){ walkVar(x, 0); walkVar(x, H-1); }
     for (let y = 0; y < H; y += step){ walkVar(0, y); walkVar(W-1, y); }
     const bgNoise = varSum / bN;
-    // Threshold = baseline (18) + 2x the border noise, clamped
-    const FG_THRESHOLD = Math.max(14, Math.min(28, 14 + bgNoise * 2));
+    // Threshold = baseline + 2x the border noise. Lower bound aggressive
+    // enough to catch low-contrast parts (e.g. gray on off-white table),
+    // upper bound capped so lively backgrounds don't bleed into FG.
+    const FG_THRESHOLD = Math.max(10, Math.min(28, 10 + bgNoise * 2));
 
     // Binary FG mask at 1/4 resolution. Use Lab ΔE, not RGB Euclidean.
     const scale = 4;
