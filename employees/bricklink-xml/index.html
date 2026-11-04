@@ -2618,6 +2618,8 @@
     }).join("");
     box.style.display = "block";
     scanSummary.textContent = rows.length + " row" + (rows.length===1?"":"s") + " ready. Uncheck anything wrong, then click Add all.";
+    // Scroll the preview into view so Dad sees it immediately on tap.
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
 
   function esc(s){ return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
