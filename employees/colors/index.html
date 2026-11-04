@@ -192,6 +192,27 @@
     .tile .copy-btn.copied{background:var(--green)}
     .tile .copy-btn.copied::before{content:"✓";font-weight:900}
     .tile .copy-btn.copied{font-size:0}
+    .tile .star-btn{position:absolute;bottom:38px;left:8px;background:rgba(255,255,255,.95);color:var(--mid);border:none;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.14);z-index:2;transition:all .15s}
+    .tile .star-btn:hover{color:var(--yellow);transform:scale(1.1)}
+    .tile .star-btn.on{color:var(--yellow);background:var(--ink)}
+    .tile .cname{cursor:pointer}
+    .tile .cname:active{color:var(--red)}
+
+    /* Clear-X in the search box */
+    .search-row .search-wrap{flex:1;min-width:200px;position:relative}
+    .search-clear-x{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--mid);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.8rem;line-height:1;display:none;align-items:center;justify-content:center;transition:background .12s}
+    .search-clear-x.on{display:inline-flex}
+    .search-clear-x:hover{background:var(--red)}
+
+    /* Recent parts strip */
+    .recent-strip{display:none;margin:12px 0 0;padding:10px 12px;background:#15151f;color:#fff;border-radius:10px;align-items:center;gap:10px;flex-wrap:wrap}
+    .recent-strip.on{display:flex}
+    .recent-strip .rs-label{font-weight:800;color:var(--yellow);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .recent-strip .rs-item{background:rgba(255,255,255,.1);color:#fff;border:none;padding:4px 10px;border-radius:50px;font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;font-weight:700;cursor:pointer;transition:background .12s}
+    .recent-strip .rs-item:hover{background:var(--red)}
+    .recent-strip .rs-pinned{color:var(--yellow)}
+    .recent-strip .rs-clear{margin-left:auto;background:transparent;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:.78rem}
+    .recent-strip .rs-clear:hover{color:#fff}
     .tile.verified{border-color:#86efac}
     .tile .verified{color:#16a34a;font-weight:900;margin-left:auto;font-size:1rem;line-height:1}
 
@@ -237,11 +258,15 @@
     <div class="search-card">
       <div class="search-row">
         <label for="partNo">Search:</label>
-        <div style="flex:1;min-width:200px;position:relative">
+        <div class="search-wrap">
           <input id="partNo" type="text" autocomplete="off" placeholder="e.g. 3005  or  brick 2 x 4" autofocus style="width:100%" />
+          <button class="search-clear-x" id="searchClearX" type="button" title="Clear search" aria-label="Clear search">&times;</button>
           <div id="suggest" class="suggest" aria-live="polite"></div>
         </div>
         <button class="btn" id="goBtn">Go &rarr;</button>
+      </div>
+      <div class="recent-strip" id="recentStrip">
+        <span class="rs-label">Recent &amp; Pinned</span>
       </div>
       <div class="filter-row" id="filterRow">
         <span class="filter-label">Type:</span>
@@ -1237,6 +1262,7 @@
           '</a>' +
           '<button class="colors-btn" data-no="'+esc(it.no)+'" title="See every color">colors</button>' +
           '<button class="copy-btn" data-no="'+esc(it.no)+'" title="Copy part ID '+esc(it.no)+'" aria-label="Copy part ID">&#128203;</button>' +
+          '<button class="star-btn'+(window.__isPinned && window.__isPinned(it.no) ? " on" : "")+'" data-no="'+esc(it.no)+'" title="Pin this part" aria-label="Pin">&#9733;</button>' +
         '</div>';
       }).join("");
       return '<section class="cat-section animate-sect-in"><h3 class="cat-h">'+esc(catName)+' <span>&middot; '+rows.length+'</span></h3><div class="grid">'+tiles+'</div></section>';
@@ -1251,6 +1277,46 @@
         if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button > 0) return;
         ev.preventDefault();
         window.open(a.href, "_blank", "noopener");
+      });
+    });
+
+    // Click the part NAME to copy it too (not just the ID button).
+    grid.querySelectorAll(".cname").forEach((el) => {
+      el.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const name = (el.textContent || "").trim();
+        try { await navigator.clipboard.writeText(name); }
+        catch(_){
+          const ta = document.createElement("textarea");
+          ta.value = name; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); } catch(_){}
+          document.body.removeChild(ta);
+        }
+        const orig = el.style.color;
+        el.style.color = "var(--red)";
+        setTimeout(() => { el.style.color = orig; }, 500);
+      });
+    });
+
+    // Star/pin button on each tile.
+    grid.querySelectorAll(".star-btn").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const no = btn.dataset.no;
+        togglePin(no);
+        btn.classList.toggle("on", isPinned(no));
+        renderRecentStrip();
+      });
+    });
+
+    // Push each result's part number into recents when clicked.
+    grid.querySelectorAll(".tile-link, .colors-btn").forEach((el) => {
+      el.addEventListener("click", () => {
+        const no = el.dataset.no || el.closest(".tile")?.querySelector("[data-no]")?.dataset.no;
+        if (no) pushRecent(no);
       });
     });
 
@@ -1610,6 +1676,71 @@
     }).join("");
     COLORS_RENDERED = true;
   }
+
+  // ========== RECENTS + PINS (localStorage) ==========
+  const REC_KEY = "pp_colors_recent_v1";
+  const PIN_KEY = "pp_colors_pins_v1";
+  function loadArr(k){ try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch(e){ return []; } }
+  function saveArr(k, arr){ try { localStorage.setItem(k, JSON.stringify(arr)); } catch(e){} }
+  function pushRecent(no){
+    if (!no) return;
+    let arr = loadArr(REC_KEY).filter((x) => x !== no);
+    arr.unshift(no);
+    arr = arr.slice(0, 8);
+    saveArr(REC_KEY, arr);
+    renderRecentStrip();
+  }
+  function isPinned(no){ return loadArr(PIN_KEY).includes(no); }
+  function togglePin(no){
+    const arr = loadArr(PIN_KEY);
+    const i = arr.indexOf(no);
+    if (i >= 0) arr.splice(i, 1); else arr.unshift(no);
+    saveArr(PIN_KEY, arr.slice(0, 20));
+  }
+  window.__isPinned = isPinned;
+
+  function renderRecentStrip(){
+    const strip = document.getElementById("recentStrip");
+    if (!strip) return;
+    const pins = loadArr(PIN_KEY);
+    const recs = loadArr(REC_KEY).filter((x) => !pins.includes(x));
+    const items = [...pins.map((x) => ({ no: x, pin: true })), ...recs.map((x) => ({ no: x, pin: false }))];
+    if (!items.length){ strip.classList.remove("on"); return; }
+    strip.classList.add("on");
+    strip.innerHTML = '<span class="rs-label">Recent &amp; Pinned</span>' +
+      items.map((it) =>
+        '<button class="rs-item'+(it.pin?" rs-pinned":"")+'" data-no="'+esc(it.no)+'" title="'+(it.pin?"Pinned":"Recent")+' '+esc(it.no)+'">' +
+          (it.pin ? "&#9733; " : "") + esc(it.no) +
+        '</button>'
+      ).join("") +
+      '<button class="rs-clear" id="rsClearBtn" type="button" title="Clear recents">clear</button>';
+    strip.querySelectorAll(".rs-item").forEach((b) => {
+      b.addEventListener("click", () => {
+        const no = b.dataset.no;
+        partIn.value = no;
+        lookup();
+        pushRecent(no);
+      });
+    });
+    const clr = document.getElementById("rsClearBtn");
+    if (clr) clr.addEventListener("click", () => {
+      saveArr(REC_KEY, []); // keeps pins
+      renderRecentStrip();
+    });
+  }
+  renderRecentStrip();
+
+  // ========== SEARCH CLEAR-X ==========
+  const searchClearX = document.getElementById("searchClearX");
+  function updateClearX(){ searchClearX.classList.toggle("on", !!partIn.value); }
+  partIn.addEventListener("input", updateClearX);
+  searchClearX.addEventListener("click", () => {
+    partIn.value = "";
+    updateClearX();
+    partIn.focus();
+    scheduleRerun(0);
+  });
+  updateClearX();
 
   // Preload the catalog in the background so the first search is instant.
   catalog();
