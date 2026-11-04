@@ -1979,36 +1979,37 @@
       rows[y] = cnt;
     }
 
-    // Find the best pinch (narrowest trough between two peaks). Try both axes.
+    // Find the best pinch (narrowest trough between two peaks). Returns
+    // {idx, ratio} where ratio = depth / neighbourMax (0..1, higher = deeper).
     const findPinch = (hist) => {
       const n = hist.length;
-      if (n < 8) return -1;
-      const maxV = Math.max(...hist);
-      if (!maxV) return -1;
-      // Walk the middle 60% so we don't cut off the ends.
+      if (n < 8) return { idx: -1, ratio: 0 };
       const lo = Math.floor(n * 0.2), hi = Math.floor(n * 0.8);
-      let bestIdx = -1, bestDepth = 0;
+      let bestIdx = -1, bestRatio = 0;
       for (let i = lo; i < hi; i++){
-        // depth = min(leftMax, rightMax) - hist[i]
         let lMax = 0, rMax = 0;
         for (let j = 0; j < i; j++) if (hist[j] > lMax) lMax = hist[j];
         for (let j = i+1; j < n; j++) if (hist[j] > rMax) rMax = hist[j];
         const neighbourMax = Math.min(lMax, rMax);
-        const depth = neighbourMax - hist[i];
-        // Require pinch < 35% of the smaller neighbour peak
-        if (neighbourMax > 0 && hist[i] < neighbourMax * 0.35 && depth > bestDepth){
-          bestDepth = depth; bestIdx = i;
-        }
+        if (!neighbourMax) continue;
+        // Require pinch < 35% of the smaller neighbour peak.
+        if (hist[i] >= neighbourMax * 0.35) continue;
+        const ratio = (neighbourMax - hist[i]) / neighbourMax;
+        if (ratio > bestRatio){ bestRatio = ratio; bestIdx = i; }
       }
-      return bestIdx;
+      return { idx: bestIdx, ratio: bestRatio };
     };
-    const splitX = findPinch(cols);
-    const splitY = findPinch(rows);
+    const pX = findPinch(cols);
+    const pY = findPinch(rows);
 
-    // Pick the deeper pinch; if none, no split.
-    const useX = splitX >= 0 && (splitY < 0 || (cols[splitX] <= rows[splitY]));
-    const useY = !useX && splitY >= 0;
+    // Pick the axis with the deeper RELATIVE pinch; if neither qualifies,
+    // no split. Comparing ratios lets us pick fairly between axes with
+    // different-magnitude histograms (wide blob vs tall blob).
+    const useX = pX.idx >= 0 && pX.ratio >= pY.ratio;
+    const useY = pY.idx >= 0 && !useX;
     if (!useX && !useY) return [b];
+    const splitX = useX ? pX.idx : -1;
+    const splitY = useY ? pY.idx : -1;
 
     const results = [];
     const pad = 10;
