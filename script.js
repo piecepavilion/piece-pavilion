@@ -441,11 +441,11 @@ Promise.race([bothLoaded, timeout]).then(revealBanner);
       if (!isFinite(t)) return;
       const ageHours = (Date.now() - t) / 3_600_000;
       if (ageHours < windowHours) {
-        // BrickLink-guide posts pulse BLUE instead of red. Detect by
-        // slug prefix so any bricklink-seller-guide-* or bricklink-blog-*
-        // launch gets the blue variant.
+        // BrickLink-prefix posts (bricklink-seller-guide-*, bricklink-blog-*,
+        // bricklink-vlog-*, bricklink-guide-* — anything starting with
+        // "bricklink-") pulse BLUE. Everything else pulses RED.
         const slug = (data.slug || '').toLowerCase();
-        const isBl = /^bricklink-(seller-guide|blog)/.test(slug);
+        const isBl = /^bricklink-/.test(slug);
         if (nav) nav.classList.add(isBl ? 'is-fresh-bl' : 'is-fresh');
         document.body.classList.add(isBl ? 'blog-fresh-bl' : 'blog-fresh');
       }
