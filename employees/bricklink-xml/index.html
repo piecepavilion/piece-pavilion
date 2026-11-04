@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v4" />
+  <meta name="pp-build" content="v2026-11-04-vision-v5-nogroupmerge" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -196,9 +196,22 @@
         <h2 style="font-family:'Fredoka','Nunito';font-size:1.15rem;flex:1">&#128247; Scan many parts</h2>
         <button id="scanManyClose" type="button" style="background:transparent;border:none;font-size:1.6rem;cursor:pointer;color:var(--mid)">&times;</button>
       </div>
-      <p style="color:var(--mid);font-size:.9rem;margin-bottom:14px;line-height:1.45">
-        Lay parts on a plain background, <strong>spread out so each one is separate</strong>. Take one photo top-down. The parts get auto-detected and boxed on the photo — each box gets sent to Brickognize for identification.
+      <p style="color:var(--mid);font-size:.9rem;margin-bottom:10px;line-height:1.45">
+        Lay parts on a plain background, <strong>spread out so each one is separate</strong>. Take one photo top-down. The parts get auto-detected and boxed on the photo &mdash; each box gets sent to Brickognize for identification.
       </p>
+      <details style="margin-bottom:14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px">
+        <summary style="cursor:pointer;font-weight:700;color:#92400e;font-size:.88rem;font-family:'Fredoka','Nunito'">&#128161; Tips for better scans (open if accuracy is low)</summary>
+        <ul style="margin:10px 0 2px 18px;padding:0;color:#78350f;font-size:.82rem;line-height:1.55">
+          <li><strong>Spread parts out.</strong> At least a finger-width of gap between each piece. Parts that touch get merged into one blob.</li>
+          <li><strong>Plain, high-contrast background.</strong> A plain white poster board or a plain black cloth works best. Avoid wood grain, patterns, or anything with text.</li>
+          <li><strong>Camera straight overhead.</strong> Angle the phone directly down, not tilted. Tilted shots stretch parts and break the color sampling.</li>
+          <li><strong>Even lighting, no harsh shadows.</strong> Daylight from a window or a ring light. Overhead room lights that cast a shadow of the phone onto the parts hurt a lot.</li>
+          <li><strong>15&ndash;25 parts per photo</strong>, not more. More parts means smaller parts in the frame, means weaker ID. Two scans of 20 beats one scan of 40.</li>
+          <li><strong>Studs up for bricks and plates, printed side up for tiles and minifig parts.</strong> Brickognize is trained on catalog views, which show the stud side.</li>
+          <li><strong>Keep orientations varied.</strong> If every tile is pointed the same way, Brickognize can't tell them apart from the back. Rotate every other one.</li>
+          <li><strong>Low-confidence blobs are now kept separate</strong> in the preview even when their IDs match &mdash; that is the "combining 20 parts into one" fix. Review each tile and drop the obvious misses with the &times; button before Check &amp; group.</li>
+        </ul>
+      </details>
       <div id="scanPreviewWrap" style="position:relative;margin-bottom:14px;max-height:380px;overflow:hidden;border-radius:10px;background:#111;display:none">
         <img id="scanPreviewImg" style="display:block;width:100%;height:auto;max-height:380px;object-fit:contain" />
         <svg id="scanOverlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></svg>
@@ -239,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v4</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v5</span>
   </div>
 
   <div class="wrap">
@@ -2524,6 +2537,20 @@
   // in the green box so Dad can sanity-check before stamping into the grid.
   // Each group also tracks the SCAN_RESULTS indices that fed into it so the
   // preview can show thumbnails of the original photos.
+  //
+  // IMPORTANT: low-confidence blobs are NEVER grouped. If Brickognize is
+  // guessing, 20 different physical parts can all come back with the same
+  // wrong ID + a safe common color, and they collapse to one row of qty 20.
+  // Dad caught this in a Nov 4 test (30 parts, 20 merged into 1). Keeping
+  // them split means he sees each tile and can drop or correct the obvious
+  // misses before Add to grid.
+  //
+  // Also capped: a single group can only absorb up to GROUP_MAX blobs. A
+  // bulk photo of the SAME part in the SAME color (a bag of 1x1 plates) is
+  // real and should merge, but anything above the cap gets split into more
+  // rows of qty GROUP_MAX each so a silent misclassify can't produce qty 50.
+  const SCAN_GROUP_MIN_CONF = 0.60;   // blobs below this always stay in their own row
+  const SCAN_GROUP_MAX = 12;          // single group's qty cap before overflow spills to a new row
   function buildGroupedRows(){
     const dcolor = (document.getElementById("defColor").value || "").trim();
     const dqty   = parseInt((document.getElementById("defQty").value || "").trim(), 10) || 1;
@@ -2532,30 +2559,48 @@
     const ddesc  = (document.getElementById("defDescription").value || "").trim();
     const drem   = (document.getElementById("defRemarks").value || "").trim();
     const groups = new Map();
+    const newGroup = (r, idx, colorName) => ({
+      itemid: r.id,
+      color: colorName,
+      colorId: r.detectedColor ? r.detectedColor.id : 0,
+      qty: dqty,
+      price: dprice,
+      condition: dcond,
+      description: ddesc,
+      remarks: drem,
+      name: r.name || "",
+      avgScore: r.score || 0,
+      sources: [idx],
+      lowConf: (r.score || 0) < SCAN_GROUP_MIN_CONF,
+    });
     SCAN_RESULTS.forEach((r, idx) => {
       if (!r || r.status !== "ok" || r.dropped) return;  // drop honors sc-drop click
       const colorName = r.detectedColor ? r.detectedColor.name : dcolor;
-      const key = [r.id, colorName, dcond, drem, ddesc].join("\u0001");
+      const score = r.score || 0;
+      // Low confidence -> never merge. Each tile is its own row with
+      // sources:[idx] so Dad sees them individually in the preview and
+      // can drop the junk ones.
+      if (score < SCAN_GROUP_MIN_CONF){
+        const key = ["lowconf", idx, r.id, colorName].join("\u0001");
+        groups.set(key, newGroup(r, idx, colorName));
+        return;
+      }
+      // High confidence -> normal merge-on-(id,color,cond,remarks,desc),
+      // but spill into a new group once a single bucket hits GROUP_MAX
+      // so a run of bad guesses can't quietly collapse a whole tray.
+      const baseKey = [r.id, colorName, dcond, drem, ddesc].join("\u0001");
+      let bucket = 0, key = baseKey + "\u0001b" + bucket;
+      while (groups.has(key) && groups.get(key).sources.length >= SCAN_GROUP_MAX){
+        bucket++; key = baseKey + "\u0001b" + bucket;
+      }
       if (groups.has(key)){
         const g = groups.get(key);
         g.qty += dqty;
         g.sources.push(idx);
         // Running average of per-blob confidence across the group.
-        g.avgScore = (g.avgScore * (g.sources.length - 1) + (r.score || 0)) / g.sources.length;
+        g.avgScore = (g.avgScore * (g.sources.length - 1) + score) / g.sources.length;
       } else {
-        groups.set(key, {
-          itemid: r.id,
-          color: colorName,
-          colorId: r.detectedColor ? r.detectedColor.id : 0,
-          qty: dqty,
-          price: dprice,
-          condition: dcond,
-          description: ddesc,
-          remarks: drem,
-          name: r.name || "",
-          avgScore: r.score || 0,
-          sources: [idx],
-        });
+        groups.set(key, newGroup(r, idx, colorName));
       }
     });
     return Array.from(groups.values());
