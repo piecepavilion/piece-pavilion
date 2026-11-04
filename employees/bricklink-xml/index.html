@@ -1843,6 +1843,8 @@
     // Load BrickLink's official reference image so Dad can eyeball
     // part + color against what he photographed. Color-specific URL first;
     // onerror falls back to the no-color variant.
+    // Wrap the ref image in a link to BL's catalog page so Dad can open it
+    // in a new tab to double-check.
     const refImg = tileEl.querySelector(".sc-ref");
     if (refImg){
       const colorId = r.detectedColor && r.detectedColor.id ? r.detectedColor.id : 0;
@@ -1852,6 +1854,12 @@
         refImg.src = "https://img.bricklink.com/ItemImage/PN/0/" + safeId + ".png";
       };
       refImg.src = "https://img.bricklink.com/ItemImage/PN/" + colorId + "/" + safeId + ".png";
+      refImg.style.cursor = "pointer";
+      refImg.title = "Open " + r.id + " on BrickLink in a new tab";
+      refImg.onclick = (ev) => {
+        ev.stopPropagation();  // don't trigger tile cycle
+        window.open("https://www.bricklink.com/v2/catalog/catalogitem.page?P=" + safeId, "_blank", "noopener");
+      };
     }
     const inp = tileEl.querySelector(".sc-manual");
     if (inp){ inp.style.display = "block"; inp.value = r.manual ? r.id : ""; }
