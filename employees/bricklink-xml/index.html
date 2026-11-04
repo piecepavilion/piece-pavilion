@@ -2318,7 +2318,12 @@
     await Promise.all(workers);
 
     const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
-    scanSummary.textContent = good + " of " + nCells + " parts identified. Click Check & group to preview, then Add all.";
+    // Confidence breakdown
+    const hi = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) >= 0.70).length;
+    const mid = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) >= 0.40 && (r.score || 0) < 0.70).length;
+    const low = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) < 0.40).length;
+    scanSummary.textContent = good + " of " + nCells + " identified — " +
+      hi + " high, " + mid + " mid, " + low + " low confidence. Click Check & group next.";
     document.getElementById("scanManyCheck").disabled = good === 0;
     scanAddBtn.disabled = good === 0;
   }
