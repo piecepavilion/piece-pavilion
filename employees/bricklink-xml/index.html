@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v18-preflight" />
+  <meta name="pp-build" content="v2026-11-04-vision-v19-top3" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v18</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v19</span>
   </div>
 
   <div class="wrap">
@@ -2154,6 +2154,17 @@
       ev.stopPropagation();
       return;
     }
+    // Rescan-tile circular-arrow button: re-send just THIS blob to
+    // Brickognize with a 30% padded crop (vs the normal 15%), giving
+    // the classifier more shape context. Fastest way to recover a
+    // single wrong tile without re-shooting the whole tray. Dad's
+    // 2026-11-04 asks for the UX side of the push to 95%+.
+    if (ev.target.classList.contains("sc-rescan")){
+      ev.stopPropagation();
+      const i = parseInt(tileEl.dataset.i, 10);
+      rescanTile(i).catch((e) => console.warn("rescan failed", e));
+      return;
+    }
     const i = parseInt(tileEl.dataset.i, 10);
     const r = SCAN_RESULTS[i];
     if (!r || !r.options || r.options.length < 2) return;
@@ -2196,11 +2207,71 @@
   // Each object URL holds a reference to a blob in memory; leaking them
   // accumulates across repeat scans in a long session on iPad Safari.
   let SCAN_OBJ_URLS = [];
+  // Snapshot of the per-blob state the rescan button needs to re-crop
+  // and re-send to Brickognize from inside a single tile, without
+  // re-running the whole photo-detect pipeline. Captured once per
+  // processBulkPhotoInner call.
+  let SCAN_SOURCE_CANVAS = null;
+  let SCAN_BLOBS = [];
   document.getElementById("scanManyClose").addEventListener("click", () => {
     scanOverlay.style.display = "none";
     SCAN_OBJ_URLS.forEach((u) => { try { URL.revokeObjectURL(u); } catch(_){} });
     SCAN_OBJ_URLS = [];
   });
+
+  // Re-scan a single tile with a larger padded crop. Dad clicks this on
+  // a tile Brickognize got wrong; the tool re-sends the same blob at
+  // 30 % padding (vs 15 % in the batch pass), which usually gives
+  // Brickognize enough shape context to flip to the right answer on
+  // oblique parts or things sitting near frame-edge noise. Keeps the
+  // existing SCAN_RESULTS[i] slot so grouping behaves.
+  async function rescanTile(i){
+    const box = SCAN_BLOBS && SCAN_BLOBS[i];
+    const canvas = SCAN_SOURCE_CANVAS;
+    const tileEl = scanGridEl.children[i];
+    if (!box || !canvas || !tileEl) return;
+    const labelEl = tileEl.querySelector(".sc-label");
+    if (labelEl) labelEl.textContent = "re-scanning (bigger crop)...";
+    try {
+      const padW = Math.round(box.w * 0.30), padH = Math.round(box.h * 0.30);
+      const pbx = Math.max(0, box.x - padW), pby = Math.max(0, box.y - padH);
+      const pbw = Math.min(canvas.width - pbx, box.w + padW * 2);
+      const pbh = Math.min(canvas.height - pby, box.h + padH * 2);
+      const padded = document.createElement("canvas");
+      padded.width = pbw; padded.height = pbh;
+      padded.getContext("2d").drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
+      const padBlob = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
+      const fd = new FormData();
+      fd.append("query_image", padBlob, "cell-" + i + "-rescan-30.jpg");
+      fd.append("predict_color", "true");
+      fd.append("top_k_items", "10");
+      fd.append("top_k_colors", "5");
+      const resp = await fetch("/employees/api/colors/scan", {
+        method: "POST", credentials: "include", body: fd,
+      });
+      if (!resp.ok) throw new Error("scan HTTP " + resp.status);
+      const j = await resp.json();
+      const top = j && j.top;
+      const items = (j && j.items) || [];
+      const options = [];
+      if (top) options.push(top);
+      items.forEach((it) => { if (!options.find((o) => o.id === it.id)) options.push(it); });
+      options.forEach((o) => { if (typeof fixPartId === "function") o.id = fixPartId(o.id, partsSet); });
+      if (!options[0] || !options[0].id) throw new Error("no match on rescan");
+      const chosen = options[0];
+      const prior = SCAN_RESULTS[i] || {};
+      SCAN_RESULTS[i] = {
+        ...prior,
+        idx: i, status: "ok",
+        id: chosen.id, name: chosen.name, score: chosen.score,
+        options, optIdx: 0,
+        rescanned: true,
+      };
+      renderScanTile(i);
+    } catch (e){
+      if (labelEl) labelEl.textContent = "rescan failed — " + String(e.message || e).slice(0, 48);
+    }
+  }
 
   // Render a single scan tile from SCAN_RESULTS[i].
   function renderScanTile(i){
@@ -2706,15 +2777,23 @@
     canvas.height = img.naturalHeight;
     canvas.getContext("2d").drawImage(img, 0, 0);
 
-    // Preprocessing: nudge up contrast on a SEPARATE analysis-only canvas so
-    // low-contrast parts (gray-on-white, shadows) have a better chance of
-    // being separated from the background. The ORIGINAL canvas is still
-    // used for crops sent to Brickognize + for display.
+    // Preprocessing: nudge up contrast + lift shadows on a SEPARATE
+    // analysis-only canvas so low-contrast parts (grey-on-white, parts in
+    // the phone's own shadow across the middle of the frame) have a
+    // better chance of being separated from the background. The ORIGINAL
+    // canvas is still used for crops sent to Brickognize + for display.
+    //
+    // The brightness(1.2) is the "lift shadows" piece Dad's whole-day
+    // accuracy push targeted at missing-middle-parts: it brightens the
+    // whole frame, which effectively flattens the shadow gradient from
+    // an uneven overhead light. Combined with the FG floor drop (v12)
+    // and the phantom-bg relaxation (v14) this should catch a lot more
+    // of the middle-of-tray parts than previous builds did.
     const analysisCanvas = document.createElement("canvas");
     analysisCanvas.width = canvas.width;
     analysisCanvas.height = canvas.height;
     const actx = analysisCanvas.getContext("2d");
-    actx.filter = "contrast(1.2) saturate(1.1)";
+    actx.filter = "brightness(1.2) contrast(1.3) saturate(1.1)";
     actx.drawImage(canvas, 0, 0);
     actx.filter = "none";
 
@@ -2726,6 +2805,9 @@
     // uses the untouched RGB values.
     blobOut.sourceImg = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
     const blobs = blobOut.blobs;
+    // Snapshot for the per-tile rescan button.
+    SCAN_SOURCE_CANVAS = canvas;
+    SCAN_BLOBS = blobs;
     const previewWrap = document.getElementById("scanPreviewWrap");
     const previewImg = document.getElementById("scanPreviewImg");
     const svg = document.getElementById("scanOverlay");
@@ -2754,6 +2836,7 @@
       d.style.cssText = "background:#fafbfd;border:2px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem;cursor:pointer;transition:border-color .15s;position:relative";
       d.innerHTML = '<div style="position:absolute;top:4px;left:6px;background:var(--red);color:#fff;font-weight:900;font-size:.7rem;padding:1px 6px;border-radius:50px;z-index:1">'+(i+1)+'</div>' +
                     '<button type="button" class="sc-drop" title="Drop this tile from the batch" style="position:absolute;top:3px;right:3px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation">&times;</button>' +
+                    '<button type="button" class="sc-rescan" title="Rescan this tile with a larger context crop" style="position:absolute;top:3px;right:33px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(14,165,233,.9);color:#fff;font-weight:700;font-size:.8rem;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation" aria-label="Rescan tile">&#8635;</button>' +
                     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">' +
                       '<div style="aspect-ratio:1;background:#eee;border-radius:6px;overflow:hidden;position:relative" title="your photo"><img class="sc-your" style="width:100%;height:100%;object-fit:cover" alt=""><div style="position:absolute;bottom:2px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:.56rem;padding:1px 4px;border-radius:3px;font-weight:700">YOUR PHOTO</div></div>' +
                       '<div style="aspect-ratio:1;background:#fff;border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--line)" title="BrickLink reference"><img class="sc-ref" style="width:100%;height:100%;object-fit:contain" alt=""><div style="position:absolute;bottom:2px;left:3px;background:rgba(14,165,233,.9);color:#fff;font-size:.56rem;padding:1px 4px;border-radius:3px;font-weight:700">BL REF</div></div>' +
@@ -3313,6 +3396,27 @@
     }
     if (!rows.length){
       gridMsg("err", "Nothing to add — all rows unchecked.");
+      return;
+    }
+    // Confirmation summary before the grid mutates. One click to catch
+    // a wildly-off qty before 20 rows of a wrong part flow in. Dad's
+    // 2026-11-04 polish pass: a safety net on the "Add all" button.
+    const totalQty = rows.reduce((s, r) => s + (parseInt(r.qty, 10) || 0), 0);
+    const totalValue = rows.reduce((s, r) => {
+      const price = parseFloat(r.price);
+      const qty = parseInt(r.qty, 10) || 0;
+      return s + (isFinite(price) ? price * qty : 0);
+    }, 0);
+    const uniqueParts = new Set(rows.map((r) => r.itemid));
+    const confirmMsg =
+      "Add " + rows.length + " row" + (rows.length === 1 ? "" : "s") +
+      " (" + uniqueParts.size + " unique part" + (uniqueParts.size === 1 ? "" : "s") + ")\n" +
+      "Total qty across rows: " + totalQty + "\n" +
+      (totalValue > 0 ? "Known value: $" + totalValue.toFixed(2) + " (unpriced rows will auto-price after)\n" : "") +
+      "\nClick OK to add to the grid.";
+    if (!window.confirm(confirmMsg)) {
+      gridMsg("warn", "Add cancelled. Nothing changed in the grid.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2800);
       return;
     }
     let addedCount = 0;
