@@ -2220,14 +2220,24 @@
         try {
           // View fusion: send BOTH crops as query_image[] so Brickognize
           // considers them together. Request color prediction.
-          const fd = new FormData();
-          fd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
-          fd.append("query_image", blobPad,  "cell-" + i + "-pad.jpg");
-          fd.append("predict_color", "true");
-          fd.append("top_k_items", "10");
-          fd.append("top_k_colors", "5");
-          const resp = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
-          const j = resp.ok ? await resp.json() : null;
+          // On any error, retry ONCE with just the tight crop — sometimes
+          // view fusion confuses the model more than it helps.
+          const buildFd = (withPad) => {
+            const fd = new FormData();
+            fd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
+            if (withPad) fd.append("query_image", blobPad,  "cell-" + i + "-pad.jpg");
+            fd.append("predict_color", "true");
+            fd.append("top_k_items", "10");
+            fd.append("top_k_colors", "5");
+            return fd;
+          };
+          let resp = await fetch("/employees/api/colors/scan", { method: "POST", body: buildFd(true), credentials: "include" });
+          let j = resp.ok ? await resp.json() : null;
+          if (!resp.ok || !j || !j.top){
+            // Retry tight-only
+            resp = await fetch("/employees/api/colors/scan", { method: "POST", body: buildFd(false), credentials: "include" });
+            j = resp.ok ? await resp.json() : j;
+          }
           const top = j && j.top;
           const allItems = (j && j.items) || [];
           const bgColors = (j && j.colors) || [];  // Brickognize's own color guesses
