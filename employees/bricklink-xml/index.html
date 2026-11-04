@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-undo-persist" />
+  <meta name="pp-build" content="v2026-11-04-scan" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -187,7 +187,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan</span>
   </div>
 
   <div class="wrap">
@@ -255,6 +255,10 @@
           <div class="d-actions">
             <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill row 1</button>
             <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
+            <label class="btn ghost" style="padding:7px 14px;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px" title="Take or upload a photo of a part — Brickognize AI identifies it and fills in the Part ID">
+              &#128247; Scan part
+              <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none" />
+            </label>
             <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in the template">Clear template</button>
           </div>
           <span class="d-note">Each press fills the next row with every field above (including Part ID). Great for listing a lot of the same part.</span>
@@ -1316,6 +1320,37 @@
   updateFillButtonLabel();
   document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
   document.getElementById("priceAvgBtn").addEventListener("click", priceAtBlAverage);
+
+  // ========== BRICKOGNIZE SCAN ==========
+  // Take/upload a photo of one part → send to Brickognize via Worker → drop
+  // the predicted part ID into the template's Part ID cell. The existing
+  // auto-price + Fill-row-N flow handles everything after that.
+  document.getElementById("scanFile").addEventListener("change", async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const dbg = document.getElementById("priceDebug");
+    if (dbg) dbg.textContent = "scan: uploading " + Math.round(file.size/1024) + " KB to Brickognize...";
+    const fd = new FormData();
+    fd.append("query_image", file, file.name || "scan.jpg");
+    try {
+      const r = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
+      const text = await r.text();
+      let j = null;
+      try { j = JSON.parse(text); } catch(_){}
+      if (!r.ok || !j || !j.top){
+        if (dbg) dbg.textContent = "scan: no part recognized (HTTP " + r.status + "). " + (j && j.error || text.slice(0, 100));
+        return;
+      }
+      const top = j.top;
+      document.getElementById("defItemId").value = top.id;
+      if (dbg) dbg.textContent = "scan: " + top.id + " — " + top.name + " (" + Math.round(top.score * 100) + "% confidence)";
+      try { localStorage.setItem("pp_bl_defItemId", top.id); } catch(e){}
+    } catch (e) {
+      if (dbg) dbg.textContent = "scan: network error — " + String(e);
+    } finally {
+      ev.target.value = "";  // let the same file be re-picked next time
+    }
+  });
   document.getElementById("clearDefaultsBtn").addEventListener("click", () => {
     ["defItemId","defColor","defQty","defPrice","defCondition","defDescription","defRemarks"].forEach((id) => {
       const el = document.getElementById(id);
