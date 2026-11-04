@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-scan" />
+  <meta name="pp-build" content="v2026-11-04-scan-many" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -167,6 +167,33 @@
 </head>
 <body>
 
+  <!-- ===== SCAN MANY: bulk-scan tray of parts ===== -->
+  <div id="scanManyOverlay" style="display:none;position:fixed;inset:0;background:rgba(21,21,31,.75);z-index:100;align-items:center;justify-content:center;padding:14px">
+    <div style="background:#fff;border-radius:14px;max-width:960px;width:100%;max-height:92vh;overflow-y:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <h2 style="font-family:'Fredoka','Nunito';font-size:1.15rem;flex:1">&#128247; Scan many parts</h2>
+        <button id="scanManyClose" type="button" style="background:transparent;border:none;font-size:1.6rem;cursor:pointer;color:var(--mid)">&times;</button>
+      </div>
+      <p style="color:var(--mid);font-size:.9rem;margin-bottom:14px;line-height:1.45">
+        Lay parts on a plain background in a <strong>neat grid</strong> (same spacing, no overlaps). Take one photo top-down. Tell me the layout below — I'll slice the photo into cells, send each to Brickognize, and show you the guesses.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px">
+        <label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem">Rows: <input type="number" id="scanRows" value="4" min="1" max="20" style="width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-weight:700"></label>
+        <label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem">Cols: <input type="number" id="scanCols" value="5" min="1" max="20" style="width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-weight:700"></label>
+        <label class="btn" style="padding:9px 18px;font-size:.9rem;cursor:pointer">
+          Choose photo
+          <input type="file" id="scanManyFile" accept="image/*" capture="environment" style="display:none">
+        </label>
+        <span id="scanManyStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace;flex:1"></span>
+      </div>
+      <div id="scanManyGrid" style="display:grid;gap:8px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="scanManyAddAll" type="button" disabled style="padding:9px 18px;font-size:.9rem">Add all to grid &rarr;</button>
+        <span id="scanManySummary" style="color:var(--mid);font-size:.82rem"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== SNIPPETS: saved phrases you can copy into Description / Remarks ===== -->
   <button class="snippets-toggle" id="snippetsToggle" type="button" aria-expanded="false">
     Phrases <span class="caret">&#9662;</span>
@@ -187,7 +214,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-many</span>
   </div>
 
   <div class="wrap">
@@ -259,6 +286,7 @@
               &#128247; Scan part
               <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none" />
             </label>
+            <button class="btn ghost" id="scanBulkBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="One photo of a tray of parts laid out in a grid — identifies them all and fills rows">&#128247; Scan many</button>
             <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in the template">Clear template</button>
           </div>
           <span class="d-note">Each press fills the next row with every field above (including Part ID). Great for listing a lot of the same part.</span>
@@ -1325,6 +1353,151 @@
   // Take/upload a photo of one part → send to Brickognize via Worker → drop
   // the predicted part ID into the template's Part ID cell. The existing
   // auto-price + Fill-row-N flow handles everything after that.
+  // ========== BULK SCAN (grid of parts in one photo) ==========
+  const scanOverlay = document.getElementById("scanManyOverlay");
+  const scanGridEl  = document.getElementById("scanManyGrid");
+  const scanStatus  = document.getElementById("scanManyStatus");
+  const scanSummary = document.getElementById("scanManySummary");
+  const scanAddBtn  = document.getElementById("scanManyAddAll");
+  let SCAN_RESULTS = [];
+
+  document.getElementById("scanBulkBtn").addEventListener("click", () => {
+    scanOverlay.style.display = "flex";
+    scanGridEl.innerHTML = "";
+    scanStatus.textContent = "";
+    scanSummary.textContent = "";
+    scanAddBtn.disabled = true;
+    SCAN_RESULTS = [];
+  });
+  document.getElementById("scanManyClose").addEventListener("click", () => {
+    scanOverlay.style.display = "none";
+  });
+
+  document.getElementById("scanManyFile").addEventListener("change", async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const rows = Math.max(1, Math.min(20, parseInt(document.getElementById("scanRows").value, 10) || 4));
+    const cols = Math.max(1, Math.min(20, parseInt(document.getElementById("scanCols").value, 10) || 5));
+    const nCells = rows * cols;
+    scanStatus.textContent = "Loading photo...";
+    scanAddBtn.disabled = true;
+    scanGridEl.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
+    scanGridEl.innerHTML = "";
+
+    // Load the image into a canvas so we can slice it.
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    const cellW = Math.floor(canvas.width / cols);
+    const cellH = Math.floor(canvas.height / rows);
+
+    SCAN_RESULTS = new Array(nCells).fill(null).map((_, i) => ({ idx: i, status: "pending" }));
+
+    // Render blank tiles immediately so Dad sees progress.
+    for (let i = 0; i < nCells; i++){
+      const d = document.createElement("div");
+      d.dataset.i = String(i);
+      d.style.cssText = "background:#fafbfd;border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem";
+      d.innerHTML = '<div style="aspect-ratio:1;background:#eee;border-radius:6px;overflow:hidden;position:relative"><img style="width:100%;height:100%;object-fit:cover" alt=""></div>' +
+                    '<div class="sc-label" style="color:var(--mid);font-size:.7rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace">waiting...</div>';
+      scanGridEl.appendChild(d);
+    }
+
+    // Slice each cell → blob → POST to /api/colors/scan in parallel, max 6 at a time.
+    let done = 0, errors = 0;
+    const queue = Array.from({length: nCells}, (_, i) => i);
+    async function worker(){
+      while (queue.length){
+        const i = queue.shift();
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const sub = document.createElement("canvas");
+        sub.width = cellW; sub.height = cellH;
+        sub.getContext("2d").drawImage(canvas, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
+        const blob = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.85));
+        const previewUrl = URL.createObjectURL(blob);
+        const tileEl = scanGridEl.children[i];
+        if (tileEl){
+          tileEl.querySelector("img").src = previewUrl;
+          tileEl.querySelector(".sc-label").textContent = "scanning...";
+        }
+        try {
+          const fd = new FormData();
+          fd.append("query_image", blob, "cell-" + i + ".jpg");
+          const resp = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
+          const j = resp.ok ? await resp.json() : null;
+          const top = j && j.top;
+          if (top && top.id){
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: top.id, name: top.name, score: top.score };
+            if (tileEl){
+              const pct = Math.round(top.score * 100);
+              tileEl.style.borderColor = pct >= 70 ? "#86efac" : (pct >= 40 ? "#fde68a" : "#fecaca");
+              tileEl.querySelector(".sc-label").innerHTML =
+                '<strong style="color:var(--ink);font-family:\'Nunito\'">' + top.id + '</strong> &middot; ' + pct + '%<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (top.name || "") + '</span>';
+            }
+          } else {
+            SCAN_RESULTS[i] = { idx: i, status: "err" };
+            errors++;
+            if (tileEl){ tileEl.querySelector(".sc-label").textContent = "no match"; tileEl.style.borderColor = "#fecaca"; }
+          }
+        } catch(e){
+          SCAN_RESULTS[i] = { idx: i, status: "err" };
+          errors++;
+          if (tileEl){ tileEl.querySelector(".sc-label").textContent = "error"; }
+        }
+        done++;
+        scanStatus.textContent = done + "/" + nCells + " scanned" + (errors ? " (" + errors + " failed)" : "");
+      }
+    }
+    const workers = Array.from({length: Math.min(6, nCells)}, () => worker());
+    await Promise.all(workers);
+
+    const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
+    scanSummary.textContent = good + " of " + nCells + " parts identified. Click Add all to stamp them into the grid.";
+    scanAddBtn.disabled = good === 0;
+  });
+
+  scanAddBtn.addEventListener("click", () => {
+    snapshotGrid();  // make it undoable
+    const ok = SCAN_RESULTS.filter((r) => r && r.status === "ok");
+    const dcolor = (document.getElementById("defColor").value || "").trim();
+    const dqty   = (document.getElementById("defQty").value || "").trim() || "1";
+    const dprice = (document.getElementById("defPrice").value || "").trim();
+    const dcond  = (document.getElementById("defCondition").value || "").trim();
+    const ddesc  = (document.getElementById("defDescription").value || "").trim();
+    const drem   = (document.getElementById("defRemarks").value || "").trim();
+    let addedCount = 0;
+    ok.forEach((r) => {
+      while (GRID_BODY.children.length < FILL_ROW_STEP + 1) addRows(1);
+      FILL_ROW_STEP++;
+      const tr = GRID_BODY.children[FILL_ROW_STEP - 1];
+      const set = (k, v) => {
+        const el = tr.querySelector('[data-k="'+k+'"]');
+        if (el && v) el.value = v;
+      };
+      set("ITEMID", r.id);
+      set("COLOR", dcolor);
+      set("QTY", dqty);
+      set("PRICE", dprice);
+      set("CONDITION", dcond);
+      set("DESCRIPTION", ddesc);
+      set("REMARKS", drem);
+      flagRow(tr);
+      autoPriceRow(tr);
+      addedCount++;
+    });
+    saveFillStep();
+    updateFillButtonLabel();
+    recountGrid(); saveGrid();
+    scanOverlay.style.display = "none";
+    gridMsg("ok", "Scanned and added " + addedCount + " rows. Auto-pricing each in the background.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
+  });
+
   document.getElementById("scanFile").addEventListener("change", async (ev) => {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
