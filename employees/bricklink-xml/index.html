@@ -1215,13 +1215,25 @@
           }
           if (tr.dataset.priceManual !== "1"){
             priceEl.value = Number(p).toFixed(2);
-            priceEl.style.background = "#d1fae5";
+            // Color-code the cell so Dad can see which source the price
+            // came from at a glance:
+            //   green  = real 6-month sold data (ideal)
+            //   yellow = currently-listed stock (no sales, but market data)
+            //   amber  = discounted New (no Used data; rough estimate)
+            const bgBySource = { "sold": "#d1fae5", "stock": "#fef3c7", "new-discounted": "#fde68a" };
+            priceEl.style.background = bgBySource[j.source] || "#d1fae5";
+            priceEl.title = {
+              "sold": "6-month sold average",
+              "stock": "Current listing average (no recent sales)",
+              "new-discounted": "Estimated from New price × " + (j.fallback && j.fallback.discount ? j.fallback.discount : 0.65) + " (no Used data)",
+            }[j.source] || "6-month sold average";
             flagRow(tr); recountGrid(); saveGridDebounced();
             if (dbg) dbg.textContent = "price: " + no + " c=" + (color || "n/a") + " " + cond + " → $" + Number(p).toFixed(2) +
+              " via " + (j.source || "sold") +
               " | qty_avg=" + j.qty_avg_price + " avg=" + j.avg_price +
-              " min=" + j.min_price + " max=" + j.max_price + " sold=" + (j.sold_qty || 0) +
+              " sold=" + (j.sold_qty || 0) +
               (j.cached ? " (CACHED)" : "");
-            setTimeout(() => { priceEl.style.background = ""; }, 1800);
+            setTimeout(() => { priceEl.style.background = ""; }, 3500);
           } else {
             if (dbg) dbg.textContent = "price: skipped " + no + " (you typed it manually)";
           }
