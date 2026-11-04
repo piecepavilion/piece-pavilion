@@ -1740,7 +1740,7 @@
       const list = groups[type].sort((a, b) => Number(a.id) - Number(b.id));
       const tiles = list.map((c) => {
         const hex = c.hex || "#cfd3dc";
-        const bl = "https://www.bricklink.com/catalogItemsForColor.asp?colorID=" + encodeURIComponent(c.id);
+        const bl = "https://www.bricklink.com/catalogList.asp?catType=P&colorPart=" + encodeURIComponent(c.id);
         const cname = c.name || ("Color #"+c.id);
         return '<a class="col-tile animate-pop-in" href="'+bl+'" target="_blank" rel="noopener" title="Open on BrickLink">' +
           '<button class="col-copy" type="button" data-cname="'+esc(cname)+'" title="Copy color name" aria-label="Copy color name">&#128203;</button>' +
