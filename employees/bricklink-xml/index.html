@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-scan-validate" />
+  <meta name="pp-build" content="v2026-11-04-blob-detect" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -197,14 +197,16 @@
         <button id="scanManyClose" type="button" style="background:transparent;border:none;font-size:1.6rem;cursor:pointer;color:var(--mid)">&times;</button>
       </div>
       <p style="color:var(--mid);font-size:.9rem;margin-bottom:14px;line-height:1.45">
-        Lay parts on a plain background in a <strong>neat grid</strong> (same spacing, no overlaps). Take one photo top-down. Tell me the layout below — I'll slice the photo into cells, send each to Brickognize, and show you the guesses.
+        Lay parts on a plain background, <strong>spread out so each one is separate</strong>. Take one photo top-down. The parts get auto-detected and boxed on the photo — each box gets sent to Brickognize for identification.
       </p>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px">
-        <label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem">Rows: <input type="number" id="scanRows" value="4" min="1" max="20" style="width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-weight:700"></label>
-        <label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem">Cols: <input type="number" id="scanCols" value="5" min="1" max="20" style="width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-weight:700"></label>
-        <span id="scanManyStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace;flex:1">Set rows/cols above, then Take Photo opens.</span>
+      <div id="scanPreviewWrap" style="position:relative;margin-bottom:14px;max-height:380px;overflow:hidden;border-radius:10px;background:#111;display:none">
+        <img id="scanPreviewImg" style="display:block;width:100%;height:auto;max-height:380px;object-fit:contain" />
+        <svg id="scanOverlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></svg>
       </div>
-      <div id="scanManyGrid" style="display:grid;gap:8px;margin-bottom:14px"></div>
+      <div style="margin-bottom:10px">
+        <span id="scanManyStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace">Click Scan many to open the camera.</span>
+      </div>
+      <div id="scanManyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:14px"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn" id="scanManyAddAll" type="button" disabled style="padding:9px 18px;font-size:.9rem">Add all to grid &rarr;</button>
         <span id="scanManySummary" style="color:var(--mid);font-size:.82rem"></span>
@@ -232,7 +234,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-validate</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-blob-detect</span>
   </div>
 
   <div class="wrap">
@@ -1380,7 +1382,7 @@
 
   async function openCamera(mode){
     CAM_MODE = mode;
-    camTitle.textContent = mode === "many" ? "📷 Take a photo of the tray" : "📷 Take a photo of one part";
+    camTitle.textContent = mode === "many" ? "📷 Take a photo of the tray — SPACE to shoot" : "📷 Take a photo of one part — SPACE to shoot";
     camStatus.textContent = "";
     camError.style.display = "none";
     camOverlay.style.display = "flex";
@@ -1402,6 +1404,14 @@
     camOverlay.style.display = "none";
   }
   document.getElementById("camClose").addEventListener("click", closeCamera);
+  // Spacebar triggers the shutter while the camera modal is open.
+  document.addEventListener("keydown", (ev) => {
+    if (camOverlay.style.display !== "flex") return;
+    if (ev.code === "Space" || ev.key === " "){
+      ev.preventDefault();
+      camShoot.click();
+    }
+  });
 
   async function captureFromVideo(){
     if (!CAM_STREAM) return null;
@@ -1589,22 +1599,100 @@
     if (inp){ inp.style.display = "block"; inp.value = r.manual ? r.id : ""; }
   }
 
+  // Find distinct parts in a canvas by detecting non-background blobs.
+  // Returns array of {x, y, w, h} bounding boxes at the canvas resolution.
+  function detectBlobs(canvas){
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+    const img = ctx.getImageData(0, 0, W, H).data;
+
+    // Estimate background by averaging the four corners and edge midpoints.
+    const samples = [[0,0],[W-1,0],[0,H-1],[W-1,H-1],[Math.floor(W/2),0],[Math.floor(W/2),H-1],[0,Math.floor(H/2)],[W-1,Math.floor(H/2)]];
+    let bgR=0, bgG=0, bgB=0;
+    samples.forEach(([x,y]) => {
+      const p = (y * W + x) * 4;
+      bgR += img[p]; bgG += img[p+1]; bgB += img[p+2];
+    });
+    bgR /= samples.length; bgG /= samples.length; bgB /= samples.length;
+
+    // Binary foreground mask at 1/4 resolution (faster).
+    const scale = 4;
+    const sw = Math.floor(W / scale), sh = Math.floor(H / scale);
+    const mask = new Uint8Array(sw * sh);
+    const threshold = 50 * 50;  // squared RGB distance
+    for (let y = 0; y < sh; y++){
+      for (let x = 0; x < sw; x++){
+        const p = ((y * scale) * W + (x * scale)) * 4;
+        const dr = img[p] - bgR, dg = img[p+1] - bgG, db = img[p+2] - bgB;
+        if (dr*dr + dg*dg + db*db > threshold) mask[y * sw + x] = 1;
+      }
+    }
+
+    // Dilate (close small gaps) so one part doesn't split into two blobs.
+    const dil = new Uint8Array(sw * sh);
+    for (let y = 0; y < sh; y++){
+      for (let x = 0; x < sw; x++){
+        const i = y * sw + x;
+        if (mask[i]){ dil[i] = 1; continue; }
+        // Expand by 2 px
+        for (let dy = -2; dy <= 2 && !dil[i]; dy++){
+          for (let dx = -2; dx <= 2 && !dil[i]; dx++){
+            const yy = y+dy, xx = x+dx;
+            if (yy < 0 || xx < 0 || yy >= sh || xx >= sw) continue;
+            if (mask[yy * sw + xx]) dil[i] = 1;
+          }
+        }
+      }
+    }
+
+    // Connected components via iterative stack (BFS/DFS).
+    const visited = new Uint8Array(sw * sh);
+    const blobs = [];
+    const minAreaPx = (sw * sh) * 0.002;  // 0.2% of image
+    for (let y = 0; y < sh; y++){
+      for (let x = 0; x < sw; x++){
+        const idx = y * sw + x;
+        if (!dil[idx] || visited[idx]) continue;
+        const stack = [idx];
+        let minX = x, maxX = x, minY = y, maxY = y, area = 0;
+        while (stack.length){
+          const p = stack.pop();
+          if (visited[p]) continue;
+          visited[p] = 1;
+          area++;
+          const px = p % sw, py = Math.floor(p / sw);
+          if (px < minX) minX = px; if (px > maxX) maxX = px;
+          if (py < minY) minY = py; if (py > maxY) maxY = py;
+          if (px > 0 && dil[p-1] && !visited[p-1]) stack.push(p-1);
+          if (px < sw-1 && dil[p+1] && !visited[p+1]) stack.push(p+1);
+          if (py > 0 && dil[p-sw] && !visited[p-sw]) stack.push(p-sw);
+          if (py < sh-1 && dil[p+sw] && !visited[p+sw]) stack.push(p+sw);
+        }
+        if (area >= minAreaPx){
+          // Scale back to original resolution + small padding
+          const pad = 8;
+          const bx = Math.max(0, minX * scale - pad);
+          const by = Math.max(0, minY * scale - pad);
+          const bw = Math.min(W - bx, (maxX - minX + 1) * scale + 2 * pad);
+          const bh = Math.min(H - by, (maxY - minY + 1) * scale + 2 * pad);
+          blobs.push({ x: bx, y: by, w: bw, h: bh, area });
+        }
+      }
+    }
+    // Sort top-to-bottom, left-to-right for a natural reading order.
+    blobs.sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
+    return blobs;
+  }
+
   async function processBulkPhoto(file){
     scanOverlay.style.display = "flex";
     scanGridEl.innerHTML = "";
-    scanStatus.textContent = "";
+    scanStatus.textContent = "Analyzing photo...";
     scanSummary.textContent = "";
     scanAddBtn.disabled = true;
     SCAN_RESULTS = [];
-    const rows = Math.max(1, Math.min(20, parseInt(document.getElementById("scanRows").value, 10) || 4));
-    const cols = Math.max(1, Math.min(20, parseInt(document.getElementById("scanCols").value, 10) || 5));
-    const nCells = rows * cols;
-    scanStatus.textContent = "Loading photo...";
-    scanAddBtn.disabled = true;
-    scanGridEl.style.gridTemplateColumns = "repeat(" + cols + ", 1fr)";
-    scanGridEl.innerHTML = "";
 
-    // Load the image into a canvas so we can slice it.
+    // Load the image into a canvas so we can analyze it.
     const img = new Image();
     img.src = URL.createObjectURL(file);
     await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
@@ -1612,8 +1700,27 @@
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
     canvas.getContext("2d").drawImage(img, 0, 0);
-    const cellW = Math.floor(canvas.width / cols);
-    const cellH = Math.floor(canvas.height / rows);
+
+    // Detect blobs (individual parts) and draw boxes on the preview.
+    const blobs = detectBlobs(canvas);
+    const previewWrap = document.getElementById("scanPreviewWrap");
+    const previewImg = document.getElementById("scanPreviewImg");
+    const svg = document.getElementById("scanOverlay");
+    previewImg.src = img.src;
+    previewWrap.style.display = "block";
+    svg.setAttribute("viewBox", "0 0 " + canvas.width + " " + canvas.height);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.innerHTML = blobs.map((b, i) =>
+      '<rect x="'+b.x+'" y="'+b.y+'" width="'+b.w+'" height="'+b.h+'" fill="none" stroke="#e3000b" stroke-width="'+(canvas.width*0.006)+'" />' +
+      '<text x="'+(b.x+8)+'" y="'+(b.y+Math.min(40,canvas.height*0.03))+'" font-size="'+(canvas.width*0.025)+'" font-weight="900" fill="#e3000b" stroke="#fff" stroke-width="'+(canvas.width*0.006)+'" paint-order="stroke">'+(i+1)+'</text>'
+    ).join("");
+
+    const nCells = blobs.length;
+    if (!nCells){
+      scanStatus.textContent = "No parts detected — try a clearer background or spread the parts out more.";
+      return;
+    }
+    scanStatus.textContent = "Found " + nCells + " parts. Scanning each...";
 
     SCAN_RESULTS = new Array(nCells).fill(null).map((_, i) => ({ idx: i, status: "pending", options: [], optIdx: 0 }));
 
@@ -1621,8 +1728,9 @@
     for (let i = 0; i < nCells; i++){
       const d = document.createElement("div");
       d.dataset.i = String(i);
-      d.style.cssText = "background:#fafbfd;border:2px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem;cursor:pointer;transition:border-color .15s";
-      d.innerHTML = '<div style="aspect-ratio:1;background:#eee;border-radius:6px;overflow:hidden;position:relative"><img style="width:100%;height:100%;object-fit:cover" alt=""></div>' +
+      d.style.cssText = "background:#fafbfd;border:2px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem;cursor:pointer;transition:border-color .15s;position:relative";
+      d.innerHTML = '<div style="position:absolute;top:4px;left:6px;background:var(--red);color:#fff;font-weight:900;font-size:.7rem;padding:1px 6px;border-radius:50px;z-index:1">'+(i+1)+'</div>' +
+                    '<div style="aspect-ratio:1;background:#eee;border-radius:6px;overflow:hidden;position:relative"><img style="width:100%;height:100%;object-fit:cover" alt=""></div>' +
                     '<div class="sc-label" style="color:var(--mid);font-size:.7rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace">waiting...</div>' +
                     '<input type="text" class="sc-manual" placeholder="or type ID" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:.78rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace;font-weight:700;display:none">';
       scanGridEl.appendChild(d);
@@ -1638,11 +1746,10 @@
     async function worker(){
       while (queue.length){
         const i = queue.shift();
-        const r = Math.floor(i / cols);
-        const c = i % cols;
+        const box = blobs[i];
         const sub = document.createElement("canvas");
-        sub.width = cellW; sub.height = cellH;
-        sub.getContext("2d").drawImage(canvas, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
+        sub.width = box.w; sub.height = box.h;
+        sub.getContext("2d").drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
         const blob = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.85));
         // Sample the dominant color from the center of this cell.
         let detectedColor = null;
