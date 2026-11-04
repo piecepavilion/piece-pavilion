@@ -2098,8 +2098,25 @@
     canvas.height = img.naturalHeight;
     canvas.getContext("2d").drawImage(img, 0, 0);
 
-    // Detect blobs (individual parts) and draw boxes on the preview.
-    const blobOut = detectBlobs(canvas);
+    // Preprocessing: nudge up contrast on a SEPARATE analysis-only canvas so
+    // low-contrast parts (gray-on-white, shadows) have a better chance of
+    // being separated from the background. The ORIGINAL canvas is still
+    // used for crops sent to Brickognize + for display.
+    const analysisCanvas = document.createElement("canvas");
+    analysisCanvas.width = canvas.width;
+    analysisCanvas.height = canvas.height;
+    const actx = analysisCanvas.getContext("2d");
+    actx.filter = "contrast(1.2) saturate(1.1)";
+    actx.drawImage(canvas, 0, 0);
+    actx.filter = "none";
+
+    // Detect blobs on the enhanced analysis canvas, but RECORD source pixels
+    // from the ORIGINAL — we don't want contrast boost polluting the color
+    // we report.
+    const blobOut = detectBlobs(analysisCanvas);
+    // Overwrite the sourceImg to be the original photo, so color sampling
+    // uses the untouched RGB values.
+    blobOut.sourceImg = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
     const blobs = blobOut.blobs;
     const previewWrap = document.getElementById("scanPreviewWrap");
     const previewImg = document.getElementById("scanPreviewImg");
