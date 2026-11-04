@@ -2106,6 +2106,8 @@
   // Build the grouped-rows preview. One row per unique (Part ID, Color,
   // Condition, Remarks, Description) combo with summed quantity. Previews
   // in the green box so Dad can sanity-check before stamping into the grid.
+  // Each group also tracks the SCAN_RESULTS indices that fed into it so the
+  // preview can show thumbnails of the original photos.
   function buildGroupedRows(){
     const dcolor = (document.getElementById("defColor").value || "").trim();
     const dqty   = parseInt((document.getElementById("defQty").value || "").trim(), 10) || 1;
@@ -2113,13 +2115,15 @@
     const dprice = (document.getElementById("defPrice").value || "").trim();
     const ddesc  = (document.getElementById("defDescription").value || "").trim();
     const drem   = (document.getElementById("defRemarks").value || "").trim();
-    const ok = SCAN_RESULTS.filter((r) => r && r.status === "ok");
     const groups = new Map();
-    ok.forEach((r) => {
+    SCAN_RESULTS.forEach((r, idx) => {
+      if (!r || r.status !== "ok" || r.dropped) return;
       const colorName = r.detectedColor ? r.detectedColor.name : dcolor;
       const key = [r.id, colorName, dcond, drem, ddesc].join("\u0001");
       if (groups.has(key)){
-        groups.get(key).qty += dqty;
+        const g = groups.get(key);
+        g.qty += dqty;
+        g.sources.push(idx);
       } else {
         groups.set(key, {
           itemid: r.id,
@@ -2131,6 +2135,8 @@
           description: ddesc,
           remarks: drem,
           name: r.name || "",
+          avgScore: r.score || 0,
+          sources: [idx],
         });
       }
     });
@@ -2142,33 +2148,74 @@
     const box = document.getElementById("scanCheckPreview");
     const el = document.getElementById("scanCheckRows");
     if (!rows.length){ box.style.display = "none"; return; }
-    el.innerHTML = rows.map((r) => {
+
+    // Collect the thumbnail srcs from the scan tiles (your-photo imgs).
+    const thumbSrc = (srcIdx) => {
+      const tile = scanGridEl.children[srcIdx];
+      if (!tile) return "";
+      const img = tile.querySelector(".sc-your");
+      return img ? (img.src || "") : "";
+    };
+
+    el.innerHTML = rows.map((r, rIdx) => {
       const colorId = r.colorId || 0;
       const refSrc = "https://img.bricklink.com/ItemImage/PN/" + colorId + "/" + encodeURIComponent(r.itemid) + ".png";
+      const refFallback = "https://img.bricklink.com/ItemImage/PN/0/" + encodeURIComponent(r.itemid) + ".png";
+      const scorePct = Math.round((r.avgScore || 0) * 100);
+      const scoreColor = scorePct >= 70 ? "#065f46" : (scorePct >= 40 ? "#92400e" : "#991b1b");
+      const scoreBg = scorePct >= 70 ? "#d1fae5" : (scorePct >= 40 ? "#fef3c7" : "#fee2e2");
+      // Thumbnails of each source blob photo (max 4 shown + "+N more")
+      const shown = r.sources.slice(0, 4);
+      const extra = r.sources.length - shown.length;
+      const srcThumbs = shown.map((si) => {
+        const src = thumbSrc(si);
+        return src
+          ? '<img src="' + src + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;border:1px solid #d1fae5;background:#eee" alt="">'
+          : '';
+      }).join("") + (extra > 0 ? '<span style="font-size:.7rem;color:var(--mid);align-self:center;margin-left:4px">+' + extra + '</span>' : '');
+
       return (
-        '<div style="padding:6px 0;border-bottom:1px dashed #86efac;display:flex;gap:10px;align-items:center">' +
-          '<img src="' + refSrc + '" onerror="this.onerror=null;this.src=\'https://img.bricklink.com/ItemImage/PN/0/' + encodeURIComponent(r.itemid) + '.png\'" style="width:42px;height:42px;object-fit:contain;background:#fff;border:1px solid #d1fae5;border-radius:4px;flex-shrink:0" alt="">' +
-          '<div style="flex:1">' +
-            '<strong style="color:var(--ink)">' + esc(r.itemid) + '</strong>' +
-            ' &middot; ' + esc(r.color || "(no color)") +
-            ' &middot; qty ' + r.qty +
-            (r.price ? ' @ $' + r.price : ' @ (auto-price)') +
-            ' &middot; ' + esc(r.condition || "(set condition in template)") +
-            (r.remarks ? ' &middot; ' + esc(r.remarks) : "") +
+        '<div style="padding:8px;margin-bottom:6px;background:#fff;border:1px solid #d1fae5;border-radius:8px;display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center">' +
+          '<label style="display:flex;align-items:center;cursor:pointer;gap:6px"><input type="checkbox" class="chk-keep" data-r="'+rIdx+'" checked style="width:16px;height:16px;cursor:pointer"></label>' +
+          // Left: your-photo thumbs
+          '<div style="display:flex;gap:2px;flex-wrap:wrap;max-width:140px">' + srcThumbs + '</div>' +
+          // Middle: BL ref + text
+          '<div style="display:flex;gap:10px;align-items:center;min-width:0">' +
+            '<img src="' + refSrc + '" onerror="this.onerror=null;this.src=\'' + refFallback + '\'" style="width:52px;height:52px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px;flex-shrink:0" alt="BrickLink ref">' +
+            '<div style="font-size:.85rem;line-height:1.35">' +
+              '<strong style="color:var(--ink);font-family:\'Nunito\'">' + esc(r.itemid) + '</strong>' +
+              ' &middot; <span style="background:'+scoreBg+';color:'+scoreColor+';padding:0 6px;border-radius:3px;font-size:.7rem;font-weight:700">' + scorePct + '%</span>' +
+              '<br><span style="color:var(--slate);font-size:.78rem">' + esc(r.color || "(no color)") + ' &middot; qty ' + r.qty + (r.price ? ' @ $' + r.price : ' @ auto-price') + '</span>' +
+              (r.name ? '<br><span style="color:var(--mid);font-size:.7rem">' + esc(r.name) + '</span>' : '') +
+            '</div>' +
           '</div>' +
+          // Right: BL link
+          '<a href="https://www.bricklink.com/v2/catalog/catalogitem.page?P=' + encodeURIComponent(r.itemid) + '" target="_blank" rel="noopener" style="color:var(--blue);font-size:.72rem;font-weight:700;text-decoration:none;white-space:nowrap">BL &rarr;</a>' +
         '</div>'
       );
     }).join("");
     box.style.display = "block";
-    scanSummary.textContent = rows.length + " row" + (rows.length===1?"":"s") + " ready to add.";
+    scanSummary.textContent = rows.length + " row" + (rows.length===1?"":"s") + " ready. Uncheck anything wrong, then click Add all.";
   });
 
   function esc(s){ return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
   scanAddBtn.addEventListener("click", () => {
     snapshotGrid();  // make it undoable
-    const rows = buildGroupedRows();
+    let rows = buildGroupedRows();
     if (!rows.length) return;
+    // Honor the keep/drop checkboxes in the Check preview — any rIdx whose
+    // chk-keep is unchecked is dropped from the batch.
+    const unchecked = Array.from(document.querySelectorAll(".chk-keep"))
+      .filter((cb) => !cb.checked)
+      .map((cb) => parseInt(cb.dataset.r, 10));
+    if (unchecked.length){
+      rows = rows.filter((_, i) => !unchecked.includes(i));
+    }
+    if (!rows.length){
+      gridMsg("err", "Nothing to add — all rows unchecked.");
+      return;
+    }
     let addedCount = 0;
     rows.forEach((r) => {
       while (GRID_BODY.children.length < FILL_ROW_STEP + 1) addRows(1);
