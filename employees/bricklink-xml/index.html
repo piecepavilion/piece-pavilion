@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v6-phantombg" />
+  <meta name="pp-build" content="v2026-11-04-vision-v7-flipretry-qty" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v6</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v7</span>
   </div>
 
   <div class="wrap">
@@ -2452,6 +2452,19 @@
 
         const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
         const blobPad = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
+        // A 180-degree rotated copy of the tight crop. Used only when the
+        // first scan returns low confidence — Brickognize is trained on
+        // catalog views (studs up for bricks/plates, printed face up for
+        // tiles and minifig parts), so a face-down tile scans poorly.
+        // Dad's 2026-11-04 test specifically called out upside-down parts
+        // as the remaining accuracy gap. See flip-retry below.
+        const flipCanvas = document.createElement("canvas");
+        flipCanvas.width = sub.width; flipCanvas.height = sub.height;
+        const fctx = flipCanvas.getContext("2d");
+        fctx.translate(sub.width, sub.height);
+        fctx.rotate(Math.PI);
+        fctx.drawImage(sub, 0, 0);
+        const blobFlip = await new Promise((res) => flipCanvas.toBlob(res, "image/jpeg", 0.9));
         const previewUrl = URL.createObjectURL(blobTight);
         SCAN_OBJ_URLS.push(previewUrl);
         const tileEl = scanGridEl.children[i];
@@ -2464,21 +2477,44 @@
           // considers them together. Request color prediction.
           // On any error, retry ONCE with just the tight crop — sometimes
           // view fusion confuses the model more than it helps.
-          const buildFd = (withPad) => {
+          const buildFd = (imgs) => {
             const fd = new FormData();
-            fd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
-            if (withPad) fd.append("query_image", blobPad,  "cell-" + i + "-pad.jpg");
+            imgs.forEach((im, k) => fd.append("query_image", im.blob, "cell-" + i + "-" + im.name + ".jpg"));
             fd.append("predict_color", "true");
             fd.append("top_k_items", "10");
             fd.append("top_k_colors", "5");
             return fd;
           };
-          let resp = await fetch("/employees/api/colors/scan", { method: "POST", body: buildFd(true), credentials: "include" });
+          let resp = await fetch("/employees/api/colors/scan", {
+            method: "POST", credentials: "include",
+            body: buildFd([{blob: blobTight, name: "tight"}, {blob: blobPad, name: "pad"}]),
+          });
           let j = resp.ok ? await resp.json() : null;
           if (!resp.ok || !j || !j.top){
-            // Retry tight-only
-            resp = await fetch("/employees/api/colors/scan", { method: "POST", body: buildFd(false), credentials: "include" });
+            // Retry tight-only — view fusion sometimes confuses Brickognize.
+            resp = await fetch("/employees/api/colors/scan", {
+              method: "POST", credentials: "include",
+              body: buildFd([{blob: blobTight, name: "tight-only"}]),
+            });
             j = resp.ok ? await resp.json() : j;
+          }
+          // Upside-down retry. If the first pass returned low confidence,
+          // the part may be face-down. Send the 180-rotated crop and keep
+          // whichever scan came back stronger. Doubles the API cost on
+          // low-confidence blobs ONLY — high-confidence blobs skip this.
+          {
+            const topScore = (j && j.top && j.top.score) || 0;
+            if (topScore < 0.60){
+              try {
+                const fresp = await fetch("/employees/api/colors/scan", {
+                  method: "POST", credentials: "include",
+                  body: buildFd([{blob: blobFlip, name: "flip"}]),
+                });
+                const fj = fresp.ok ? await fresp.json() : null;
+                const fScore = (fj && fj.top && fj.top.score) || 0;
+                if (fScore > topScore){ j = fj; }
+              } catch(_){ /* flip retry is best-effort; a network blip shouldn't kill the scan */ }
+            }
           }
           const top = j && j.top;
           const allItems = (j && j.items) || [];
@@ -2683,7 +2719,7 @@
             '<div style="font-size:.85rem;line-height:1.35">' +
               '<strong style="color:var(--ink);font-family:\'Nunito\'">' + esc(r.itemid) + '</strong>' +
               ' &middot; <span style="background:'+scoreBg+';color:'+scoreColor+';padding:0 6px;border-radius:3px;font-size:.7rem;font-weight:700">' + scorePct + '%</span>' +
-              '<br><span style="color:var(--slate);font-size:.78rem">' + esc(r.color || "(no color)") + ' &middot; qty ' + r.qty + (r.price ? ' @ $' + r.price : ' @ auto-price') + '</span>' +
+              '<br><span style="color:var(--slate);font-size:.78rem">' + esc(r.color || "(no color)") + ' &middot; qty <input type="number" class="qty-edit" data-r="'+rIdx+'" value="' + r.qty + '" min="1" max="999" style="width:52px;padding:2px 4px;border:1px solid #cbd5e1;border-radius:4px;font-size:.78rem;font-family:\'JetBrains Mono\',Consolas,monospace;text-align:center;background:#fff">' + (r.price ? ' @ $' + r.price : ' @ auto-price') + '</span>' +
               (r.name ? '<br><span style="color:var(--mid);font-size:.7rem">' + esc(r.name) + '</span>' : '') +
             '</div>' +
           '</div>' +
@@ -2693,7 +2729,22 @@
       );
     }).join("");
     box.style.display = "block";
-    scanSummary.textContent = rows.length + " row" + (rows.length===1?"":"s") + " ready. Uncheck anything wrong, then click Add all.";
+    // Wire up the editable qty inputs. Changes write back to the snapshot
+    // so Add all picks them up — Dad asked for qty fixes in the preview
+    // instead of having to edit the XML grid after. Treat empty / NaN as
+    // the default 1 (same as what the scan would have assigned) so a
+    // typo doesn't silently zero-out the row.
+    el.querySelectorAll(".qty-edit").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        const rIdx = parseInt(inp.dataset.r, 10);
+        if (!CHECK_ROWS_SNAPSHOT[rIdx]) return;
+        const v = parseInt(inp.value, 10);
+        CHECK_ROWS_SNAPSHOT[rIdx].qty = (isFinite(v) && v > 0) ? v : 1;
+      });
+      // Keep the input from stealing taps on the row background.
+      inp.addEventListener("click", (e) => e.stopPropagation());
+    });
+    scanSummary.textContent = rows.length + " row" + (rows.length===1?"":"s") + " ready. Edit qty inline, uncheck anything wrong, then click Add all.";
     // Scroll the preview into view so Dad sees it immediately on tap.
     box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
@@ -2711,13 +2762,27 @@
     let rows = freshRows;
     if (checkboxes.length && CHECK_ROWS_SNAPSHOT.length){
       const droppedKeys = new Set();
+      // Also carry over per-row qty overrides from the preview: Dad can
+      // retype qty on any row in the Check preview, and Add all must use
+      // those values rather than the freshly-recomputed group sum.
+      const qtyOverride = new Map();
       checkboxes.forEach((cb) => {
-        if (cb.checked) return;
         const snapIdx = parseInt(cb.dataset.r, 10);
         const snapRow = CHECK_ROWS_SNAPSHOT[snapIdx];
-        if (snapRow) droppedKeys.add(snapRow.itemid + "\u0001" + snapRow.color);
+        if (!snapRow) return;
+        const key = snapRow.itemid + "\u0001" + snapRow.color;
+        if (!cb.checked){
+          droppedKeys.add(key);
+          return;
+        }
+        qtyOverride.set(key, snapRow.qty);
       });
-      rows = freshRows.filter((r) => !droppedKeys.has(r.itemid + "\u0001" + r.color));
+      rows = freshRows
+        .filter((r) => !droppedKeys.has(r.itemid + "\u0001" + r.color))
+        .map((r) => {
+          const key = r.itemid + "\u0001" + r.color;
+          return qtyOverride.has(key) ? { ...r, qty: qtyOverride.get(key) } : r;
+        });
     }
     if (!rows.length){
       gridMsg("err", "Nothing to add — all rows unchecked.");
