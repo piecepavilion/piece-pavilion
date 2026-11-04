@@ -82,13 +82,22 @@
     .mode-panel.on{display:block}
 
     /* Defaults bar — set once at top, applies to every new row. */
-    .defaults-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 14px;background:#fffbea;border:1px solid #fde68a;border-radius:10px;margin-bottom:14px;font-size:.88rem}
-    .defaults-bar .d-label{font-weight:800;color:#854d0e;letter-spacing:.03em;text-transform:uppercase;font-size:.78rem;margin-right:4px}
-    .defaults-bar .d-field{display:flex;gap:6px;align-items:center}
-    .defaults-bar .d-field label{font-weight:700;color:var(--slate);font-size:.84rem}
-    .defaults-bar input, .defaults-bar select{border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-family:'Nunito';font-size:.88rem;font-weight:700;background:#fff;color:var(--ink);min-width:70px}
-    .defaults-bar input:focus, .defaults-bar select:focus{outline:none;border-color:var(--red)}
-    .defaults-bar .d-note{color:var(--mid);font-size:.78rem;margin-left:auto}
+    .defaults-bar{padding:12px 14px;background:#fffbea;border:1px solid #fde68a;border-radius:10px;margin-bottom:14px;font-size:.88rem}
+    .defaults-bar .d-label{font-weight:800;color:#854d0e;letter-spacing:.03em;text-transform:uppercase;font-size:.78rem;display:block;margin-bottom:8px}
+    .defaults-bar .d-note{color:#854d0e;font-size:.78rem;display:block;margin-top:8px}
+    .defaults-bar .d-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    /* Template row mirrors the main grid's column widths exactly, so what
+       you type up here flows cleanly into the row below on Fill. */
+    .template-grid{overflow-x:auto}
+    .template-grid table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #fde68a;border-radius:8px;overflow:hidden;font-size:.88rem;table-layout:fixed}
+    .template-grid th{background:#15151f;color:#fff;padding:7px 10px;text-align:left;font-weight:800;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;border-right:1px solid #2a2a3a}
+    .template-grid th:last-child{border-right:none}
+    .template-grid td{padding:0;border-right:1px solid var(--line)}
+    .template-grid td:last-child{border-right:none}
+    .template-grid td input, .template-grid td textarea, .template-grid td select{width:100%;border:none;background:transparent;padding:8px 10px;font-family:'Nunito';font-size:.88rem;color:var(--ink);resize:none;outline:none}
+    .template-grid td textarea{min-height:36px;line-height:1.3}
+    .template-grid td input:focus, .template-grid td textarea:focus, .template-grid td select:focus{background:#fff8d6;box-shadow:inset 0 0 0 2px var(--yellow)}
+    .template-grid td.num input{text-align:right;font-family:'JetBrains Mono','Consolas',monospace}
 
     .bl-grid{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.88rem;table-layout:fixed}
     .bl-grid th{background:#15151f;color:#fff;padding:9px 10px;text-align:left;font-weight:800;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;border-right:1px solid #2a2a3a}
@@ -197,39 +206,51 @@
           Everything auto-saves to this browser.
         </p>
 
-        <!-- Defaults bar — set these once, every new row Dad types a Part ID
-             in gets auto-filled; clicking Fill empties also fills all rows. -->
+        <!-- Template row — fill once, press Fill to copy ALL seven fields
+             (Part ID through My Remarks) into the next grid row. Great for
+             listing 30 of the same part. Same columns + widths as the
+             main grid so it reads as a mirror. -->
         <div class="defaults-bar">
-          <span class="d-label">Use for all rows:</span>
-          <span class="d-field">
-            <label>Color</label>
-            <input id="defColor" type="text" placeholder="red or 5" size="10" />
-          </span>
-          <span class="d-field">
-            <label>Qty</label>
-            <input id="defQty" type="text" inputmode="numeric" placeholder="1" size="5" />
-          </span>
-          <span class="d-field">
-            <label>Price</label>
-            <input id="defPrice" type="text" inputmode="decimal" placeholder="0.00" size="6" />
-          </span>
-          <span class="d-field">
-            <label>Condition</label>
-            <select id="defCondition">
-              <option value="">—</option>
-              <option value="N">New</option>
-              <option value="U">Used</option>
-            </select>
-          </span>
-          <span class="d-field">
-            <label>My Remarks</label>
-            <input id="defRemarks" type="text" placeholder="e.g. BIN A3" size="12" />
-          </span>
-          <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill blanks now</button>
-          <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
-          <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in this yellow defaults bar">Clear defaults</button>
-          <span class="d-note">Also auto-fills whenever you type a Part ID.</span>
-          <div id="priceDebug" style="flex-basis:100%;font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;color:var(--mid);padding-top:6px;border-top:1px dashed #fde68a;margin-top:4px;word-break:break-all">price: idle</div>
+          <span class="d-label">Use for all rows (template)</span>
+          <div class="template-grid">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:13%">Part ID</th>
+                  <th style="width:10%">Color</th>
+                  <th style="width:7%">Qty</th>
+                  <th style="width:9%">Price</th>
+                  <th style="width:9%">Condition</th>
+                  <th style="width:22%">Description</th>
+                  <th>My Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input id="defItemId" type="text" autocomplete="off" placeholder="e.g. 3005" /></td>
+                  <td><input id="defColor" type="text" autocomplete="off" placeholder="red or 5" /></td>
+                  <td class="num"><input id="defQty" type="text" inputmode="numeric" placeholder="1" /></td>
+                  <td class="num"><input id="defPrice" type="text" inputmode="decimal" placeholder="0.00" /></td>
+                  <td>
+                    <select id="defCondition">
+                      <option value="">—</option>
+                      <option value="N">New</option>
+                      <option value="U">Used</option>
+                    </select>
+                  </td>
+                  <td><textarea id="defDescription" rows="1" placeholder="public description"></textarea></td>
+                  <td><textarea id="defRemarks" rows="1" placeholder="internal note"></textarea></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-actions">
+            <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill row 1</button>
+            <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
+            <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in the template">Clear template</button>
+          </div>
+          <span class="d-note">Each press fills the next row with every field above (including Part ID). Great for listing a lot of the same part.</span>
+          <div id="priceDebug" style="font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;color:var(--mid);padding-top:6px;border-top:1px dashed #fde68a;margin-top:8px;word-break:break-all">price: idle</div>
         </div>
 
         <div class="bl-grid-wrap">
@@ -1004,42 +1025,48 @@
     btn.textContent = "Fill row " + next;
   }
 
+  const TEMPLATE_DEFS = [
+    { key: "ITEMID",     id: "defItemId" },
+    { key: "COLOR",      id: "defColor" },
+    { key: "QTY",        id: "defQty" },
+    { key: "PRICE",      id: "defPrice" },
+    { key: "CONDITION",  id: "defCondition" },
+    { key: "DESCRIPTION",id: "defDescription" },
+    { key: "REMARKS",    id: "defRemarks" },
+  ];
   function applyDefaults(){
-    const defs = [
-      { key: "COLOR",     id: "defColor" },
-      { key: "QTY",       id: "defQty" },
-      { key: "PRICE",     id: "defPrice" },
-      { key: "CONDITION", id: "defCondition" },
-      { key: "REMARKS",   id: "defRemarks" },
-    ];
     const values = {};
-    defs.forEach((d) => { values[d.key] = (document.getElementById(d.id).value || "").trim(); });
+    TEMPLATE_DEFS.forEach((d) => { values[d.key] = (document.getElementById(d.id).value || "").trim(); });
     const anyValueSet = Object.values(values).some((v) => v);
     if (!anyValueSet){
-      gridMsg("warn", "Type a default value in the fields above first, then press this button.");
+      gridMsg("warn", "Fill at least one cell in the template above first.");
       setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2800);
       return;
     }
 
     FILL_ROW_STEP++;
-    // Make sure the row exists — append new ones if we've run past the grid.
     while (GRID_BODY.children.length < FILL_ROW_STEP) addRows(1);
     const tr = GRID_BODY.children[FILL_ROW_STEP - 1];
 
     let touched = 0;
-    defs.forEach((d) => {
+    TEMPLATE_DEFS.forEach((d) => {
       const v = values[d.key];
       if (!v) return;
       const el = tr.querySelector('[data-k="'+d.key+'"]');
-      if (el && !(el.value || "").trim()){ el.value = v; touched++; }
+      if (!el) return;
+      // Template OVERWRITES — Dad fills template once then stamps it onto
+      // each row, so empty-only would stop after the first stamp.
+      el.value = v;
+      touched++;
     });
     flagRow(tr);
     recountGrid(); saveGrid();
-    gridMsg("ok", "Filled " + touched + " blank cell" + (touched === 1 ? "" : "s") + " on row " + FILL_ROW_STEP + ". Press again for the next row.");
+    gridMsg("ok", "Stamped template onto row " + FILL_ROW_STEP + " (" + touched + " cells). Press again for row " + (FILL_ROW_STEP + 1) + ".");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2800);
-    // Scroll the just-filled row into view.
     tr.scrollIntoView({ behavior: "smooth", block: "center" });
     updateFillButtonLabel();
+    // If Price wasn't in the template, auto-price will catch it.
+    autoPriceRow(tr);
   }
 
   // Reset the row counter if Dad clicks a specific row (so "Fill row N"
@@ -1130,11 +1157,15 @@
 
   // Auto-apply defaults to a row the moment a Part ID is typed in it —
   // so the defaults bar "just works" without needing to click Fill empties.
+  // When Dad types a Part ID directly in the grid (not using the template
+  // button), copy the template's OTHER fields (not ITEMID) into empty
+  // cells of that row — lets him list one-off parts fast.
   function autoFillOnPartId(tr){
     const dc = (document.getElementById("defColor").value || "").trim();
     const dqty = (document.getElementById("defQty").value || "").trim();
     const dcond = (document.getElementById("defCondition").value || "").trim();
     const dprice = (document.getElementById("defPrice").value || "").trim();
+    const ddesc = (document.getElementById("defDescription").value || "").trim();
     const drem = (document.getElementById("defRemarks").value || "").trim();
     const partId = (tr.querySelector('[data-k="ITEMID"]').value || "").trim();
     if (!partId) return;
@@ -1144,10 +1175,10 @@
       if (el && !(el.value || "").trim()) el.value = v;
     };
     fill("COLOR", dc); fill("QTY", dqty); fill("CONDITION", dcond);
-    fill("PRICE", dprice); fill("REMARKS", drem);
+    fill("PRICE", dprice); fill("DESCRIPTION", ddesc); fill("REMARKS", drem);
   }
   // Save defaults so they persist too.
-  ["defColor","defQty","defCondition","defPrice","defRemarks"].forEach((id) => {
+  ["defItemId","defColor","defQty","defCondition","defPrice","defDescription","defRemarks"].forEach((id) => {
     const el = document.getElementById(id);
     try { el.value = localStorage.getItem("pp_bl_" + id) || ""; } catch(e){}
     el.addEventListener("change", () => {
@@ -1243,7 +1274,7 @@
   document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
   document.getElementById("priceAvgBtn").addEventListener("click", priceAtBlAverage);
   document.getElementById("clearDefaultsBtn").addEventListener("click", () => {
-    ["defColor","defQty","defPrice","defCondition","defRemarks"].forEach((id) => {
+    ["defItemId","defColor","defQty","defPrice","defCondition","defDescription","defRemarks"].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.value = "";
@@ -1251,7 +1282,7 @@
     });
     FILL_ROW_STEP = 0;
     updateFillButtonLabel();
-    gridMsg("ok", "Defaults cleared.");
+    gridMsg("ok", "Template cleared.");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 1600);
   });
 
