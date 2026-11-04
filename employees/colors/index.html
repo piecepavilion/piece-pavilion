@@ -266,10 +266,16 @@
     </div>
 
     <div id="partsView">
-      <div class="main-results">
-        <div id="msg"></div>
-        <div id="partHead"></div>
-        <div id="grid" class="grid real"></div>
+      <div class="results-wrap">
+        <aside class="side-panel" id="sidePanel" hidden>
+          <h3>Narrow by <span id="sideCount">0</span></h3>
+          <div id="sideBody"></div>
+        </aside>
+        <div class="main-results">
+          <div id="msg"></div>
+          <div id="partHead"></div>
+          <div id="grid" class="grid real"></div>
+        </div>
       </div>
     </div>
 
@@ -1191,10 +1197,22 @@
         '<span class="count">tap any to open on BrickLink</span>' +
       '</div>';
 
-    // Flatter structure: category heading + grid of tiles. No more size
-    // sub-sections — they splintered results into too many tiny groups.
+    // Within each category, sort tiles so the most common / canonical parts
+    // come first:
+    //   1. BL-verified parts (we know for sure they exist) above unverified
+    //   2. Then by extracted size — 1x1 → 1x2 → 1x3 → 2x2 → 2x4 ...
+    //   3. Then alphabetical by name as the tiebreaker
+    function rowSortKey(r){
+      const sz = extractSize(r.name);
+      return [r.verified ? 0 : 1, sz ? sizeSortKey(sz) : 999999, (r.name || "").toLowerCase()];
+    }
     const sections = order.map((catName) => {
-      const rows = groups[catName];
+      const rows = groups[catName].slice().sort((a, b) => {
+        const ka = rowSortKey(a), kb = rowSortKey(b);
+        if (ka[0] !== kb[0]) return ka[0] - kb[0];
+        if (ka[1] !== kb[1]) return ka[1] - kb[1];
+        return ka[2].localeCompare(kb[2]);
+      });
       const tiles = rows.map((it) => {
         const bl = buildBlUrl(it);
         let imgSrc, imgChainAttrs = "";
