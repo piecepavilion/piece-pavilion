@@ -1738,9 +1738,20 @@
     const altsNote = (r.options && r.options.length > 1)
       ? ' <span style="color:var(--muted);font-weight:600">&middot; tap for ' + r.options.length + ' alts</span>'
       : "";
-    const colorBit = r.detectedColor
-      ? '<br><span style="font-family:\'Nunito\';color:var(--slate);display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgb('+r.detectedColor.r+','+r.detectedColor.g+','+r.detectedColor.b+');border:1px solid rgba(0,0,0,.2)"></span>' + r.detectedColor.name + '</span>'
-      : "";
+    // Show both the matched BL color swatch AND the actual pixel sample (if
+    // we have one) so Dad can see how close the match is. Small chip for
+    // Brickognize-sourced colors so he knows which side the pick came from.
+    let colorBit = "";
+    if (r.detectedColor){
+      const c = r.detectedColor;
+      const src = c._fromBrickognize ? ' <span style="background:#dbeafe;color:#1e40af;font-size:.56rem;padding:0 4px;border-radius:3px;font-weight:700">BG</span>' : '';
+      const sampleSwatch = c._sampledRgb
+        ? '<span title="color actually sampled from your photo" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgb('+c._sampledRgb[0]+','+c._sampledRgb[1]+','+c._sampledRgb[2]+');border:1px dashed rgba(0,0,0,.3)"></span>'
+        : '';
+      colorBit = '<br><span style="font-family:\'Nunito\';color:var(--slate);display:inline-flex;align-items:center;gap:4px">' +
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgb('+c.r+','+c.g+','+c.b+');border:1px solid rgba(0,0,0,.2)"></span>' +
+        c.name + src + sampleSwatch + '</span>';
+    }
     tileEl.querySelector(".sc-label").innerHTML =
       '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong> &middot; ' + pct + '%' + altsNote +
       '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>' +
