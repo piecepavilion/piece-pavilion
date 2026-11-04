@@ -1761,26 +1761,22 @@
   // Pick the BL color with the closest ΔE in Lab space (perceptually
   // uniform). Also hue-gates against obvious mismatches so a dim red doesn't
   // get matched to a brown.
-  function closestBlColor(rgb, colorMap){
-    if (!rgb) return null;
+  // Return the top BL color match AND a ranked list of top-5 with distances,
+  // so reconciliation can let Brickognize's pick break ties when the top
+  // candidates are visually close.
+  function rankBlColors(rgb, colorMap){
+    if (!rgb) return [];
     const lab = rgb2lab(rgb[0], rgb[1], rgb[2]);
     const hue = hueDeg(rgb[0], rgb[1], rgb[2]);
     const sampleIsGray = (Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2])) < 18;
-    let best = null, bestD = Infinity;
+    const ranked = [];
     Object.values(colorMap).forEach((c) => {
       const t = (c.type || "").toLowerCase();
-      // Skip exotic types that cause visually-wrong matches
       if (/speckle|glitter|modulex/.test(t)) return;
-      // Skip transparent & chrome unless they're the overwhelming best
       const isWeird = /trans|chrome|metallic|pearl|milky|glow/.test(t);
       const cLab = rgb2lab(c.r, c.g, c.b);
       let d = labDist(lab, cLab);
-      // Trans/chrome/pearl/metallic rarely match a photo of a plain plastic
-      // part. Big penalty so a solid color almost always wins unless the
-      // weird one is visibly much closer.
       if (isWeird) d += 30;
-      // Hue gate: if sample is saturated and candidate is a different hue
-      // family by >60°, add a penalty
       if (!sampleIsGray){
         const cGray = (Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b)) < 20;
         if (!cGray){
@@ -1789,9 +1785,43 @@
           if (dh > 60) d += (dh - 60) * 0.3;
         }
       }
-      if (d < bestD){ bestD = d; best = c; }
+      ranked.push({ color: c, dist: d });
     });
-    return best;
+    ranked.sort((a, b) => a.dist - b.dist);
+    return ranked.slice(0, 5);
+  }
+
+  function closestBlColor(rgb, colorMap){
+    const ranked = rankBlColors(rgb, colorMap);
+    return ranked.length ? ranked[0].color : null;
+  }
+
+  // Given a ranked pixel-match list and Brickognize's color guess, resolve
+  // to a final BL color. If Brickognize's pick is in our top-5 AND within
+  // AMBIGUITY_WINDOW ΔE of our top, prefer Brickognize's pick (it has
+  // access to the whole image, not just pixel stats).
+  function reconcileColor(rgb, colorMap, bgColors){
+    const ranked = rankBlColors(rgb, colorMap);
+    if (!ranked.length) return null;
+    const pixelTop = ranked[0].color;
+    if (!bgColors || !bgColors.length) return pixelTop;
+    const AMBIGUITY_WINDOW = 10;  // ΔE*ab
+    const bgPick = bgColors[0];
+    const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
+    const bgIdStr = String(bgPick.id || "");
+    const bgNameNorm = norm(bgPick.name);
+    // Find Brickognize's pick in our ranked list.
+    const bgInRanked = ranked.find((r) =>
+      String(r.color.id) === bgIdStr || norm(r.color.name) === bgNameNorm
+    );
+    if (bgInRanked){
+      const gap = bgInRanked.dist - ranked[0].dist;
+      if (gap < AMBIGUITY_WINDOW){
+        // Brickognize's pick is visually close to pixel top — defer to it.
+        return bgInRanked.color;
+      }
+    }
+    return pixelTop;
   }
 
   // ========== BULK SCAN (grid of parts in one photo) ==========
@@ -2294,14 +2324,12 @@
         padded.getContext("2d").drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
 
         // Sample the dominant color from the actual blob mask (not the bbox).
-        // IMPORTANT: clone the matched color before adding per-scan metadata.
-        // closestBlColor returns the shared BL_COLORS object; mutating it
-        // would leak _sampledRgb across every row that picks the same color.
-        let detectedColor = null;
+        // Store the raw RGB sample on the row so later reconciliation can
+        // consider Brickognize's hint. Actual BL color pick happens below
+        // after we have Brickognize's output.
+        let sampledRgb = null;
         try {
-          const rgb = dominantRgbInMask(blobOut.sourceImg, blobOut.W, box, blobOut.mask, blobOut.sw, blobOut.sh, blobOut.scale);
-          const match = closestBlColor(rgb, colorMap);
-          if (match) detectedColor = rgb ? { ...match, _sampledRgb: rgb } : { ...match };
+          sampledRgb = dominantRgbInMask(blobOut.sourceImg, blobOut.W, box, blobOut.mask, blobOut.sw, blobOut.sh, blobOut.scale);
         } catch(_){}
 
         const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
@@ -2349,29 +2377,23 @@
             options.unshift(v);
           }
 
-          // Color reconciliation. Prefer our pixel-based pick when the
-          // matched BL color is perceptually close to the sampled RGB
-          // (ΔE < 25). Otherwise defer to Brickognize's color guess, which
-          // is trained on the part image itself and handles tricky lighting
-          // or printed parts better.
-          let finalColor = detectedColor;
-          const pixelOffThreshold = 25;  // ΔE*ab
-          let pixelFarOff = false;
-          if (detectedColor && detectedColor._sampledRgb){
-            const sampledLab = rgb2lab(
-              detectedColor._sampledRgb[0],
-              detectedColor._sampledRgb[1],
-              detectedColor._sampledRgb[2]
-            );
-            const matchLab = rgb2lab(detectedColor.r, detectedColor.g, detectedColor.b);
-            if (labDist(sampledLab, matchLab) > pixelOffThreshold) pixelFarOff = true;
+          // Color reconciliation. Use the new reconcileColor function which
+          // considers both the pixel-based ranking AND Brickognize's color
+          // guess: if Brickognize's pick is in our top-5 and within 10 ΔE
+          // of the top pixel match, defer to Brickognize's pick (tiebreak
+          // on ambiguous cases). Otherwise use pure pixel top.
+          let finalColor = null;
+          if (sampledRgb){
+            const resolved = reconcileColor(sampledRgb, colorMap, bgColors);
+            if (resolved){
+              finalColor = { ...resolved, _sampledRgb: sampledRgb };
+            }
           }
-          if (bgColors.length && (!finalColor || pixelFarOff)){
-            const bgPick = bgColors[0];
-            // Tolerant name match: strip spaces/dashes/hyphens, lowercase.
-            // Brickognize sometimes returns "Dark-Bluish-Gray" while BL
-            // has "Dark Bluish Gray".
+          // If no sampled RGB at all (blob too small / all noise), fall back
+          // directly to Brickognize's top color guess.
+          if (!finalColor && bgColors.length){
             const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
+            const bgPick = bgColors[0];
             const bgIdStr = String(bgPick.id || "");
             const bgNameNorm = norm(bgPick.name);
             const match = Object.values(colorMap).find((c) =>
