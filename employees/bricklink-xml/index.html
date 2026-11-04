@@ -1890,7 +1890,7 @@
     // Connected components via iterative stack.
     const visited = new Uint8Array(sw * sh);
     let blobs = [];
-    const minAreaPx = (sw * sh) * 0.0015;  // 0.15% — catches small parts like 1x1
+    const minAreaPx = (sw * sh) * 0.0008;  // 0.08% — catches 1x1 plates @ normal distance, filters dust
     const blobMask = new Uint16Array(sw * sh);  // which blob each pixel belongs to (1-based)
     let blobId = 0;
     for (let y = 0; y < sh; y++){
