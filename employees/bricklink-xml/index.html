@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v10-learn" />
+  <meta name="pp-build" content="v2026-11-04-vision-v11-recsplit-sxs" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -219,7 +219,7 @@
       <div style="margin-bottom:10px">
         <span id="scanManyStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace">Click Scan many to open the camera.</span>
       </div>
-      <div id="scanManyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:14px"></div>
+      <div id="scanManyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:14px"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn ghost" id="scanManyCheck" type="button" disabled style="padding:9px 18px;font-size:.9rem" title="Group duplicates by Part + Color and preview the final rows">&#10003; Check &amp; group</button>
         <button class="btn" id="scanManyAddAll" type="button" disabled style="padding:9px 18px;font-size:.9rem">Add all to grid &rarr;</button>
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v10</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v11</span>
   </div>
 
   <div class="wrap">
@@ -2282,7 +2282,15 @@
         // background is heavily textured (bgNoise high) we tighten more.
         const meanL = sumL / area, meanA = sumA / area, meanB = sumB2 / area;
         const meanContrast = labDist([meanL, meanA, meanB], bgLab);
-        const phantomCutoff = Math.max(8, 6 + bgNoise * 1.5);
+        // Phantom cutoff is a trade-off: too tight and real low-contrast
+        // parts (light grey parts on white paper, dark grey on wood) get
+        // dropped; too loose and carpet speckle leaks through. 2026-11-04
+        // Dad's retest had three middle parts missing — probably at the
+        // edge of this threshold. Dropped from 8 floor to 6 floor and
+        // the bgNoise multiplier from 1.5 to 1.2 to be more forgiving on
+        // mid-contrast parts. The shadow + fill-density filters above
+        // still catch the carpet-speckle shape that this change loosens.
+        const phantomCutoff = Math.max(6, 4 + bgNoise * 1.2);
         const isPhantomBg = meanContrast < phantomCutoff;
         if (area >= minAreaPx && !isLikelyShadow && !isPhantomBg){
           const pad = 10;
@@ -2300,15 +2308,33 @@
     // Split touching parts. For any blob whose area is > 2x the median,
     // look for a "pinch point" — a column or row inside its bbox where the
     // mask-pixel count drops below 35% of the local max. Split there.
+    // RECURSIVE: after splitting into 2, each half is checked again
+    // against the (stable) median. Three touching parts get split to a
+    // 1:2 pair on the first pass, then the 2-piece side splits again
+    // into 1:1 on the second pass. Max depth 4 so we don't runaway on
+    // a single oversized blob of pure speckle. Dad's 2026-11-04 real
+    // test had three adjacent parts coming through as one tile; one
+    // pinch-split pass produced two tiles (2 parts + 1 part) and the
+    // merged pair stayed merged.
     if (blobs.length >= 2){
       const sorted = blobs.map(b => b.area).sort((a,b) => a-b);
       const median = sorted[Math.floor(sorted.length/2)];
+      const MAX_DEPTH = 4;
+      const splitRecursive = (b, depth) => {
+        if (depth >= MAX_DEPTH) return [b];
+        if (b.area <= median * 2.0) return [b];
+        const splits = pinchSplit(b, closed, sw, sh, scale, W, H);
+        if (!splits || splits.length <= 1) return [b];
+        const out = [];
+        splits.forEach((s) => { out.push(...splitRecursive(s, depth + 1)); });
+        return out;
+      };
       const splitable = blobs.filter(b => b.area > median * 2.0);
       if (splitable.length){
         const extraBlobs = [];
         splitable.forEach((b) => {
-          const splits = pinchSplit(b, closed, sw, sh, scale, W, H);
-          if (splits && splits.length > 1){
+          const splits = splitRecursive(b, 0);
+          if (splits.length > 1){
             extraBlobs.push(...splits);
             b._split = true;
           }
@@ -2897,7 +2923,7 @@
       const srcThumbs = shown.map((si) => {
         const src = thumbSrc(si);
         return src
-          ? '<img src="' + src + '" style="width:30px;height:30px;object-fit:cover;border-radius:4px;border:1px solid #d1fae5;background:#eee" alt="">'
+          ? '<img src="' + src + '" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #d1fae5;background:#eee" alt="">'
           : '';
       }).join("") + (extra > 0 ? '<span style="font-size:.7rem;color:var(--mid);align-self:center;margin-left:4px">+' + extra + '</span>' : '');
 
@@ -2907,13 +2933,21 @@
       const rowBg = scorePct < 40 ? '#fef2f2' : '#fff';
       const rowBorder = scorePct < 40 ? '#fecaca' : '#d1fae5';
       return (
-        '<div style="padding:8px;margin-bottom:6px;background:'+rowBg+';border:1px solid '+rowBorder+';border-radius:8px;display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center">' +
+        '<div style="padding:10px;margin-bottom:6px;background:'+rowBg+';border:1px solid '+rowBorder+';border-radius:8px;display:grid;grid-template-columns:auto auto auto 1fr auto;gap:10px;align-items:center">' +
           '<label style="display:flex;align-items:center;cursor:pointer;gap:6px"><input type="checkbox" class="chk-keep" data-r="'+rIdx+'"'+preChecked+' style="width:16px;height:16px;cursor:pointer"></label>' +
-          // Left: your-photo thumbs
-          '<div style="display:flex;gap:2px;flex-wrap:wrap;max-width:140px">' + srcThumbs + '</div>' +
-          // Middle: BL ref + text
+          // Your photo(s): the piece as Dad shot it. Labelled so he can tell
+          // at a glance which side is his vs which side is BrickLink.
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">' +
+            '<div style="display:flex;gap:3px;flex-wrap:wrap;max-width:140px">' + srcThumbs + '</div>' +
+            '<span style="font-size:.6rem;font-weight:700;color:#065f46;letter-spacing:.03em">YOUR PHOTO</span>' +
+          '</div>' +
+          // BrickLink official catalog view for direct comparison.
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">' +
+            '<img src="' + refSrc + '" onerror="this.onerror=null;this.src=\'' + refFallback + '\'" style="width:64px;height:64px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px" alt="BrickLink ref" title="Official BrickLink catalog image for ' + esc(r.itemid) + '">' +
+            '<span style="font-size:.6rem;font-weight:700;color:#0369a1;letter-spacing:.03em">BL REF</span>' +
+          '</div>' +
+          // Text column (id, confidence, color, qty, name)
           '<div style="display:flex;gap:10px;align-items:center;min-width:0">' +
-            '<img src="' + refSrc + '" onerror="this.onerror=null;this.src=\'' + refFallback + '\'" style="width:52px;height:52px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px;flex-shrink:0" alt="BrickLink ref">' +
             '<div style="font-size:.85rem;line-height:1.35">' +
               '<strong style="color:var(--ink);font-family:\'Nunito\'">' + esc(r.itemid) + '</strong>' +
               ' &middot; <span style="background:'+scoreBg+';color:'+scoreColor+';padding:0 6px;border-radius:3px;font-size:.7rem;font-weight:700">' + scorePct + '%</span>' +
