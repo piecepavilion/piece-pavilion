@@ -1486,9 +1486,11 @@
         const bgPick = bgColors[0];
         try {
           const colorMap = await blColors();
+          const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
+          const bgIdStr = String(bgPick.id || "");
+          const bgNameNorm = norm(bgPick.name);
           const match = Object.values(colorMap).find((c) =>
-            String(c.id) === String(bgPick.id) ||
-            c.name.toLowerCase() === (bgPick.name || "").toLowerCase()
+            String(c.id) === bgIdStr || norm(c.name) === bgNameNorm
           );
           if (match){
             document.getElementById("defColor").value = match.name;
@@ -2302,9 +2304,14 @@
           }
           if (bgColors.length && (!finalColor || pixelFarOff)){
             const bgPick = bgColors[0];
+            // Tolerant name match: strip spaces/dashes/hyphens, lowercase.
+            // Brickognize sometimes returns "Dark-Bluish-Gray" while BL
+            // has "Dark Bluish Gray".
+            const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
+            const bgIdStr = String(bgPick.id || "");
+            const bgNameNorm = norm(bgPick.name);
             const match = Object.values(colorMap).find((c) =>
-              String(c.id) === String(bgPick.id) ||
-              c.name.toLowerCase() === (bgPick.name || "").toLowerCase()
+              String(c.id) === bgIdStr || norm(c.name) === bgNameNorm
             );
             if (match) finalColor = { ...match, _fromBrickognize: true };
           }
