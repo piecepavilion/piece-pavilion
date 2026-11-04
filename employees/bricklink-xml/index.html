@@ -2106,9 +2106,18 @@
   }
 
   async function processBulkPhoto(file){
+    try { await processBulkPhotoInner(file); }
+    catch(err){
+      console.error("bulk scan failed:", err);
+      scanStatus.textContent = "Scan crashed — " + (err && err.message ? err.message.slice(0, 120) : String(err).slice(0, 120));
+      scanStatus.style.color = "#991b1b";
+    }
+  }
+  async function processBulkPhotoInner(file){
     scanOverlay.style.display = "flex";
     scanGridEl.innerHTML = "";
     scanStatus.textContent = "Analyzing photo...";
+    scanStatus.style.color = "";
     scanSummary.textContent = "";
     scanAddBtn.disabled = true;
     document.getElementById("scanManyCheck").disabled = true;
