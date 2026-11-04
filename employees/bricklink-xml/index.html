@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-bl-ref" />
+  <meta name="pp-build" content="v2026-11-04-vision-v2" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -239,7 +239,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-bl-ref</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v2</span>
   </div>
 
   <div class="wrap">
@@ -1543,42 +1543,165 @@
 
   // Sample the center ~50% of a canvas, return average RGB of non-background
   // pixels (filters near-white/near-black backgrounds that drag the average).
+  // sRGB [0-255] -> CIE Lab. ΔE in Lab is perceptually uniform, so matches are
+  // far better than RGB Euclidean (handles lighting, printed parts, shadows).
+  function rgb2lab(R, G, B){
+    let r = R / 255, g = G / 255, b = B / 255;
+    r = r > 0.04045 ? Math.pow((r+0.055)/1.055, 2.4) : r/12.92;
+    g = g > 0.04045 ? Math.pow((g+0.055)/1.055, 2.4) : g/12.92;
+    b = b > 0.04045 ? Math.pow((b+0.055)/1.055, 2.4) : b/12.92;
+    let x = (r*0.4124 + g*0.3576 + b*0.1805) / 0.95047;
+    let y = (r*0.2126 + g*0.7152 + b*0.0722) / 1.00000;
+    let z = (r*0.0193 + g*0.1192 + b*0.9505) / 1.08883;
+    const f = (t) => t > 0.008856 ? Math.pow(t, 1/3) : (7.787 * t + 16/116);
+    x = f(x); y = f(y); z = f(z);
+    return [116*y - 16, 500*(x - y), 200*(y - z)];
+  }
+  function labDist(a, b){
+    const dL = a[0]-b[0], dA = a[1]-b[1], dB = a[2]-b[2];
+    return Math.sqrt(dL*dL + dA*dA + dB*dB);  // ΔE*ab
+  }
+  function hueDeg(R, G, B){
+    const r = R/255, g = G/255, b = B/255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const d = mx - mn;
+    if (!d) return 0;
+    let h;
+    if (mx === r) h = ((g - b) / d) % 6;
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+    return h;
+  }
+
+  // Sample the dominant foreground color inside a blob's mask (NOT the
+  // bounding box). Uses k-means in Lab space (k=3) and returns the largest
+  // cluster center as RGB. This fixes printed parts (print marks + bg are
+  // small minority clusters; the base plastic color is the dominant one).
+  function dominantRgbInMask(sourceImg, W, blob, mask, sw, sh, scale){
+    const pxR = [], pxG = [], pxB = [], pxLab = [];
+    const bx0 = blob.x, by0 = blob.y, bw = blob.w, bh = blob.h;
+    // Walk every ~2nd pixel inside the bbox; keep only if mask[y/scale, x/scale] is set.
+    const step = Math.max(1, Math.floor(Math.min(bw, bh) / 80));
+    for (let y = by0; y < by0 + bh; y += step){
+      for (let x = bx0; x < bx0 + bw; x += step){
+        const mx = Math.min(sw-1, Math.floor(x / scale));
+        const my = Math.min(sh-1, Math.floor(y / scale));
+        if (!mask[my * sw + mx]) continue;
+        const p = (y * W + x) * 4;
+        const R = sourceImg[p], G = sourceImg[p+1], B = sourceImg[p+2];
+        // Skip near-white (specular) and near-black (deep shadow) outliers.
+        const MX = Math.max(R, G, B), MN = Math.min(R, G, B);
+        if (MN > 240 || MX < 15) continue;
+        pxR.push(R); pxG.push(G); pxB.push(B);
+        pxLab.push(rgb2lab(R, G, B));
+      }
+    }
+    if (pxR.length < 30) return null;
+
+    // k-means k=3 in Lab (10 iters). Seed with 3 well-separated samples.
+    const K = Math.min(3, pxR.length);
+    const centroids = [];
+    const seen = new Set();
+    while (centroids.length < K){
+      const i = Math.floor(Math.random() * pxR.length);
+      if (seen.has(i)) continue;
+      seen.add(i);
+      centroids.push(pxLab[i].slice());
+    }
+    const assign = new Int32Array(pxR.length);
+    for (let iter = 0; iter < 10; iter++){
+      // assign
+      let changed = 0;
+      for (let i = 0; i < pxR.length; i++){
+        let bi = 0, bd = Infinity;
+        for (let k = 0; k < K; k++){
+          const d = labDist(pxLab[i], centroids[k]);
+          if (d < bd){ bd = d; bi = k; }
+        }
+        if (assign[i] !== bi){ assign[i] = bi; changed++; }
+      }
+      // update
+      const sumL = new Float32Array(K), sumA = new Float32Array(K), sumB = new Float32Array(K), cnt = new Int32Array(K);
+      for (let i = 0; i < pxR.length; i++){
+        const k = assign[i], v = pxLab[i];
+        sumL[k] += v[0]; sumA[k] += v[1]; sumB[k] += v[2]; cnt[k]++;
+      }
+      for (let k = 0; k < K; k++){
+        if (!cnt[k]) continue;
+        centroids[k] = [sumL[k]/cnt[k], sumA[k]/cnt[k], sumB[k]/cnt[k]];
+      }
+      if (!changed) break;
+    }
+    // Pick the biggest cluster.
+    const cnt = new Int32Array(K);
+    for (let i = 0; i < assign.length; i++) cnt[assign[i]]++;
+    let bk = 0; for (let k = 1; k < K; k++){ if (cnt[k] > cnt[bk]) bk = k; }
+    // Average the RGBs of the biggest cluster (not Lab back-conversion — we
+    // already have the originals, and the average RGB is what we want to
+    // show as a swatch).
+    let sR = 0, sG = 0, sB = 0, n = 0;
+    for (let i = 0; i < pxR.length; i++){
+      if (assign[i] !== bk) continue;
+      sR += pxR[i]; sG += pxG[i]; sB += pxB[i]; n++;
+    }
+    if (!n) return null;
+    return [Math.round(sR/n), Math.round(sG/n), Math.round(sB/n)];
+  }
+
+  // Legacy single-canvas sampler (still used by the single-part scan path).
   function dominantRgbFromCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const w = canvas.width, h = canvas.height;
-    // Estimate local background from the border (first & last row/col).
     const edge = ctx.getImageData(0, 0, w, h).data;
+    // bg estimate from the border
     let bR = 0, bG = 0, bB = 0, bN = 0;
     const walk = (x, y) => { const p = (y*w + x)*4; bR+=edge[p]; bG+=edge[p+1]; bB+=edge[p+2]; bN++; };
     for (let x = 0; x < w; x += Math.max(1, Math.floor(w/40))){ walk(x, 0); walk(x, h-1); }
     for (let y = 0; y < h; y += Math.max(1, Math.floor(h/40))){ walk(0, y); walk(w-1, y); }
     bR /= bN; bG /= bN; bB /= bN;
-    // Now sample the whole crop; keep only pixels far from the border bg and
-    // not near-white / near-black (shadows, specular highlights).
-    const BG_DIST_SQ = 60 * 60;
+    const bgLab = rgb2lab(bR, bG, bB);
+    const BG_LAB_MIN = 18;
     let r = 0, g = 0, b = 0, n = 0;
     for (let i = 0; i < edge.length; i += 4){
       const R = edge[i], G = edge[i+1], B = edge[i+2];
-      const dR = R - bR, dG = G - bG, dB = B - bB;
-      if (dR*dR + dG*dG + dB*dB < BG_DIST_SQ) continue;  // too close to background
+      if (labDist(rgb2lab(R, G, B), bgLab) < BG_LAB_MIN) continue;
       const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
-      if (mn > 235 || mx < 20) continue;
+      if (mn > 240 || mx < 15) continue;
       r += R; g += G; b += B; n++;
     }
-    if (n < 50) return null;  // not enough foreground pixels to trust
+    if (n < 50) return null;
     return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
   }
 
-  // Pick the BL color_id with the closest RGB distance to a sampled pixel.
+  // Pick the BL color with the closest ΔE in Lab space (perceptually
+  // uniform). Also hue-gates against obvious mismatches so a dim red doesn't
+  // get matched to a brown.
   function closestBlColor(rgb, colorMap){
     if (!rgb) return null;
+    const lab = rgb2lab(rgb[0], rgb[1], rgb[2]);
+    const hue = hueDeg(rgb[0], rgb[1], rgb[2]);
+    const sampleIsGray = (Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2])) < 18;
     let best = null, bestD = Infinity;
     Object.values(colorMap).forEach((c) => {
-      // Skip exotic types where false-matches cause pain (speckle, glitter)
       const t = (c.type || "").toLowerCase();
+      // Skip exotic types that cause visually-wrong matches
       if (/speckle|glitter|modulex/.test(t)) return;
-      const dr = c.r - rgb[0], dg = c.g - rgb[1], db = c.b - rgb[2];
-      const d = dr*dr + dg*dg + db*db;
+      // Skip transparent & chrome unless they're the overwhelming best
+      const isWeird = /trans|chrome|metallic|pearl|milky|glow/.test(t);
+      const cLab = rgb2lab(c.r, c.g, c.b);
+      let d = labDist(lab, cLab);
+      if (isWeird) d += 15;  // penalty — only wins if clearly better
+      // Hue gate: if sample is saturated and candidate is a different hue
+      // family by >60°, add a penalty
+      if (!sampleIsGray){
+        const cGray = (Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b)) < 20;
+        if (!cGray){
+          let dh = Math.abs(hueDeg(c.r, c.g, c.b) - hue);
+          if (dh > 180) dh = 360 - dh;
+          if (dh > 60) d += (dh - 60) * 0.3;
+        }
+      }
       if (d < bestD){ bestD = d; best = c; }
     });
     return best;
@@ -1592,7 +1715,14 @@
   const scanAddBtn  = document.getElementById("scanManyAddAll");
   let SCAN_RESULTS = [];
 
-  document.getElementById("scanBulkBtn").addEventListener("click", () => openCamera("many"));
+  document.getElementById("scanBulkBtn").addEventListener("click", () => {
+    // Dad said not to worry about Condition — default to "N" (New) so the
+    // 6-month-avg auto-price will fire on every scanned row. He can change it
+    // after if a batch is Used.
+    const defCond = document.getElementById("defCondition");
+    if (defCond && !defCond.value) defCond.value = "N";
+    openCamera("many");
+  });
   document.getElementById("scanManyClose").addEventListener("click", () => {
     scanOverlay.style.display = "none";
   });
@@ -1633,88 +1763,141 @@
   }
 
   // Find distinct parts in a canvas by detecting non-background blobs.
-  // Returns array of {x, y, w, h} bounding boxes at the canvas resolution.
+  // Returns {blobs, mask, sw, sh, scale, sourceImg, W, H} so callers can
+  // sample inside the mask (not the bounding box) for color.
   function detectBlobs(canvas){
     const ctx = canvas.getContext("2d");
     const W = canvas.width, H = canvas.height;
     const img = ctx.getImageData(0, 0, W, H).data;
 
-    // Estimate background by averaging the four corners and edge midpoints.
-    const samples = [[0,0],[W-1,0],[0,H-1],[W-1,H-1],[Math.floor(W/2),0],[Math.floor(W/2),H-1],[0,Math.floor(H/2)],[W-1,Math.floor(H/2)]];
-    let bgR=0, bgG=0, bgB=0;
-    samples.forEach(([x,y]) => {
+    // Estimate background from the full border perimeter in Lab space.
+    // This tolerates uneven lighting + off-white backgrounds better than
+    // averaging just 8 corner samples.
+    let bL = 0, bA = 0, bB = 0, bN = 0;
+    const walkBorder = (x, y) => {
       const p = (y * W + x) * 4;
-      bgR += img[p]; bgG += img[p+1]; bgB += img[p+2];
-    });
-    bgR /= samples.length; bgG /= samples.length; bgB /= samples.length;
+      const lab = rgb2lab(img[p], img[p+1], img[p+2]);
+      bL += lab[0]; bA += lab[1]; bB += lab[2]; bN++;
+    };
+    const step = Math.max(1, Math.floor(Math.min(W, H) / 60));
+    for (let x = 0; x < W; x += step){ walkBorder(x, 0); walkBorder(x, H-1); }
+    for (let y = 0; y < H; y += step){ walkBorder(0, y); walkBorder(W-1, y); }
+    const bgLab = [bL/bN, bA/bN, bB/bN];
 
-    // Binary foreground mask at 1/4 resolution (faster).
-    // Lower threshold = more pixels count as foreground (catch low-contrast parts).
+    // Also compute per-pixel variance of the border to set the FG threshold
+    // adaptively (noisy border = higher threshold).
+    let varSum = 0;
+    const walkVar = (x, y) => {
+      const p = (y * W + x) * 4;
+      const lab = rgb2lab(img[p], img[p+1], img[p+2]);
+      varSum += labDist(lab, bgLab);
+    };
+    for (let x = 0; x < W; x += step){ walkVar(x, 0); walkVar(x, H-1); }
+    for (let y = 0; y < H; y += step){ walkVar(0, y); walkVar(W-1, y); }
+    const bgNoise = varSum / bN;
+    // Threshold = baseline (18) + 2x the border noise, clamped
+    const FG_THRESHOLD = Math.max(14, Math.min(28, 14 + bgNoise * 2));
+
+    // Binary FG mask at 1/4 resolution. Use Lab ΔE, not RGB Euclidean.
     const scale = 4;
     const sw = Math.floor(W / scale), sh = Math.floor(H / scale);
     const mask = new Uint8Array(sw * sh);
-    const threshold = 32 * 32;  // squared RGB distance — was 50²
     for (let y = 0; y < sh; y++){
       for (let x = 0; x < sw; x++){
         const p = ((y * scale) * W + (x * scale)) * 4;
-        const dr = img[p] - bgR, dg = img[p+1] - bgG, db = img[p+2] - bgB;
-        if (dr*dr + dg*dg + db*db > threshold) mask[y * sw + x] = 1;
+        const lab = rgb2lab(img[p], img[p+1], img[p+2]);
+        if (labDist(lab, bgLab) > FG_THRESHOLD) mask[y * sw + x] = 1;
       }
     }
 
-    // Dilate just 1 px (not 2) so adjacent parts don't merge into one blob.
-    const dil = new Uint8Array(sw * sh);
-    for (let y = 0; y < sh; y++){
-      for (let x = 0; x < sw; x++){
-        const i = y * sw + x;
-        if (mask[i]){ dil[i] = 1; continue; }
-        for (let dy = -1; dy <= 1 && !dil[i]; dy++){
-          for (let dx = -1; dx <= 1 && !dil[i]; dx++){
-            const yy = y+dy, xx = x+dx;
-            if (yy < 0 || xx < 0 || yy >= sh || xx >= sw) continue;
-            if (mask[yy * sw + xx]) dil[i] = 1;
-          }
-        }
-      }
-    }
+    // Morphological closing: dilate then erode. Closes small holes WITHOUT
+    // merging separate parts.
+    const dil = dilate(mask, sw, sh, 1);
+    const closed = erode(dil, sw, sh, 1);
 
-    // Connected components via iterative stack (BFS/DFS).
+    // Connected components via iterative stack.
     const visited = new Uint8Array(sw * sh);
-    const blobs = [];
-    const minAreaPx = (sw * sh) * 0.002;  // 0.2% of image
+    let blobs = [];
+    const minAreaPx = (sw * sh) * 0.0015;  // 0.15% — catches small parts like 1x1
+    const blobMask = new Uint16Array(sw * sh);  // which blob each pixel belongs to (1-based)
+    let blobId = 0;
     for (let y = 0; y < sh; y++){
       for (let x = 0; x < sw; x++){
         const idx = y * sw + x;
-        if (!dil[idx] || visited[idx]) continue;
+        if (!closed[idx] || visited[idx]) continue;
+        blobId++;
         const stack = [idx];
         let minX = x, maxX = x, minY = y, maxY = y, area = 0;
         while (stack.length){
           const p = stack.pop();
           if (visited[p]) continue;
           visited[p] = 1;
+          blobMask[p] = blobId;
           area++;
           const px = p % sw, py = Math.floor(p / sw);
           if (px < minX) minX = px; if (px > maxX) maxX = px;
           if (py < minY) minY = py; if (py > maxY) maxY = py;
-          if (px > 0 && dil[p-1] && !visited[p-1]) stack.push(p-1);
-          if (px < sw-1 && dil[p+1] && !visited[p+1]) stack.push(p+1);
-          if (py > 0 && dil[p-sw] && !visited[p-sw]) stack.push(p-sw);
-          if (py < sh-1 && dil[p+sw] && !visited[p+sw]) stack.push(p+sw);
+          if (px > 0 && closed[p-1] && !visited[p-1]) stack.push(p-1);
+          if (px < sw-1 && closed[p+1] && !visited[p+1]) stack.push(p+1);
+          if (py > 0 && closed[p-sw] && !visited[p-sw]) stack.push(p-sw);
+          if (py < sh-1 && closed[p+sw] && !visited[p+sw]) stack.push(p+sw);
         }
         if (area >= minAreaPx){
-          // Scale back to original resolution + small padding
-          const pad = 8;
+          const pad = 10;
           const bx = Math.max(0, minX * scale - pad);
           const by = Math.max(0, minY * scale - pad);
           const bw = Math.min(W - bx, (maxX - minX + 1) * scale + 2 * pad);
           const bh = Math.min(H - by, (maxY - minY + 1) * scale + 2 * pad);
-          blobs.push({ x: bx, y: by, w: bw, h: bh, area });
+          blobs.push({ x: bx, y: by, w: bw, h: bh, area, id: blobId });
+        } else {
+          // Not a blob — clear its mask so it doesn't bias color sampling.
+          for (let i = 0; i < blobMask.length; i++) if (blobMask[i] === blobId) blobMask[i] = 0;
         }
       }
     }
     // Sort top-to-bottom, left-to-right for a natural reading order.
     blobs.sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
-    return blobs;
+    // Build a single-blob mask for color sampling. Since dominantRgbInMask
+    // just checks mask[my*sw + mx] != 0, we can use the FG mask directly
+    // when the blob's bbox has only one id inside it. Safer: pass closed.
+    return { blobs, mask: closed, sw, sh, scale, sourceImg: img, W, H };
+  }
+
+  function dilate(src, w, h, r){
+    const out = new Uint8Array(src.length);
+    for (let y = 0; y < h; y++){
+      for (let x = 0; x < w; x++){
+        const i = y*w+x;
+        if (src[i]){ out[i] = 1; continue; }
+        for (let dy = -r; dy <= r && !out[i]; dy++){
+          for (let dx = -r; dx <= r && !out[i]; dx++){
+            const yy = y+dy, xx = x+dx;
+            if (yy < 0 || xx < 0 || yy >= h || xx >= w) continue;
+            if (src[yy*w + xx]) out[i] = 1;
+          }
+        }
+      }
+    }
+    return out;
+  }
+  function erode(src, w, h, r){
+    const out = new Uint8Array(src.length);
+    for (let y = 0; y < h; y++){
+      for (let x = 0; x < w; x++){
+        const i = y*w+x;
+        if (!src[i]) continue;
+        let keep = true;
+        for (let dy = -r; dy <= r && keep; dy++){
+          for (let dx = -r; dx <= r && keep; dx++){
+            const yy = y+dy, xx = x+dx;
+            if (yy < 0 || xx < 0 || yy >= h || xx >= w){ keep = false; break; }
+            if (!src[yy*w + xx]){ keep = false; break; }
+          }
+        }
+        if (keep) out[i] = 1;
+      }
+    }
+    return out;
   }
 
   async function processBulkPhoto(file){
@@ -1735,7 +1918,8 @@
     canvas.getContext("2d").drawImage(img, 0, 0);
 
     // Detect blobs (individual parts) and draw boxes on the preview.
-    const blobs = detectBlobs(canvas);
+    const blobOut = detectBlobs(canvas);
+    const blobs = blobOut.blobs;
     const previewWrap = document.getElementById("scanPreviewWrap");
     const previewImg = document.getElementById("scanPreviewImg");
     const svg = document.getElementById("scanOverlay");
@@ -1783,49 +1967,81 @@
       while (queue.length){
         const i = queue.shift();
         const box = blobs[i];
+        // Make a tight crop (used for display + view 1) and a padded crop
+        // (view 2 — gives Brickognize more context about shape proportions).
         const sub = document.createElement("canvas");
         sub.width = box.w; sub.height = box.h;
         sub.getContext("2d").drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
-        const blob = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.85));
-        // Sample the dominant color from the center of this cell.
+        const padW = Math.round(box.w * 0.15), padH = Math.round(box.h * 0.15);
+        const pbx = Math.max(0, box.x - padW), pby = Math.max(0, box.y - padH);
+        const pbw = Math.min(canvas.width - pbx, box.w + padW*2);
+        const pbh = Math.min(canvas.height - pby, box.h + padH*2);
+        const padded = document.createElement("canvas");
+        padded.width = pbw; padded.height = pbh;
+        padded.getContext("2d").drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
+
+        // Sample the dominant color from the actual blob mask (not the bbox).
         let detectedColor = null;
         try {
-          const rgb = dominantRgbFromCanvas(sub);
+          const rgb = dominantRgbInMask(blobOut.sourceImg, blobOut.W, box, blobOut.mask, blobOut.sw, blobOut.sh, blobOut.scale);
           detectedColor = closestBlColor(rgb, colorMap);
+          if (detectedColor && rgb) detectedColor._sampledRgb = rgb;
         } catch(_){}
-        const previewUrl = URL.createObjectURL(blob);
+
+        const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
+        const blobPad = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
+        const previewUrl = URL.createObjectURL(blobTight);
         const tileEl = scanGridEl.children[i];
         if (tileEl){
           tileEl.querySelector(".sc-your").src = previewUrl;
           tileEl.querySelector(".sc-label").textContent = "scanning...";
         }
         try {
+          // View fusion: send BOTH crops as query_image[] so Brickognize
+          // considers them together. Request color prediction.
           const fd = new FormData();
-          fd.append("query_image", blob, "cell-" + i + ".jpg");
+          fd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
+          fd.append("query_image", blobPad,  "cell-" + i + "-pad.jpg");
+          fd.append("predict_color", "true");
+          fd.append("top_k_items", "10");
+          fd.append("top_k_colors", "5");
           const resp = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
           const j = resp.ok ? await resp.json() : null;
           const top = j && j.top;
           const allItems = (j && j.items) || [];
+          const bgColors = (j && j.colors) || [];  // Brickognize's own color guesses
           const options = [];
           if (top) options.push(top);
           allItems.forEach((it) => {
             if (!options.find((o) => o.id === it.id)) options.push(it);
           });
-          // Rewrite each option's ID to a BL-valid form when possible.
           options.forEach((o) => { o.id = fixPartId(o.id, partsSet); });
-          // Re-pick the top option = the first one that's in BL's real catalog,
-          // else keep the original top.
           const validIdx = options.findIndex((o) => partsSet.has((o.id || "").toLowerCase()));
           if (validIdx > 0){
             const [v] = options.splice(validIdx, 1);
             options.unshift(v);
           }
+
+          // Color reconciliation: use Brickognize's top color when our pixel
+          // match is low-confidence (no detected color, or our match is very
+          // far from the sampled RGB). Otherwise use ours — pixel-based
+          // color beats a trained ID guess when the pixel is reliable.
+          let finalColor = detectedColor;
+          if (bgColors.length && (!finalColor || !finalColor._sampledRgb)){
+            const bgPick = bgColors[0];
+            const match = Object.values(colorMap).find((c) =>
+              String(c.id) === String(bgPick.id) ||
+              c.name.toLowerCase() === (bgPick.name || "").toLowerCase()
+            );
+            if (match) finalColor = { ...match, _fromBrickognize: true };
+          }
+
           const chosen = options[0];
           if (chosen && chosen.id){
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor };
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor };
             renderScanTile(i);
           } else {
-            SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor };
+            SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor: finalColor };
             errors++;
             if (tileEl){ tileEl.querySelector(".sc-label").textContent = "no match — type ID below"; tileEl.style.borderColor = "#fecaca"; tileEl.querySelector(".sc-manual").style.display = "block"; }
           }
