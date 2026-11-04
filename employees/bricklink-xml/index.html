@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v20-browserclip" />
+  <meta name="pp-build" content="v2026-11-04-vision-v21-vote-progress" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v20</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v21</span>
   </div>
 
   <div class="wrap">
@@ -2036,34 +2036,86 @@
     processor: null,
     model: null,
     error: null,
-    onReady: null,
+    waiters: [],
+    progress: 0,          // 0..1 of bytes received across all model files
+    progressBytes: 0,
+    progressTotal: 0,
+    onProgressChanged: null,  // UI hook; set by renderClipStatus
   };
+  function renderClipStatus(){
+    // One-line banner that sits in the scan modal above the preview, so
+    // Dad can see model loading progress on first use and understand the
+    // "PP MATCH" badges on subsequent scans.
+    const host = document.getElementById("scanManyStatus");
+    if (!host) return;
+    if (PP_CLIP.error){
+      host.innerHTML = '<span style="color:#991b1b">PP catalog engine disabled (' + esc(String(PP_CLIP.error.message || PP_CLIP.error).slice(0, 80)) + ')</span>';
+      return;
+    }
+    if (PP_CLIP.loaded){
+      host.innerHTML = '<span style="color:#065f46;font-weight:700">PP CLIP engine ready</span> &mdash; browser-side part matching active.';
+      return;
+    }
+    if (PP_CLIP.loading){
+      const pct = Math.round(PP_CLIP.progress * 100);
+      const mb = PP_CLIP.progressBytes
+        ? ' (' + (PP_CLIP.progressBytes / (1024*1024)).toFixed(1) + ' MB)'
+        : '';
+      host.innerHTML = '<span style="color:#1e3a8a;font-weight:700">Loading PP vision model&hellip; ' + pct + '%' + mb + '</span>';
+    }
+  }
   async function ensurePPClipReady(){
     if (PP_CLIP.loaded) return true;
     if (PP_CLIP.error) return false;
     if (PP_CLIP.loading) {
-      await new Promise((resolve) => { PP_CLIP.onReady = resolve; });
-      return PP_CLIP.loaded;
+      return new Promise((resolve) => { PP_CLIP.waiters.push(resolve); });
     }
     PP_CLIP.loading = true;
+    PP_CLIP.onProgressChanged = renderClipStatus;
+    renderClipStatus();
     try {
       const mod = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
       const { AutoProcessor, CLIPVisionModelWithProjection, env } = mod;
       // Cache model files in IndexedDB so a repeat scan next week doesn't
-      // re-download 90 MB.
+      // re-download 90 MB. First load is slow; every subsequent session
+      // is nearly instant.
       env.allowLocalModels = false;
       env.useBrowserCache = true;
-      PP_CLIP.processor = await AutoProcessor.from_pretrained("Xenova/clip-vit-base-patch32");
-      PP_CLIP.model = await CLIPVisionModelWithProjection.from_pretrained("Xenova/clip-vit-base-patch32", {
-        quantized: true,  // ~90 MB download vs ~340 MB full precision
-      });
+      // transformers.js reports download progress through a shared
+      // callback -- totals are per-file and only known after headers
+      // arrive. Keep a running sum across files and recompute on each
+      // event. Called frequently during the ~90 MB first download.
+      const progressCb = (p) => {
+        if (!p || !p.status) return;
+        if (p.status === "progress" || p.status === "download"){
+          const bytes = Number(p.loaded || 0);
+          const total = Number(p.total || 0);
+          PP_CLIP.progressBytes = bytes;
+          PP_CLIP.progressTotal = total || PP_CLIP.progressTotal;
+          PP_CLIP.progress = total > 0 ? Math.min(1, bytes / total) : 0;
+          if (PP_CLIP.onProgressChanged) PP_CLIP.onProgressChanged();
+        }
+      };
+      PP_CLIP.processor = await AutoProcessor.from_pretrained(
+        "Xenova/clip-vit-base-patch32",
+        { progress_callback: progressCb }
+      );
+      PP_CLIP.model = await CLIPVisionModelWithProjection.from_pretrained(
+        "Xenova/clip-vit-base-patch32",
+        { quantized: true, progress_callback: progressCb }
+      );
       PP_CLIP.loaded = true;
-      if (PP_CLIP.onReady) PP_CLIP.onReady();
+      PP_CLIP.progress = 1;
+      renderClipStatus();
+      PP_CLIP.waiters.forEach((r) => r(true));
+      PP_CLIP.waiters.length = 0;
       return true;
     } catch (e) {
       console.warn("PP CLIP load failed:", e);
       PP_CLIP.error = e;
-      if (PP_CLIP.onReady) PP_CLIP.onReady();
+      renderClipStatus();
+      PP_CLIP.waiters.forEach((r) => r(false));
+      PP_CLIP.waiters.length = 0;
       return false;
     } finally {
       PP_CLIP.loading = false;
@@ -2380,7 +2432,16 @@
     // made on a visually-similar blob. Not a Brickognize prediction this
     // round. Shown so Dad can spot when the learning layer's doing work.
     const learnedTag = r.learned ? ' <span style="background:#ede9fe;color:#5b21b6;font-size:.6rem;padding:0 4px;border-radius:3px;font-weight:700" title="Promoted from your prior corrections">LEARNED</span>' : '';
-    const ppTag = r.ppMatch ? ' <span style="background:#dbeafe;color:#1e3a8a;font-size:.6rem;padding:0 4px;border-radius:3px;font-weight:700" title="Piece Pavilion custom catalog match (CLIP embedding)">PP MATCH</span>' : '';
+    // PP MATCH tag with a rotation-hit count when the catalog saw more
+    // than one rotation of this part in the top results -- a consensus
+    // vote is a stronger signal than a lone similarity spike.
+    const ppHits = r.ppMatchHits || 0;
+    const ppTitleExtra = ppHits > 1
+      ? "Piece Pavilion custom catalog match (" + ppHits + " rotations of this part voted in)"
+      : "Piece Pavilion custom catalog match (CLIP embedding)";
+    const ppTag = r.ppMatch
+      ? ' <span style="background:#dbeafe;color:#1e3a8a;font-size:.6rem;padding:0 4px;border-radius:3px;font-weight:700" title="'+ppTitleExtra+'">PP MATCH' + (ppHits > 1 ? ' x' + ppHits : '') + '</span>'
+      : '';
     tileEl.querySelector(".sc-label").innerHTML =
       '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong>' + warning + learnedTag + ppTag + ' &middot; ' + pct + '%' + altsNote +
       '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>' +
@@ -3109,7 +3170,16 @@
             if (mJ){
               const nearest = (mJ && mJ.nearest) || [];
               const n0 = nearest[0];
-              if (n0 && n0.similarity >= 0.70){
+              // Multi-rotation voting signal: a part whose multiple
+              // rotations appear in the top catalog results is a stronger
+              // match than a one-off similarity spike. If hits>=2 AND
+              // similarity is close to the top single-rotation match, we
+              // lower the acceptance threshold because the vote is more
+              // credible than a lone high-similarity outlier.
+              const consensusHits = n0 ? (n0.hits || 1) : 0;
+              const matchFloor = consensusHits >= 2 ? 0.62 : 0.70;
+              const injectFloor = consensusHits >= 2 ? 0.75 : 0.85;
+              if (n0 && n0.similarity >= matchFloor){
                 const idx = options.findIndex((o) => (o.id || "").toLowerCase() === n0.item_id.toLowerCase());
                 if (idx >= 0){
                   // Agreement -- boost the matched option with the best
@@ -3120,9 +3190,9 @@
                 } else {
                   // Brickognize doesn't rank this ID at all. Only inject
                   // over Brickognize's top-1 if Brickognize is weak
-                  // (<0.60) OR PP catalog is very confident (>=0.85).
+                  // (<0.60) OR PP catalog is very confident / has consensus.
                   const bScore = (options[0] && options[0].score) || 0;
-                  if (bScore < 0.60 || n0.similarity >= 0.85){
+                  if (bScore < 0.60 || n0.similarity >= injectFloor){
                     options.unshift({ id: n0.item_id, name: "(PP catalog match)", score: n0.similarity });
                     customMatched = n0;
                   }
@@ -3156,7 +3226,7 @@
             const blValid = partsSet && partsSet.size > 0
               ? partsSet.has((chosen.id || "").toLowerCase())
               : null;  // unknown
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid, phash, learned: !!learnedCorrection, ppMatch: !!customMatched, originalBrickognizeId: learnedCorrection ? (learnedCorrection.originalId || (options[1] && options[1].id) || "") : "" };
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid, phash, learned: !!learnedCorrection, ppMatch: !!customMatched, ppMatchHits: customMatched ? (customMatched.hits || 1) : 0, originalBrickognizeId: learnedCorrection ? (learnedCorrection.originalId || (options[1] && options[1].id) || "") : "" };
             renderScanTile(i);
           } else {
             SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor: finalColor, phash };
