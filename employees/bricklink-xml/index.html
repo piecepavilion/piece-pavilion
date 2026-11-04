@@ -1832,8 +1832,12 @@
         '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:rgb('+c.r+','+c.g+','+c.b+');border:1px solid rgba(0,0,0,.2)"></span>' +
         c.name + src + sampleSwatch + '</span>';
     }
+    // Flag when the chosen ID isn't in BL's real catalog — Dad can retype
+    // the manual input and move on.
+    const notInBL = r.blValid === false;
+    const warning = notInBL ? ' <span style="background:#fef3c7;color:#92400e;font-size:.65rem;padding:0 4px;border-radius:3px;font-weight:700" title="Not in BL catalog">?</span>' : '';
     tileEl.querySelector(".sc-label").innerHTML =
-      '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong> &middot; ' + pct + '%' + altsNote +
+      '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong>' + warning + ' &middot; ' + pct + '%' + altsNote +
       '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>' +
       colorBit;
     // Load BrickLink's official reference image so Dad can eyeball
@@ -2281,7 +2285,8 @@
 
           const chosen = options[0];
           if (chosen && chosen.id){
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor };
+            const blValid = partsSet.has((chosen.id || "").toLowerCase());
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid };
             renderScanTile(i);
           } else {
             SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor: finalColor };
