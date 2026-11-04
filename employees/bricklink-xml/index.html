@@ -282,6 +282,7 @@
 
         <div class="row-tools">
           <button class="btn" id="buildFromGridBtn" type="button">Build XML &rarr;</button>
+          <button class="btn ghost" id="undoBtn" type="button" disabled title="Revert the last action">&#8630; Undo</button>
           <button class="btn ghost" id="pasteRowsBtn" type="button">&#128203; Paste from spreadsheet</button>
           <button class="btn ghost" id="addRowsBtn" type="button">+ 25 more rows</button>
           <button class="btn ghost" id="clearGridBtn" type="button">Clear grid</button>
@@ -1247,10 +1248,30 @@
     if (!rows.length){ gridMsg("err", "No rows filled in. Type at least one Part ID."); return; }
     if (problems.length){ gridMsg("warn", "Fix these before BL will accept it:\n• " + problems.join("\n• ")); }
 
+    // Combine duplicate lines when EVERYTHING matches: Part ID + Color +
+    // Price + Condition + Remarks (and Description). Dad wants parts with
+    // different Remarks kept separate — remarks is the deciding factor.
+    const merged = [];
+    const seenKey = new Map();
+    let combinedCount = 0;
+    rows.forEach((r) => {
+      const key = [r.ITEMID, r.COLOR || "", r.PRICE || "", r.CONDITION || "",
+                   r.REMARKS || "", r.DESCRIPTION || ""].join("\u0001");
+      if (seenKey.has(key)){
+        const idx = seenKey.get(key);
+        merged[idx].QTY = String((parseInt(merged[idx].QTY, 10) || 0) + (parseInt(r.QTY, 10) || 0));
+        combinedCount++;
+      } else {
+        seenKey.set(key, merged.length);
+        merged.push({ ...r });
+      }
+    });
+    const rowsOut = merged;
+
     // Emit XML in BrickLink's expected order, then feed into the existing
     // Paste pipeline so it goes through the same cleanup + validation.
     const xmlParts = ["<INVENTORY>"];
-    rows.forEach((r) => {
+    rowsOut.forEach((r) => {
       xmlParts.push("  <ITEM>");
       FIELD_ORDER.forEach((k) => {
         const v = r[k];
@@ -1262,7 +1283,12 @@
     xmlParts.push("</INVENTORY>");
     inEl.value = xmlParts.join("\n");
     convert();  // run the existing cleanup flow
-    if (!problems.length) gridMsg("ok", "Built XML for " + rows.length + " row" + (rows.length===1?"":"s") + " — see the output below.");
+    if (!problems.length){
+      const msg = combinedCount
+        ? "Built XML — " + rowsOut.length + " line" + (rowsOut.length===1?"":"s") + " after combining " + combinedCount + " duplicate" + (combinedCount===1?"":"s") + " (same ID+color+price+condition+remarks)."
+        : "Built XML for " + rowsOut.length + " row" + (rowsOut.length===1?"":"s") + ".";
+      gridMsg("ok", msg);
+    }
     document.getElementById("out").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -1344,6 +1370,71 @@
               (failed ? " (" + failed + " had no data)" : "") + ".");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3200);
   }
+
+  // ========== UNDO STACK ==========
+  // Snapshots of the grid taken BEFORE any mutating action. Undo pops.
+  const UNDO_STACK = [];
+  const UNDO_MAX = 20;
+  function snapshotGrid(){
+    try {
+      const rows = [];
+      GRID_BODY.querySelectorAll("tr").forEach((tr) => {
+        const r = {};
+        tr.querySelectorAll("[data-k]").forEach((el) => { r[el.dataset.k] = el.value || ""; });
+        rows.push(r);
+      });
+      UNDO_STACK.push(rows);
+      if (UNDO_STACK.length > UNDO_MAX) UNDO_STACK.shift();
+      const btn = document.getElementById("undoBtn");
+      if (btn) btn.disabled = UNDO_STACK.length === 0;
+    } catch(e){}
+  }
+  function doUndo(){
+    if (!UNDO_STACK.length) return;
+    const rows = UNDO_STACK.pop();
+    GRID_BODY.innerHTML = "";
+    rows.forEach((r, i) => {
+      const tr = makeRow(i + 1);
+      Object.entries(r).forEach(([k, v]) => {
+        const el = tr.querySelector('[data-k="'+k+'"]');
+        if (el) el.value = v;
+      });
+      GRID_BODY.appendChild(tr);
+      flagRow(tr);
+    });
+    wireGrid();
+    recountGrid();
+    saveGrid();
+    gridMsg("ok", "Undid last action — " + UNDO_STACK.length + " more undo" + (UNDO_STACK.length === 1 ? "" : "s") + " in the history.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2200);
+    const btn = document.getElementById("undoBtn");
+    if (btn) btn.disabled = UNDO_STACK.length === 0;
+  }
+  document.getElementById("undoBtn").addEventListener("click", doUndo);
+
+  // Snapshot BEFORE mutating actions (clear grid, fill row, apply defaults,
+  // paste from clipboard, price refresh). Hook into existing handlers.
+  const _origClearGrid = clearGrid;
+  clearGrid = function(){ snapshotGrid(); _origClearGrid(); };
+  const _origApplyDefaults = applyDefaults;
+  applyDefaults = function(){ snapshotGrid(); _origApplyDefaults(); };
+  const _origPaste = pasteFromClipboard;
+  pasteFromClipboard = function(){ snapshotGrid(); _origPaste(); };
+  const _origPriceAvg = priceAtBlAverage;
+  priceAtBlAverage = function(){ snapshotGrid(); _origPriceAvg(); };
+  // Re-wire the buttons to the new wrapped functions.
+  const applyBtn = document.getElementById("applyDefaultsBtn");
+  const pasteBtn = document.getElementById("pasteRowsBtn");
+  const priceBtn = document.getElementById("priceAvgBtn");
+  const clearBtn = document.getElementById("clearGridBtn");
+  applyBtn.replaceWith(applyBtn.cloneNode(true));
+  pasteBtn.replaceWith(pasteBtn.cloneNode(true));
+  priceBtn.replaceWith(priceBtn.cloneNode(true));
+  clearBtn.replaceWith(clearBtn.cloneNode(true));
+  document.getElementById("applyDefaultsBtn").addEventListener("click", applyDefaults);
+  document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
+  document.getElementById("priceAvgBtn").addEventListener("click", priceAtBlAverage);
+  document.getElementById("clearGridBtn").addEventListener("click", clearGrid);
 
   // Try to restore from last session; otherwise start with 30 blank rows.
   if (!loadGrid()) addRows(30);

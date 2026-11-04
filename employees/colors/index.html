@@ -92,9 +92,10 @@
       .part-hero-meta .name{font-size:1.05rem}
     }
 
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
-    .tile{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease, border-color .18s ease;position:relative;will-change:transform}
-    .tile:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--red)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+    .tile{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease, border-color .18s ease;position:relative;will-change:transform}
+    .tile:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(20,22,29,.1);border-color:var(--red)}
+    .tile:hover .meta{background:linear-gradient(0deg,#fff,#fffbf2)}
     .tile .img{aspect-ratio:1/1;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
     .tile .img img{max-width:88%;max-height:88%;object-fit:contain;transition:transform .2s}
     .tile .img.failed::before{content:"no image";position:absolute;color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
@@ -102,11 +103,11 @@
     .tile .img.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shim 1.3s linear infinite}
     @keyframes shim{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 
-    .meta{padding:12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+    .meta{padding:12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;transition:background .2s ease}
     .swatch-row{display:flex;align-items:center;gap:8px}
     .swatch{width:18px;height:18px;border-radius:50%;border:1.5px solid rgba(0,0,0,.08);flex-shrink:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.08)}
-    .cname{font-weight:800;font-size:.9rem;line-height:1.25;color:var(--ink)}
-    .cid{color:var(--mid);font-size:.78rem;font-family:'JetBrains Mono','Consolas',monospace;font-weight:700}
+    .cname{font-weight:800;font-size:.92rem;line-height:1.3;color:var(--ink);letter-spacing:-.005em}
+    .cid{color:var(--mid);font-size:.78rem;font-family:'JetBrains Mono','Consolas',monospace;font-weight:700;background:#f3f4f6;padding:2px 7px;border-radius:50px;align-self:flex-start;letter-spacing:.02em}
     .qty{color:var(--muted);font-size:.74rem;margin-top:2px}
 
     .skeleton{display:none}
@@ -1735,8 +1736,47 @@
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
     });
 
+    // Convert a hex to HSL so we can sort by HUE within each type. Dark/light
+    // neutrals (white/gray/black) have no meaningful hue — use lightness so
+    // they walk from white to black.
+    function hexToHsl(hex){
+      let h = (hex || "").replace("#", "");
+      if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+      if (h.length !== 6) return { h: 999, s: 0, l: 0.5 };
+      const r = parseInt(h.slice(0,2),16)/255;
+      const g = parseInt(h.slice(2,4),16)/255;
+      const b = parseInt(h.slice(4,6),16)/255;
+      const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+      const l = (mx + mn) / 2;
+      const d = mx - mn;
+      let hv = 0, s = 0;
+      if (d > 0.001){
+        s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+        if (mx === r) hv = ((g - b) / d) % 6;
+        else if (mx === g) hv = (b - r) / d + 2;
+        else hv = (r - g) / d + 4;
+        hv *= 60;
+        if (hv < 0) hv += 360;
+      }
+      return { h: hv, s, l };
+    }
+    function colorSortKey(c){
+      const { h, s, l } = hexToHsl(c.hex);
+      // Near-neutral (very low saturation) goes to the end of the type band,
+      // ordered by lightness so Black → Dark Gray → Light Gray → White.
+      if (s < 0.15) return [1, 1 - l, 0];
+      // Everything else sorts by hue, then by lightness (darker first within a hue).
+      // Bucket hues so near-equals stay next to each other instead of churning.
+      const hb = Math.round(h / 8) * 8;
+      return [0, hb, l];
+    }
     host.innerHTML = order.map((type) => {
-      const list = groups[type].sort((a, b) => Number(a.id) - Number(b.id));
+      const list = groups[type].slice().sort((a, b) => {
+        const ka = colorSortKey(a), kb = colorSortKey(b);
+        if (ka[0] !== kb[0]) return ka[0] - kb[0];
+        if (ka[1] !== kb[1]) return ka[1] - kb[1];
+        return ka[2] - kb[2];
+      });
       const tiles = list.map((c) => {
         const hex = c.hex || "#cfd3dc";
         const bl = "https://www.bricklink.com/catalogList.asp?catType=P&colorPart=" + encodeURIComponent(c.id);
