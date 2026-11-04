@@ -2117,11 +2117,14 @@
         padded.getContext("2d").drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
 
         // Sample the dominant color from the actual blob mask (not the bbox).
+        // IMPORTANT: clone the matched color before adding per-scan metadata.
+        // closestBlColor returns the shared BL_COLORS object; mutating it
+        // would leak _sampledRgb across every row that picks the same color.
         let detectedColor = null;
         try {
           const rgb = dominantRgbInMask(blobOut.sourceImg, blobOut.W, box, blobOut.mask, blobOut.sw, blobOut.sh, blobOut.scale);
-          detectedColor = closestBlColor(rgb, colorMap);
-          if (detectedColor && rgb) detectedColor._sampledRgb = rgb;
+          const match = closestBlColor(rgb, colorMap);
+          if (match) detectedColor = rgb ? { ...match, _sampledRgb: rgb } : { ...match };
         } catch(_){}
 
         const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
