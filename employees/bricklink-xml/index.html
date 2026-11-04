@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-scan-colors" />
+  <meta name="pp-build" content="v2026-11-04-scan-validate" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -232,7 +232,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-colors</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-validate</span>
   </div>
 
   <div class="wrap">
@@ -1455,6 +1455,42 @@
     }
   }
 
+  // Lazy-loaded BL part catalog — set of every part number BrickLink has.
+  // Used to fix Brickognize's occasional false variants (e.g. '3811A' when
+  // only '3811' is a real BL part).
+  let BL_PARTS_SET = null, BL_PARTS_SET_P = null;
+  async function blPartsSet(){
+    if (BL_PARTS_SET) return BL_PARTS_SET;
+    if (!BL_PARTS_SET_P){
+      BL_PARTS_SET_P = fetch("/employees/colors/parts.json", { credentials: "include" })
+        .then((r) => r.ok ? r.json() : [])
+        .then((arr) => {
+          const s = new Set();
+          (arr || []).forEach((p) => { if (p && p.no) s.add(p.no.toLowerCase()); });
+          BL_PARTS_SET = s;
+          return s;
+        }).catch(() => new Set());
+    }
+    return BL_PARTS_SET_P;
+  }
+  // Normalise a Brickognize-returned ID to something BL actually has.
+  // Tries: original, lowercase, lowercase-suffix (3811A→3811a), stripped
+  // trailing letter (3811a→3811). Returns the first match; else original.
+  function fixPartId(raw, partsSet){
+    if (!raw || !partsSet || !partsSet.size) return raw;
+    const candidates = [
+      raw,
+      raw.toLowerCase(),
+      raw.replace(/([A-Z])$/g, (_, c) => c.toLowerCase()),  // last cap → lower
+      raw.replace(/[A-Z]$/, "").toLowerCase(),              // drop trailing cap
+      raw.replace(/[a-zA-Z]$/, ""),                         // drop any trailing letter
+    ];
+    for (const cand of candidates){
+      if (partsSet.has(cand.toLowerCase())) return cand;
+    }
+    return raw;
+  }
+
   // Lazy-loaded BL color catalog (id -> {name, hex}) used to pick the
   // closest BL color from a cell's dominant pixels.
   let BL_COLORS = null, BL_COLORS_P = null;
@@ -1592,8 +1628,9 @@
       scanGridEl.appendChild(d);
     }
 
-    // Preload color catalog so dominant-color detection has something to match against.
-    const colorMap = await blColors();
+    // Preload color + parts catalogs — color for pixel matching, parts for
+    // validating Brickognize's part IDs against the real BL catalog.
+    const [colorMap, partsSet] = await Promise.all([blColors(), blPartsSet()]);
 
     // Slice each cell → blob → POST to /api/colors/scan in parallel, max 6 at a time.
     let done = 0, errors = 0;
@@ -1631,8 +1668,18 @@
           allItems.forEach((it) => {
             if (!options.find((o) => o.id === it.id)) options.push(it);
           });
-          if (top && top.id){
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: top.id, name: top.name, score: top.score, options, optIdx: 0, detectedColor };
+          // Rewrite each option's ID to a BL-valid form when possible.
+          options.forEach((o) => { o.id = fixPartId(o.id, partsSet); });
+          // Re-pick the top option = the first one that's in BL's real catalog,
+          // else keep the original top.
+          const validIdx = options.findIndex((o) => partsSet.has((o.id || "").toLowerCase()));
+          if (validIdx > 0){
+            const [v] = options.splice(validIdx, 1);
+            options.unshift(v);
+          }
+          const chosen = options[0];
+          if (chosen && chosen.id){
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor };
             renderScanTile(i);
           } else {
             SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor };
