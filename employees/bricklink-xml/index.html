@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-cam" />
+  <meta name="pp-build" content="v2026-11-04-scan-alts" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -232,7 +232,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-cam</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-alts</span>
   </div>
 
   <div class="wrap">
@@ -1386,7 +1386,7 @@
     camOverlay.style.display = "flex";
     try {
       CAM_STREAM = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1440 } },
+        video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } },
         audio: false,
       });
       camVideo.srcObject = CAM_STREAM;
@@ -1468,6 +1468,24 @@
     scanOverlay.style.display = "none";
   });
 
+  // Render a single scan tile from SCAN_RESULTS[i].
+  function renderScanTile(i){
+    const tileEl = scanGridEl.children[i];
+    if (!tileEl) return;
+    const r = SCAN_RESULTS[i];
+    if (!r || r.status !== "ok"){ return; }
+    const pct = Math.round((r.score || 0) * 100);
+    tileEl.style.borderColor = r.manual ? "#0ea5e9" : (pct >= 70 ? "#86efac" : (pct >= 40 ? "#fde68a" : "#fecaca"));
+    const altsNote = (r.options && r.options.length > 1)
+      ? ' <span style="color:var(--muted);font-weight:600">&middot; tap for ' + r.options.length + ' alts</span>'
+      : "";
+    tileEl.querySelector(".sc-label").innerHTML =
+      '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong> &middot; ' + pct + '%' + altsNote +
+      '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>';
+    const inp = tileEl.querySelector(".sc-manual");
+    if (inp){ inp.style.display = "block"; inp.value = r.manual ? r.id : ""; }
+  }
+
   async function processBulkPhoto(file){
     scanOverlay.style.display = "flex";
     scanGridEl.innerHTML = "";
@@ -1494,15 +1512,16 @@
     const cellW = Math.floor(canvas.width / cols);
     const cellH = Math.floor(canvas.height / rows);
 
-    SCAN_RESULTS = new Array(nCells).fill(null).map((_, i) => ({ idx: i, status: "pending" }));
+    SCAN_RESULTS = new Array(nCells).fill(null).map((_, i) => ({ idx: i, status: "pending", options: [], optIdx: 0 }));
 
     // Render blank tiles immediately so Dad sees progress.
     for (let i = 0; i < nCells; i++){
       const d = document.createElement("div");
       d.dataset.i = String(i);
-      d.style.cssText = "background:#fafbfd;border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem";
+      d.style.cssText = "background:#fafbfd;border:2px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;font-size:.78rem;cursor:pointer;transition:border-color .15s";
       d.innerHTML = '<div style="aspect-ratio:1;background:#eee;border-radius:6px;overflow:hidden;position:relative"><img style="width:100%;height:100%;object-fit:cover" alt=""></div>' +
-                    '<div class="sc-label" style="color:var(--mid);font-size:.7rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace">waiting...</div>';
+                    '<div class="sc-label" style="color:var(--mid);font-size:.7rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace">waiting...</div>' +
+                    '<input type="text" class="sc-manual" placeholder="or type ID" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:.78rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace;font-weight:700;display:none">';
       scanGridEl.appendChild(d);
     }
 
@@ -1530,28 +1549,58 @@
           const resp = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
           const j = resp.ok ? await resp.json() : null;
           const top = j && j.top;
+          const allItems = (j && j.items) || [];
+          const options = [];
+          if (top) options.push(top);
+          allItems.forEach((it) => {
+            if (!options.find((o) => o.id === it.id)) options.push(it);
+          });
           if (top && top.id){
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: top.id, name: top.name, score: top.score };
-            if (tileEl){
-              const pct = Math.round(top.score * 100);
-              tileEl.style.borderColor = pct >= 70 ? "#86efac" : (pct >= 40 ? "#fde68a" : "#fecaca");
-              tileEl.querySelector(".sc-label").innerHTML =
-                '<strong style="color:var(--ink);font-family:\'Nunito\'">' + top.id + '</strong> &middot; ' + pct + '%<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (top.name || "") + '</span>';
-            }
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: top.id, name: top.name, score: top.score, options, optIdx: 0 };
+            renderScanTile(i);
           } else {
-            SCAN_RESULTS[i] = { idx: i, status: "err" };
+            SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0 };
             errors++;
-            if (tileEl){ tileEl.querySelector(".sc-label").textContent = "no match"; tileEl.style.borderColor = "#fecaca"; }
+            if (tileEl){ tileEl.querySelector(".sc-label").textContent = "no match — type ID below"; tileEl.style.borderColor = "#fecaca"; tileEl.querySelector(".sc-manual").style.display = "block"; }
           }
         } catch(e){
-          SCAN_RESULTS[i] = { idx: i, status: "err" };
+          SCAN_RESULTS[i] = { idx: i, status: "err", options: [], optIdx: 0 };
           errors++;
-          if (tileEl){ tileEl.querySelector(".sc-label").textContent = "error"; }
+          if (tileEl){ tileEl.querySelector(".sc-label").textContent = "error"; tileEl.querySelector(".sc-manual").style.display = "block"; }
         }
         done++;
         scanStatus.textContent = done + "/" + nCells + " scanned" + (errors ? " (" + errors + " failed)" : "");
       }
     }
+    // Click a tile to cycle through the top-5 Brickognize candidates for
+    // that cell. Manual text input overrides everything.
+    scanGridEl.addEventListener("click", (ev) => {
+      const tileEl = ev.target.closest("[data-i]");
+      if (!tileEl) return;
+      if (ev.target.classList.contains("sc-manual")) return;
+      const i = parseInt(tileEl.dataset.i, 10);
+      const r = SCAN_RESULTS[i];
+      if (!r || !r.options || r.options.length < 2) return;
+      r.optIdx = (r.optIdx + 1) % r.options.length;
+      const o = r.options[r.optIdx];
+      r.id = o.id; r.name = o.name; r.score = o.score;
+      r.status = "ok";
+      renderScanTile(i);
+    });
+    scanGridEl.addEventListener("input", (ev) => {
+      if (!ev.target.classList.contains("sc-manual")) return;
+      const tileEl = ev.target.closest("[data-i]");
+      const i = parseInt(tileEl.dataset.i, 10);
+      const v = (ev.target.value || "").trim();
+      if (v){
+        SCAN_RESULTS[i] = { ...(SCAN_RESULTS[i] || {}), idx: i, status: "ok", id: v, name: "(manual)", score: 1, options: SCAN_RESULTS[i].options || [], optIdx: SCAN_RESULTS[i].optIdx || 0, manual: true };
+        tileEl.style.borderColor = "#0ea5e9";
+      }
+      const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
+      scanSummary.textContent = good + " of " + nCells + " ready. Click any tile to try the next guess.";
+      scanAddBtn.disabled = good === 0;
+    });
+
     const workers = Array.from({length: Math.min(6, nCells)}, () => worker());
     await Promise.all(workers);
 
