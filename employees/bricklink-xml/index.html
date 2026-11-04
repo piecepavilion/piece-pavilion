@@ -2332,9 +2332,14 @@
           : '';
       }).join("") + (extra > 0 ? '<span style="font-size:.7rem;color:var(--mid);align-self:center;margin-left:4px">+' + extra + '</span>' : '');
 
+      // Pre-uncheck low-confidence rows (<40%) so Dad has to opt-in to the
+      // uncertain ones — stops silent bad data from flowing into the grid.
+      const preChecked = scorePct >= 40 ? ' checked' : '';
+      const rowBg = scorePct < 40 ? '#fef2f2' : '#fff';
+      const rowBorder = scorePct < 40 ? '#fecaca' : '#d1fae5';
       return (
-        '<div style="padding:8px;margin-bottom:6px;background:#fff;border:1px solid #d1fae5;border-radius:8px;display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center">' +
-          '<label style="display:flex;align-items:center;cursor:pointer;gap:6px"><input type="checkbox" class="chk-keep" data-r="'+rIdx+'" checked style="width:16px;height:16px;cursor:pointer"></label>' +
+        '<div style="padding:8px;margin-bottom:6px;background:'+rowBg+';border:1px solid '+rowBorder+';border-radius:8px;display:grid;grid-template-columns:auto auto 1fr auto;gap:10px;align-items:center">' +
+          '<label style="display:flex;align-items:center;cursor:pointer;gap:6px"><input type="checkbox" class="chk-keep" data-r="'+rIdx+'"'+preChecked+' style="width:16px;height:16px;cursor:pointer"></label>' +
           // Left: your-photo thumbs
           '<div style="display:flex;gap:2px;flex-wrap:wrap;max-width:140px">' + srcThumbs + '</div>' +
           // Middle: BL ref + text
