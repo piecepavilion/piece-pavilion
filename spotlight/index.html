@@ -78,14 +78,27 @@
         '</div>';
     }
 
+    function esc(s){
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function safeLink(u){
+      // Scheme whitelist — refuse anything other than http(s), relative
+      // paths, same-page anchors, or mailto. Blocks javascript:/data: URLs.
+      return /^(https?:|\/|#|mailto:)/i.test(u || '') ? u : '#';
+    }
     function slideshow(items){
       var slides = items.map(function(it, i){
-        var img = '<img src="' + it.url + '" alt="' + (it.caption ? it.caption.replace(/"/g,'&quot;') : 'Piece Pavilion spotlight') + '" />';
-        var cap = it.caption ? '<div class="cap">' + it.caption.replace(/</g,'&lt;') + '</div>' : '';
+        var safeUrl = esc(it.url);
+        var safeCap = esc(it.caption || '');
+        var altText = it.caption ? esc(it.caption) : 'Piece Pavilion spotlight';
+        var img = '<img src="' + safeUrl + '" alt="' + altText + '" />';
+        var cap = it.caption ? '<div class="cap">' + safeCap + '</div>' : '';
         var inner = img + cap;
         var cls = 'slide' + (i === 0 ? ' on' : '');
         return it.link
-          ? '<a class="' + cls + '" href="' + it.link + '" target="_blank" rel="noopener">' + inner + '</a>'
+          ? '<a class="' + cls + '" href="' + esc(safeLink(it.link)) + '" target="_blank" rel="noopener">' + inner + '</a>'
           : '<div class="' + cls + '">' + inner + '</div>';
       }).join('');
       var arrows = items.length > 1
