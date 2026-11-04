@@ -1796,32 +1796,46 @@
     return ranked.length ? ranked[0].color : null;
   }
 
-  // Given a ranked pixel-match list and Brickognize's color guess, resolve
-  // to a final BL color. If Brickognize's pick is in our top-5 AND within
-  // AMBIGUITY_WINDOW ΔE of our top, prefer Brickognize's pick (it has
-  // access to the whole image, not just pixel stats).
+  // Given a ranked pixel-match list and Brickognize's full color list,
+  // resolve to a final BL color. For each candidate in our top-5 pixel
+  // ranking, score it = -ΔE + bgBonus(color), where bgBonus is Brickognize's
+  // score for that color if present, else 0.
+  //
+  // Intuition: pixel distance is the primary signal, but a very confident
+  // Brickognize vote can tip a near-tie. A weak Brickognize pick that's
+  // far away in Lab doesn't override a clear pixel winner.
   function reconcileColor(rgb, colorMap, bgColors){
     const ranked = rankBlColors(rgb, colorMap);
     if (!ranked.length) return null;
     const pixelTop = ranked[0].color;
     if (!bgColors || !bgColors.length) return pixelTop;
-    const AMBIGUITY_WINDOW = 10;  // ΔE*ab
-    const bgPick = bgColors[0];
+
     const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
-    const bgIdStr = String(bgPick.id || "");
-    const bgNameNorm = norm(bgPick.name);
-    // Find Brickognize's pick in our ranked list.
-    const bgInRanked = ranked.find((r) =>
-      String(r.color.id) === bgIdStr || norm(r.color.name) === bgNameNorm
-    );
-    if (bgInRanked){
-      const gap = bgInRanked.dist - ranked[0].dist;
-      if (gap < AMBIGUITY_WINDOW){
-        // Brickognize's pick is visually close to pixel top — defer to it.
-        return bgInRanked.color;
+    // Build bg score map by both id and normalized name.
+    const bgScoreById = new Map();
+    const bgScoreByName = new Map();
+    bgColors.forEach((c) => {
+      const s = Number(c.score) || 0;
+      if (c.id != null) bgScoreById.set(String(c.id), Math.max(s, bgScoreById.get(String(c.id)) || 0));
+      if (c.name) bgScoreByName.set(norm(c.name), Math.max(s, bgScoreByName.get(norm(c.name)) || 0));
+    });
+
+    // Combined scoring. LOWER distance is better. HIGHER bg score is better.
+    // We convert: combined = pixelDist - 25 * bgScore.
+    // Weight 25 chosen so a bg score of 1.0 is worth 25 ΔE — enough to break
+    // real ties, not enough to override a clear pixel winner (ΔE > 30 gap).
+    const BG_WEIGHT = 25;
+    let best = { color: pixelTop, combined: ranked[0].dist };
+    ranked.forEach((r) => {
+      const idStr = String(r.color.id);
+      const nmStr = norm(r.color.name);
+      const bgScore = Math.max(bgScoreById.get(idStr) || 0, bgScoreByName.get(nmStr) || 0);
+      const combined = r.dist - bgScore * BG_WEIGHT;
+      if (combined < best.combined){
+        best = { color: r.color, combined };
       }
-    }
-    return pixelTop;
+    });
+    return best.color;
   }
 
   // ========== BULK SCAN (grid of parts in one photo) ==========
