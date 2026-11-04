@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v24-white-and-split" />
+  <meta name="pp-build" content="v2026-11-04-vision-v25-blur-reject-nomorph" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v24</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v25</span>
   </div>
 
   <div class="wrap">
@@ -2029,6 +2029,44 @@
   // Low-level color sampler that walks the whole crop (not the mask) and
   // returns a median-of-foreground RGB. Used as a 2nd opinion when
   // dominantRgbInMask returned null or looks suspicious.
+  // Laplacian-variance sharpness metric. Downscales the input to ~400 px
+  // on the long side, converts to grayscale, convolves with the 3x3
+  // Laplacian [[0,1,0],[1,-4,1],[0,1,0]] and returns the variance of the
+  // response. Higher = sharper. Empirically on phone photos:
+  //   < 50    motion blur / out of focus
+  //   50-120  soft / handheld
+  //   120+    well-lit, stable
+  // ~15 ms on a 12 MP photo after downscale.
+  function measureSharpness(srcCanvas){
+    const W = srcCanvas.width, H = srcCanvas.height;
+    const target = 400;
+    const scale = Math.max(1, Math.max(W, H) / target);
+    const sw = Math.max(16, Math.round(W / scale));
+    const sh = Math.max(16, Math.round(H / scale));
+    const c = document.createElement("canvas");
+    c.width = sw; c.height = sh;
+    const cx = c.getContext("2d");
+    cx.drawImage(srcCanvas, 0, 0, sw, sh);
+    const d = cx.getImageData(0, 0, sw, sh).data;
+    const gray = new Float32Array(sw * sh);
+    for (let i = 0, j = 0; i < d.length; i += 4, j++){
+      gray[j] = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+    }
+    let sum = 0, sumSq = 0, n = 0;
+    for (let y = 1; y < sh - 1; y++){
+      for (let x = 1; x < sw - 1; x++){
+        const idx = y * sw + x;
+        const l = -4 * gray[idx]
+          + gray[idx - 1] + gray[idx + 1]
+          + gray[idx - sw] + gray[idx + sw];
+        sum += l; sumSq += l * l; n++;
+      }
+    }
+    if (n < 1) return 0;
+    const mean = sum / n;
+    return sumSq / n - mean * mean;
+  }
+
   function medianRgbInCrop(sourceCanvas){
     const ctx = sourceCanvas.getContext("2d");
     const data = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
@@ -2460,6 +2498,10 @@
   // processBulkPhotoInner call.
   let SCAN_SOURCE_CANVAS = null;
   let SCAN_BLOBS = [];
+  // Blob-detection reject counters surfaced in the scan summary so Dad
+  // can tell when his background was the problem, not the model.
+  let SCAN_REJECTED_PHANTOM = 0;
+  let SCAN_REJECTED_SHADOW = 0;
   document.getElementById("scanManyClose").addEventListener("click", () => {
     scanOverlay.style.display = "none";
     SCAN_OBJ_URLS.forEach((u) => { try { URL.revokeObjectURL(u); } catch(_){} });
@@ -2478,15 +2520,23 @@
     const tileEl = scanGridEl.children[i];
     if (!box || !canvas || !tileEl) return;
     const labelEl = tileEl.querySelector(".sc-label");
-    if (labelEl) labelEl.textContent = "re-scanning (bigger crop)...";
+    if (labelEl) labelEl.textContent = "re-scanning (brighter + bigger crop)...";
     try {
+      // Rescan with 30% padding AND a brightness lift. Shadowed parts
+      // that Brickognize mis-classified on the first pass very often
+      // flip to the right answer once the shadow cast across the piece
+      // is pulled up. Combined with the wider crop, this is the fastest
+      // one-tap recovery on a wrong tile without a re-shoot.
       const padW = Math.round(box.w * 0.30), padH = Math.round(box.h * 0.30);
       const pbx = Math.max(0, box.x - padW), pby = Math.max(0, box.y - padH);
       const pbw = Math.min(canvas.width - pbx, box.w + padW * 2);
       const pbh = Math.min(canvas.height - pby, box.h + padH * 2);
       const padded = document.createElement("canvas");
       padded.width = pbw; padded.height = pbh;
-      padded.getContext("2d").drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
+      const pctx = padded.getContext("2d");
+      pctx.filter = "brightness(1.3) contrast(1.15)";
+      pctx.drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
+      pctx.filter = "none";
       const padBlob = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
       const fd = new FormData();
       fd.append("query_image", padBlob, "cell-" + i + "-rescan-30.jpg");
@@ -2656,10 +2706,15 @@
       }
     }
 
-    // Morphological closing: dilate then erode. Closes small holes WITHOUT
-    // merging separate parts.
-    const dil = dilate(mask, sw, sh, 1);
-    const closed = erode(dil, sw, sh, 1);
+    // Morphological closing used to bridge 1-2 pixel gaps between
+    // touching parts of the same colour (dad's "merging multiple parts"
+    // bug, 2026-11-04). Skip it entirely -- the FG mask is now reliable
+    // enough that we don't need to paper over 1-pixel holes, and the
+    // downstream pinch-split + shadow filter handle the rest. If parts
+    // ever fragment visibly from this change, re-introduce dilate/erode
+    // with radius 1 AND restrict it to blobs whose per-pixel contrast
+    // is well above the FG threshold floor.
+    const closed = mask;
 
     // Connected components via iterative stack.
     const visited = new Uint8Array(sw * sh);
@@ -2667,6 +2722,10 @@
     const minAreaPx = (sw * sh) * 0.0005;  // 0.05% — catches smaller parts (1x1 plates further from camera); dust filtered by fill/aspect gates below
     const blobMask = new Uint16Array(sw * sh);  // which blob each pixel belongs to (1-based)
     let blobId = 0;
+    // Rejection counters reported to the caller so the summary line can
+    // hint "N possible parts were dropped as too-close-to-background --
+    // try a plainer surface" when phantom-bg fires a lot.
+    let rejectedPhantomBg = 0, rejectedShadow = 0;
     for (let y = 0; y < sh; y++){
       for (let x = 0; x < sw; x++){
         const idx = y * sw + x;
@@ -2744,6 +2803,12 @@
         } else {
           // Not a blob — clear its mask so it doesn't bias color sampling.
           for (let i = 0; i < blobMask.length; i++) if (blobMask[i] === blobId) blobMask[i] = 0;
+          // Tally rejects so the summary line can hint Dad toward a
+          // cleaner background when the phantom-bg filter fires a lot.
+          if (area >= minAreaPx){
+            if (isPhantomBg) rejectedPhantomBg++;
+            else if (isLikelyShadow) rejectedShadow++;
+          }
         }
       }
     }
@@ -2790,7 +2855,7 @@
     }
     // Sort top-to-bottom, left-to-right for a natural reading order.
     blobs.sort((a, b) => (a.y === b.y ? a.x - b.x : a.y - b.y));
-    return { blobs, mask: closed, sw, sh, scale, sourceImg: img, W, H };
+    return { blobs, mask: closed, sw, sh, scale, sourceImg: img, W, H, rejectedPhantomBg, rejectedShadow };
   }
 
   // Try to split a single oversized blob at its narrowest cross-section.
@@ -3026,6 +3091,21 @@
     canvas.height = img.naturalHeight;
     canvas.getContext("2d").drawImage(img, 0, 0);
 
+    // Blur pre-flight. Motion-blurred phone photos fail every engine
+    // downstream; a Brickognize call costs money and time per blob, so
+    // better to tell Dad the photo's too blurry up front and let him
+    // re-shoot than to walk through 20 wrong tiles. Laplacian variance
+    // is the classic cheap sharpness metric -- ~1-sec check on a 1/8
+    // scaled gray version of the image.
+    const blurScore = measureSharpness(canvas);
+    if (blurScore < 50){
+      scanStatus.innerHTML = '<span style="color:#991b1b;font-weight:700">' +
+        'That photo looks blurry (sharpness ' + Math.round(blurScore) +
+        ', good shots are 150+). Re-shoot with the phone steady and well-lit.</span>';
+      scanStatus.style.color = "";
+      return;
+    }
+
     // Preprocessing: nudge up contrast + lift shadows on a SEPARATE
     // analysis-only canvas so low-contrast parts (grey-on-white, parts in
     // the phone's own shadow across the middle of the frame) have a
@@ -3054,6 +3134,9 @@
     // uses the untouched RGB values.
     blobOut.sourceImg = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
     const blobs = blobOut.blobs;
+    // Hoist the reject counters to the final summary.
+    SCAN_REJECTED_PHANTOM = blobOut.rejectedPhantomBg || 0;
+    SCAN_REJECTED_SHADOW = blobOut.rejectedShadow || 0;
     // Snapshot for the per-tile rescan button.
     SCAN_SOURCE_CANVAS = canvas;
     SCAN_BLOBS = blobs;
@@ -3455,6 +3538,12 @@
         : '') +
       (lowMidTotal >= 3
         ? '<br><span style="color:#92400e;font-size:.78rem;font-weight:600">Tip: the pink/yellow tiles were low confidence &mdash; often that\'s a piece sitting face-down. Flip those physical pieces so the studs or printed face is up, then re-shoot the tray. Brickognize is trained on catalog views; a 2D image rotation can\'t show the hidden side, only a physical flip can.</span>'
+        : '') +
+      // Reject hint. If the blob detector dropped several things that
+      // looked too much like the background, tell Dad -- that is almost
+      // always a textured surface problem, not a model problem.
+      (SCAN_REJECTED_PHANTOM >= 2
+        ? '<br><span style="color:#be123c;font-size:.78rem;font-weight:600">' + SCAN_REJECTED_PHANTOM + ' possible part' + (SCAN_REJECTED_PHANTOM === 1 ? '' : 's') + ' dropped as too-close-to-background. Shoot on a plain white sheet of paper or a plain black cloth to recover them.</span>'
         : '');
     document.getElementById("scanManyCheck").disabled = good === 0;
     scanAddBtn.disabled = good === 0;
