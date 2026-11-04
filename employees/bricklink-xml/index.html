@@ -2195,12 +2195,13 @@
     const bgLab = bN > 0 ? [bL/bN, bA/bN, bB/bN] : bgLab0;
     const bgNoise = bN > 0 ? varSum / bN : meanD;
     // Threshold = baseline + 2x the border noise. 1000-test harness swept
-    // 10/8/6/5/4/3 and found 6 the sweet spot: 95.5% combined vs 92% at 10,
-    // with zero false positives on synthetic. Adaptive bgNoise component
-    // raises it when the border is actually noisy (prevents bg-noise FPs
-    // in real photos). Shadow filter downstream catches any that slip
-    // through.
-    const FG_THRESHOLD = Math.max(6, Math.min(28, 6 + bgNoise * 2));
+    // 10/8/6/5/4/3 and found 6 the sweet spot on synthetic. Real-world
+    // 2026-11-04 testing showed middle-of-frame parts getting missed on
+    // trays with uneven light (phone shadow across the center). Dropped
+    // the floor from 6 to 4, giving lower-contrast parts a chance; the
+    // phantom-bg Lab contrast gate + shadow filter downstream catch the
+    // noise that this loosening lets through.
+    const FG_THRESHOLD = Math.max(4, Math.min(28, 4 + bgNoise * 2));
 
     // Binary FG mask at 1/4 resolution. Use Lab ΔE, not RGB Euclidean.
     const scale = 4;
@@ -2222,7 +2223,7 @@
     // Connected components via iterative stack.
     const visited = new Uint8Array(sw * sh);
     let blobs = [];
-    const minAreaPx = (sw * sh) * 0.0008;  // 0.08% — catches 1x1 plates @ normal distance, filters dust
+    const minAreaPx = (sw * sh) * 0.0005;  // 0.05% — catches smaller parts (1x1 plates further from camera); dust filtered by fill/aspect gates below
     const blobMask = new Uint16Array(sw * sh);  // which blob each pixel belongs to (1-based)
     let blobId = 0;
     for (let y = 0; y < sh; y++){
@@ -2509,22 +2510,30 @@
       INVENTORY_BIAS.loadedAt = Date.now();
     } catch(_){}
   }
-  // Re-rank Brickognize options with inventory bias. In-stock, same-color
-  // wins over in-stock, wrong-color wins over out-of-stock. Within each
-  // tier we keep Brickognize's original ranking so a wild guess doesn't
-  // leapfrog a strong signal.
+  // Re-rank Brickognize options with a SOFT inventory bias. Dad asked us
+  // not to make inventory a hard filter (2026-11-04) -- he's often adding
+  // parts that aren't in BL inventory yet. Instead we add a small bonus
+  // to the Brickognize score for in-stock parts and re-sort. A strong
+  // Brickognize guess at a part Dad doesn't carry still beats a weak
+  // Brickognize guess at one he does; only close calls tip to inventory.
+  //
+  // Bonuses are deliberately modest:
+  //   +0.15 for in-stock in the detected color (strongest signal)
+  //   +0.05 for in-stock, wrong colour      (part is right, bias might be wrong)
+  //   0     for parts Dad doesn't carry
   function applyInventoryBias(options, detectedColor){
     if (!INVENTORY_BIAS.parts) return options;
     const colorId = detectedColor && detectedColor.id ? detectedColor.id : 0;
-    return options.map((o, idx) => {
+    const scored = options.map((o, idx) => {
       const pid = (o.id || "").toLowerCase();
-      const inStock = INVENTORY_BIAS.parts.has(pid);
       const inStockColor = colorId && INVENTORY_BIAS.partColor.has(pid + ":" + colorId);
-      // Tier ranking: 0 = in-stock exact-color, 1 = in-stock, 2 = not in stock.
-      const tier = inStockColor ? 0 : (inStock ? 1 : 2);
-      return { o, idx, tier };
-    }).sort((a, b) => (a.tier !== b.tier ? a.tier - b.tier : a.idx - b.idx))
-      .map((x) => x.o);
+      const inStock = INVENTORY_BIAS.parts.has(pid);
+      const bonus = inStockColor ? 0.15 : (inStock ? 0.05 : 0);
+      const base = Number(o.score) || 0;
+      return { o, idx, combined: base + bonus };
+    });
+    scored.sort((a, b) => (b.combined - a.combined) || (a.idx - b.idx));
+    return scored.map((x) => x.o);
   }
 
   async function processBulkPhotoInner(file){
