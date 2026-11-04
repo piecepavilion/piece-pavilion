@@ -1749,6 +1749,38 @@
     if (defCond && !defCond.value) defCond.value = "N";
     openCamera("many");
   });
+
+  // Tile interactions — ONCE at module scope so repeat scans don't stack
+  // listeners (each click would otherwise cycle N times after N scans).
+  scanGridEl.addEventListener("click", (ev) => {
+    const tileEl = ev.target.closest("[data-i]");
+    if (!tileEl) return;
+    if (ev.target.classList.contains("sc-manual")) return;
+    const i = parseInt(tileEl.dataset.i, 10);
+    const r = SCAN_RESULTS[i];
+    if (!r || !r.options || r.options.length < 2) return;
+    r.optIdx = (r.optIdx + 1) % r.options.length;
+    const o = r.options[r.optIdx];
+    r.id = o.id; r.name = o.name; r.score = o.score;
+    r.status = "ok";
+    renderScanTile(i);
+  });
+  scanGridEl.addEventListener("input", (ev) => {
+    if (!ev.target.classList.contains("sc-manual")) return;
+    const tileEl = ev.target.closest("[data-i]");
+    const i = parseInt(tileEl.dataset.i, 10);
+    const v = (ev.target.value || "").trim();
+    if (v){
+      SCAN_RESULTS[i] = { ...(SCAN_RESULTS[i] || {}), idx: i, status: "ok", id: v, name: "(manual)", score: 1, options: SCAN_RESULTS[i].options || [], optIdx: SCAN_RESULTS[i].optIdx || 0, manual: true };
+      tileEl.style.borderColor = "#0ea5e9";
+    }
+    const nCells = SCAN_RESULTS.length;
+    const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
+    scanSummary.textContent = good + " of " + nCells + " ready. Click any tile to try the next guess.";
+    scanAddBtn.disabled = good === 0;
+    const checkBtn = document.getElementById("scanManyCheck");
+    if (checkBtn) checkBtn.disabled = good === 0;
+  });
   document.getElementById("scanManyClose").addEventListener("click", () => {
     scanOverlay.style.display = "none";
   });
@@ -2042,6 +2074,13 @@
     scanStatus.textContent = "Analyzing photo...";
     scanSummary.textContent = "";
     scanAddBtn.disabled = true;
+    document.getElementById("scanManyCheck").disabled = true;
+    // Clear the Check & group preview — stale data from a prior scan would
+    // confuse Dad if left visible.
+    const prevBox = document.getElementById("scanCheckPreview");
+    const prevEl = document.getElementById("scanCheckRows");
+    if (prevBox) prevBox.style.display = "none";
+    if (prevEl) prevEl.innerHTML = "";
     SCAN_RESULTS = [];
 
     // Load the image into a canvas so we can analyze it.
@@ -2161,12 +2200,24 @@
             options.unshift(v);
           }
 
-          // Color reconciliation: use Brickognize's top color when our pixel
-          // match is low-confidence (no detected color, or our match is very
-          // far from the sampled RGB). Otherwise use ours — pixel-based
-          // color beats a trained ID guess when the pixel is reliable.
+          // Color reconciliation. Prefer our pixel-based pick when the
+          // matched BL color is perceptually close to the sampled RGB
+          // (ΔE < 25). Otherwise defer to Brickognize's color guess, which
+          // is trained on the part image itself and handles tricky lighting
+          // or printed parts better.
           let finalColor = detectedColor;
-          if (bgColors.length && (!finalColor || !finalColor._sampledRgb)){
+          const pixelOffThreshold = 25;  // ΔE*ab
+          let pixelFarOff = false;
+          if (detectedColor && detectedColor._sampledRgb){
+            const sampledLab = rgb2lab(
+              detectedColor._sampledRgb[0],
+              detectedColor._sampledRgb[1],
+              detectedColor._sampledRgb[2]
+            );
+            const matchLab = rgb2lab(detectedColor.r, detectedColor.g, detectedColor.b);
+            if (labDist(sampledLab, matchLab) > pixelOffThreshold) pixelFarOff = true;
+          }
+          if (bgColors.length && (!finalColor || pixelFarOff)){
             const bgPick = bgColors[0];
             const match = Object.values(colorMap).find((c) =>
               String(c.id) === String(bgPick.id) ||
@@ -2193,35 +2244,6 @@
         scanStatus.textContent = done + "/" + nCells + " scanned" + (errors ? " (" + errors + " failed)" : "");
       }
     }
-    // Click a tile to cycle through the top-5 Brickognize candidates for
-    // that cell. Manual text input overrides everything.
-    scanGridEl.addEventListener("click", (ev) => {
-      const tileEl = ev.target.closest("[data-i]");
-      if (!tileEl) return;
-      if (ev.target.classList.contains("sc-manual")) return;
-      const i = parseInt(tileEl.dataset.i, 10);
-      const r = SCAN_RESULTS[i];
-      if (!r || !r.options || r.options.length < 2) return;
-      r.optIdx = (r.optIdx + 1) % r.options.length;
-      const o = r.options[r.optIdx];
-      r.id = o.id; r.name = o.name; r.score = o.score;
-      r.status = "ok";
-      renderScanTile(i);
-    });
-    scanGridEl.addEventListener("input", (ev) => {
-      if (!ev.target.classList.contains("sc-manual")) return;
-      const tileEl = ev.target.closest("[data-i]");
-      const i = parseInt(tileEl.dataset.i, 10);
-      const v = (ev.target.value || "").trim();
-      if (v){
-        SCAN_RESULTS[i] = { ...(SCAN_RESULTS[i] || {}), idx: i, status: "ok", id: v, name: "(manual)", score: 1, options: SCAN_RESULTS[i].options || [], optIdx: SCAN_RESULTS[i].optIdx || 0, manual: true };
-        tileEl.style.borderColor = "#0ea5e9";
-      }
-      const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
-      scanSummary.textContent = good + " of " + nCells + " ready. Click any tile to try the next guess.";
-      scanAddBtn.disabled = good === 0;
-    });
-
     const workers = Array.from({length: Math.min(6, nCells)}, () => worker());
     await Promise.all(workers);
 
@@ -2271,8 +2293,13 @@
     return Array.from(groups.values());
   }
 
+  // Rows snapshot used when the preview was rendered — the Add handler
+  // filters this exact list by checkbox state so stale indices can't
+  // re-key against a fresh buildGroupedRows() with different group order.
+  let CHECK_ROWS_SNAPSHOT = [];
   document.getElementById("scanManyCheck").addEventListener("click", () => {
     const rows = buildGroupedRows();
+    CHECK_ROWS_SNAPSHOT = rows;
     const box = document.getElementById("scanCheckPreview");
     const el = document.getElementById("scanCheckRows");
     if (!rows.length){ box.style.display = "none"; return; }
@@ -2330,15 +2357,17 @@
 
   scanAddBtn.addEventListener("click", () => {
     snapshotGrid();  // make it undoable
-    let rows = buildGroupedRows();
-    if (!rows.length) return;
-    // Honor the keep/drop checkboxes in the Check preview — any rIdx whose
-    // chk-keep is unchecked is dropped from the batch.
-    const unchecked = Array.from(document.querySelectorAll(".chk-keep"))
-      .filter((cb) => !cb.checked)
-      .map((cb) => parseInt(cb.dataset.r, 10));
-    if (unchecked.length){
-      rows = rows.filter((_, i) => !unchecked.includes(i));
+    // If the Check preview was rendered, use its snapshot so indices and
+    // checkbox state line up. Otherwise build fresh.
+    const checkboxes = Array.from(document.querySelectorAll(".chk-keep"));
+    let rows;
+    if (checkboxes.length && CHECK_ROWS_SNAPSHOT.length){
+      const keepIdx = new Set(
+        checkboxes.filter((cb) => cb.checked).map((cb) => parseInt(cb.dataset.r, 10))
+      );
+      rows = CHECK_ROWS_SNAPSHOT.filter((_, i) => keepIdx.has(i));
+    } else {
+      rows = buildGroupedRows();
     }
     if (!rows.length){
       gridMsg("err", "Nothing to add — all rows unchecked.");
