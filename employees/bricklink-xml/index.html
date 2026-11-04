@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v19-top3" />
+  <meta name="pp-build" content="v2026-11-04-vision-v20-browserclip" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v19</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v20</span>
   </div>
 
   <div class="wrap">
@@ -2015,6 +2015,80 @@
   const scanAddBtn  = document.getElementById("scanManyAddAll");
   let SCAN_RESULTS = [];
 
+  // ==================== BROWSER-SIDE CLIP (Phase A) ====================
+  // Cloudflare pulled @cf/openai/clip-vit-base-patch32 from Workers AI in
+  // Oct/Nov 2026, which killed the original /api/colors/match flow that
+  // ran CLIP on the edge. Phase A of the custom-vision rebuild moves CLIP
+  // into the browser via Xenova's ONNX export of CLIP ViT-B/32. The
+  // worker still owns the nearest-neighbor search against the KV catalog;
+  // we just hand it the 512-d vector instead of the raw image.
+  //
+  // Catalog in KV is 5,028 rotation-augmented vectors (1,257 BrickLink
+  // catalog images x 4 rotations), embedded with open_clip
+  // ViT-B-32/openai + force_quick_gelu=True to match Xenova's export.
+  //
+  // Model is lazy-loaded on first scan (~90 MB cached in IndexedDB) and
+  // reused for every blob after. Inference is ~400ms per blob on a
+  // modern iPad.
+  const PP_CLIP = {
+    loading: false,
+    loaded: false,
+    processor: null,
+    model: null,
+    error: null,
+    onReady: null,
+  };
+  async function ensurePPClipReady(){
+    if (PP_CLIP.loaded) return true;
+    if (PP_CLIP.error) return false;
+    if (PP_CLIP.loading) {
+      await new Promise((resolve) => { PP_CLIP.onReady = resolve; });
+      return PP_CLIP.loaded;
+    }
+    PP_CLIP.loading = true;
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
+      const { AutoProcessor, CLIPVisionModelWithProjection, env } = mod;
+      // Cache model files in IndexedDB so a repeat scan next week doesn't
+      // re-download 90 MB.
+      env.allowLocalModels = false;
+      env.useBrowserCache = true;
+      PP_CLIP.processor = await AutoProcessor.from_pretrained("Xenova/clip-vit-base-patch32");
+      PP_CLIP.model = await CLIPVisionModelWithProjection.from_pretrained("Xenova/clip-vit-base-patch32", {
+        quantized: true,  // ~90 MB download vs ~340 MB full precision
+      });
+      PP_CLIP.loaded = true;
+      if (PP_CLIP.onReady) PP_CLIP.onReady();
+      return true;
+    } catch (e) {
+      console.warn("PP CLIP load failed:", e);
+      PP_CLIP.error = e;
+      if (PP_CLIP.onReady) PP_CLIP.onReady();
+      return false;
+    } finally {
+      PP_CLIP.loading = false;
+    }
+  }
+  async function computePpClipEmbedding(canvas){
+    if (!PP_CLIP.loaded) {
+      const ok = await ensurePPClipReady();
+      if (!ok) return null;
+    }
+    try {
+      // transformers.js wants a raw HTMLCanvasElement or an ImageBitmap.
+      // Pass the blob's tight-crop canvas; its processor resizes to 224x224
+      // and normalises for CLIP internally.
+      const inputs = await PP_CLIP.processor(canvas);
+      const { image_embeds } = await PP_CLIP.model(inputs);
+      // image_embeds is a Tensor; extract its data array.
+      const arr = Array.from(image_embeds.data || []);
+      return arr.length ? arr : null;
+    } catch (e) {
+      console.warn("PP CLIP embed failed:", e);
+      return null;
+    }
+  }
+
   // ==================== LEARNING LAYER (v1) ====================
   // Lightweight per-user correction memory stored in localStorage. When
   // Dad fixes a wrong ID via the "or type ID" box, we save a record of
@@ -2733,31 +2807,14 @@
     // if this is still loading; applyInventoryBias is a no-op when the
     // index isn't ready yet.
     loadInventoryBias();
-    // PP catalog preflight. On modal open, check whether /api/colors/match
-    // is actually serving. Workers AI CLIP has been pulled from CF's
-    // catalog; the first blob's call would discover this on every scan.
-    // One probe here (sends an empty form, expects a 400 or 503 based on
-    // the server's state) lets us skip all per-blob attempts up front.
-    if (!window.PP_MATCH_DISABLED && !window.PP_MATCH_CHECKED) {
-      window.PP_MATCH_CHECKED = true;
-      (async () => {
-        try {
-          // 1x1 transparent PNG -- enough to let the server try its
-          // Workers AI CLIP call and return 503 if the model is gone.
-          const PX1 = atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
-          const bytes = new Uint8Array(PX1.length);
-          for (let i = 0; i < PX1.length; i++) bytes[i] = PX1.charCodeAt(i);
-          const blob = new Blob([bytes], { type: "image/png" });
-          const fd = new FormData(); fd.append("query_image", blob, "preflight.png");
-          const r = await fetch("/employees/api/colors/match", {
-            method: "POST", credentials: "include", body: fd,
-          });
-          // 503 = Workers AI CLIP missing; disable the per-blob calls.
-          // 200 = catalog + CLIP both working.
-          if (r.status === 503) window.PP_MATCH_DISABLED = true;
-        } catch(_) { window.PP_MATCH_DISABLED = true; }
-      })();
-    }
+    // Kick off browser-side CLIP load in the background. Doesn't block
+    // the scan -- individual blobs await PP_CLIP.loaded before firing
+    // their /match calls, so if the model is still downloading on first
+    // use the catalog match naturally skips for that scan.
+    ensurePPClipReady();
+    // Clear the old Workers-AI disable flag so the vector path can run
+    // even if a previous session hit the legacy 503.
+    window.PP_MATCH_DISABLED = false;
     // Clear the Check & group preview — stale data from a prior scan would
     // confuse Dad if left visible.
     const prevBox = document.getElementById("scanCheckPreview");
@@ -3024,22 +3081,29 @@
               } catch(_){}
             }
             if (!mJ){
-              const mFd = new FormData();
-              mFd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
-              const mResp = await fetch("/employees/api/colors/match?top_k=5", {
-                method: "POST", credentials: "include", body: mFd,
-              });
-              if (mResp.ok){
-                mJ = await mResp.json();
-                if (cacheKey && mJ){
-                  try { localStorage.setItem(cacheKey, JSON.stringify({ data: mJ, ts: Date.now() })); } catch(_){}
+              // Phase A: compute CLIP embedding in-browser via
+              // transformers.js, POST the raw vector as JSON. If the
+              // model hasn't finished loading on this first scan, skip
+              // the catalog match for this blob -- Brickognize + the
+              // other signals still give an answer.
+              const vec = await computePpClipEmbedding(sub);
+              if (vec && vec.length){
+                const mResp = await fetch("/employees/api/colors/match?top_k=5", {
+                  method: "POST", credentials: "include",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ vector: vec }),
+                });
+                if (mResp.ok){
+                  mJ = await mResp.json();
+                  if (cacheKey && mJ){
+                    try { localStorage.setItem(cacheKey, JSON.stringify({ data: mJ, ts: Date.now() })); } catch(_){}
+                  }
+                } else if (mResp.status >= 500){
+                  // Shouldn't happen in Phase A since we're not depending
+                  // on Workers AI anymore; but if the KV catalog is
+                  // missing or the worker errors, back off for the session.
+                  window.PP_MATCH_DISABLED = true;
                 }
-              } else if (mResp.status >= 500){
-                // The /match endpoint is reporting a server-side failure
-                // (most commonly Workers AI CLIP being unavailable). Kill
-                // further attempts this session so we don't thrash a
-                // broken endpoint on every blob.
-                window.PP_MATCH_DISABLED = true;
               }
             }
             if (mJ){
