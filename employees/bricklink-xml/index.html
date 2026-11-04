@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-blob-detect" />
+  <meta name="pp-build" content="v2026-11-04-group-check-mask" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -208,8 +208,13 @@
       </div>
       <div id="scanManyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:14px"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn ghost" id="scanManyCheck" type="button" disabled style="padding:9px 18px;font-size:.9rem" title="Group duplicates by Part + Color and preview the final rows">&#10003; Check &amp; group</button>
         <button class="btn" id="scanManyAddAll" type="button" disabled style="padding:9px 18px;font-size:.9rem">Add all to grid &rarr;</button>
         <span id="scanManySummary" style="color:var(--mid);font-size:.82rem"></span>
+      </div>
+      <div id="scanCheckPreview" style="display:none;margin-top:14px;padding:14px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px">
+        <h3 style="font-family:'Fredoka','Nunito';font-size:.95rem;margin-bottom:8px;color:#166534">Preview — this is what will go into the grid</h3>
+        <div id="scanCheckRows" style="font-family:'JetBrains Mono','Consolas',monospace;font-size:.82rem;color:var(--ink)"></div>
       </div>
     </div>
   </div>
@@ -234,7 +239,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-blob-detect</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-group-check-mask</span>
   </div>
 
   <div class="wrap">
@@ -1534,18 +1539,26 @@
   function dominantRgbFromCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const w = canvas.width, h = canvas.height;
-    const sx = Math.round(w * 0.25), sy = Math.round(h * 0.25);
-    const sw = Math.round(w * 0.5),  sh = Math.round(h * 0.5);
-    const data = ctx.getImageData(sx, sy, sw, sh).data;
+    // Estimate local background from the border (first & last row/col).
+    const edge = ctx.getImageData(0, 0, w, h).data;
+    let bR = 0, bG = 0, bB = 0, bN = 0;
+    const walk = (x, y) => { const p = (y*w + x)*4; bR+=edge[p]; bG+=edge[p+1]; bB+=edge[p+2]; bN++; };
+    for (let x = 0; x < w; x += Math.max(1, Math.floor(w/40))){ walk(x, 0); walk(x, h-1); }
+    for (let y = 0; y < h; y += Math.max(1, Math.floor(h/40))){ walk(0, y); walk(w-1, y); }
+    bR /= bN; bG /= bN; bB /= bN;
+    // Now sample the whole crop; keep only pixels far from the border bg and
+    // not near-white / near-black (shadows, specular highlights).
+    const BG_DIST_SQ = 60 * 60;
     let r = 0, g = 0, b = 0, n = 0;
-    for (let i = 0; i < data.length; i += 4){
-      const R = data[i], G = data[i+1], B = data[i+2];
-      // Skip background: near-white and near-black pixels
+    for (let i = 0; i < edge.length; i += 4){
+      const R = edge[i], G = edge[i+1], B = edge[i+2];
+      const dR = R - bR, dG = G - bG, dB = B - bB;
+      if (dR*dR + dG*dG + dB*dB < BG_DIST_SQ) continue;  // too close to background
       const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
-      if (mn > 230 || mx < 25) continue;
+      if (mn > 235 || mx < 20) continue;
       r += R; g += G; b += B; n++;
     }
-    if (!n) return null;
+    if (n < 50) return null;  // not enough foreground pixels to trust
     return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
   }
 
@@ -1835,21 +1848,71 @@
     await Promise.all(workers);
 
     const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
-    scanSummary.textContent = good + " of " + nCells + " parts identified. Click Add all to stamp them into the grid.";
+    scanSummary.textContent = good + " of " + nCells + " parts identified. Click Check & group to preview, then Add all.";
+    document.getElementById("scanManyCheck").disabled = good === 0;
     scanAddBtn.disabled = good === 0;
   }
 
-  scanAddBtn.addEventListener("click", () => {
-    snapshotGrid();  // make it undoable
-    const ok = SCAN_RESULTS.filter((r) => r && r.status === "ok");
+  // Build the grouped-rows preview. One row per unique (Part ID, Color,
+  // Condition, Remarks, Description) combo with summed quantity. Previews
+  // in the green box so Dad can sanity-check before stamping into the grid.
+  function buildGroupedRows(){
     const dcolor = (document.getElementById("defColor").value || "").trim();
-    const dqty   = (document.getElementById("defQty").value || "").trim() || "1";
-    const dprice = (document.getElementById("defPrice").value || "").trim();
+    const dqty   = parseInt((document.getElementById("defQty").value || "").trim(), 10) || 1;
     const dcond  = (document.getElementById("defCondition").value || "").trim();
+    const dprice = (document.getElementById("defPrice").value || "").trim();
     const ddesc  = (document.getElementById("defDescription").value || "").trim();
     const drem   = (document.getElementById("defRemarks").value || "").trim();
-    let addedCount = 0, autoColorCount = 0;
+    const ok = SCAN_RESULTS.filter((r) => r && r.status === "ok");
+    const groups = new Map();
     ok.forEach((r) => {
+      const colorName = r.detectedColor ? r.detectedColor.name : dcolor;
+      const key = [r.id, colorName, dcond, drem, ddesc].join("\u0001");
+      if (groups.has(key)){
+        groups.get(key).qty += dqty;
+      } else {
+        groups.set(key, {
+          itemid: r.id,
+          color: colorName,
+          qty: dqty,
+          price: dprice,
+          condition: dcond,
+          description: ddesc,
+          remarks: drem,
+          name: r.name || "",
+        });
+      }
+    });
+    return Array.from(groups.values());
+  }
+
+  document.getElementById("scanManyCheck").addEventListener("click", () => {
+    const rows = buildGroupedRows();
+    const box = document.getElementById("scanCheckPreview");
+    const el = document.getElementById("scanCheckRows");
+    if (!rows.length){ box.style.display = "none"; return; }
+    el.innerHTML = rows.map((r) =>
+      '<div style="padding:4px 0;border-bottom:1px dashed #86efac">' +
+        '<strong style="color:var(--ink)">' + esc(r.itemid) + '</strong>' +
+        ' &middot; ' + esc(r.color || "(no color)") +
+        ' &middot; qty ' + r.qty +
+        (r.price ? ' @ $' + r.price : ' @ (auto-price)') +
+        ' &middot; ' + esc(r.condition || "(set condition in template)") +
+        (r.remarks ? ' &middot; ' + esc(r.remarks) : "") +
+      '</div>'
+    ).join("");
+    box.style.display = "block";
+    scanSummary.textContent = rows.length + " row" + (rows.length===1?"":"s") + " ready to add.";
+  });
+
+  function esc(s){ return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+  scanAddBtn.addEventListener("click", () => {
+    snapshotGrid();  // make it undoable
+    const rows = buildGroupedRows();
+    if (!rows.length) return;
+    let addedCount = 0;
+    rows.forEach((r) => {
       while (GRID_BODY.children.length < FILL_ROW_STEP + 1) addRows(1);
       FILL_ROW_STEP++;
       const tr = GRID_BODY.children[FILL_ROW_STEP - 1];
@@ -1857,16 +1920,13 @@
         const el = tr.querySelector('[data-k="'+k+'"]');
         if (el && v != null && v !== "") el.value = String(v);
       };
-      // Color priority: detected from photo > template default.
-      let rowColor = dcolor;
-      if (r.detectedColor){ rowColor = r.detectedColor.name; autoColorCount++; }
-      set("ITEMID", r.id);
-      set("COLOR", rowColor);
-      set("QTY", dqty);
-      set("PRICE", dprice);
-      set("CONDITION", dcond);
-      set("DESCRIPTION", ddesc);
-      set("REMARKS", drem);
+      set("ITEMID", r.itemid);
+      set("COLOR", r.color);
+      set("QTY", r.qty);
+      set("PRICE", r.price);
+      set("CONDITION", r.condition);
+      set("DESCRIPTION", r.description);
+      set("REMARKS", r.remarks);
       flagRow(tr);
       autoPriceRow(tr);
       addedCount++;
@@ -1875,10 +1935,7 @@
     updateFillButtonLabel();
     recountGrid(); saveGrid();
     scanOverlay.style.display = "none";
-    const msg = "Added " + addedCount + " row" + (addedCount === 1 ? "" : "s") +
-      (autoColorCount ? " — " + autoColorCount + " got colors from the photo" : "") +
-      ". Auto-pricing in the background.";
-    gridMsg("ok", msg);
+    gridMsg("ok", "Added " + addedCount + " grouped row" + (addedCount === 1 ? "" : "s") + ". Auto-pricing in the background.");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4500);
   });
 
