@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-scan-many" />
+  <meta name="pp-build" content="v2026-11-04-cam" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -167,6 +167,28 @@
 </head>
 <body>
 
+  <!-- ===== LIVE CAMERA: used for both Scan part and Scan many ===== -->
+  <div id="camOverlay" style="display:none;position:fixed;inset:0;background:rgba(21,21,31,.9);z-index:110;align-items:center;justify-content:center;padding:14px">
+    <div style="background:#fff;border-radius:14px;max-width:720px;width:100%;max-height:92vh;overflow-y:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <h2 id="camTitle" style="font-family:'Fredoka','Nunito';font-size:1.15rem;flex:1">&#128247; Take a photo</h2>
+        <button id="camClose" type="button" style="background:transparent;border:none;font-size:1.6rem;cursor:pointer;color:var(--mid)">&times;</button>
+      </div>
+      <div style="background:#000;border-radius:10px;overflow:hidden;position:relative;aspect-ratio:4/3;margin-bottom:12px">
+        <video id="camVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+        <div id="camError" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#fff;padding:20px;text-align:center;font-size:.9rem;background:rgba(0,0,0,.7)"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="camShoot" type="button" style="padding:10px 22px;font-size:1rem">&#9673; Take photo</button>
+        <label class="btn ghost" style="padding:9px 18px;font-size:.9rem;cursor:pointer">
+          Upload file instead
+          <input type="file" id="camFileFallback" accept="image/*" capture="environment" style="display:none">
+        </label>
+        <span id="camStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace;flex:1"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== SCAN MANY: bulk-scan tray of parts ===== -->
   <div id="scanManyOverlay" style="display:none;position:fixed;inset:0;background:rgba(21,21,31,.75);z-index:100;align-items:center;justify-content:center;padding:14px">
     <div style="background:#fff;border-radius:14px;max-width:960px;width:100%;max-height:92vh;overflow-y:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
@@ -180,11 +202,7 @@
       <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px">
         <label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem">Rows: <input type="number" id="scanRows" value="4" min="1" max="20" style="width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-weight:700"></label>
         <label style="display:flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem">Cols: <input type="number" id="scanCols" value="5" min="1" max="20" style="width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-weight:700"></label>
-        <label class="btn" style="padding:9px 18px;font-size:.9rem;cursor:pointer">
-          Choose photo
-          <input type="file" id="scanManyFile" accept="image/*" capture="environment" style="display:none">
-        </label>
-        <span id="scanManyStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace;flex:1"></span>
+        <span id="scanManyStatus" style="color:var(--mid);font-size:.82rem;font-family:'JetBrains Mono','Consolas',monospace;flex:1">Set rows/cols above, then Take Photo opens.</span>
       </div>
       <div id="scanManyGrid" style="display:grid;gap:8px;margin-bottom:14px"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -214,7 +232,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-scan-many</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-cam</span>
   </div>
 
   <div class="wrap">
@@ -282,10 +300,7 @@
           <div class="d-actions">
             <button class="btn ghost" id="applyDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem">Fill row 1</button>
             <button class="btn ghost" id="priceAvgBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Overwrite every row's Price with its BrickLink 6-month average sold price">Price at BL 6-mo avg</button>
-            <label class="btn ghost" style="padding:7px 14px;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px" title="Take or upload a photo of a part — Brickognize AI identifies it and fills in the Part ID">
-              &#128247; Scan part
-              <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none" />
-            </label>
+            <button class="btn ghost" id="scanOneBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Open webcam (or camera on iPad) — take a photo of one part and auto-fill the Part ID">&#128247; Scan part</button>
             <button class="btn ghost" id="scanBulkBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="One photo of a tray of parts laid out in a grid — identifies them all and fills rows">&#128247; Scan many</button>
             <button class="btn ghost" id="clearDefaultsBtn" type="button" style="padding:7px 14px;font-size:.85rem" title="Empty every field in the template">Clear template</button>
           </div>
@@ -1353,6 +1368,93 @@
   // Take/upload a photo of one part → send to Brickognize via Worker → drop
   // the predicted part ID into the template's Part ID cell. The existing
   // auto-price + Fill-row-N flow handles everything after that.
+  // ========== LIVE CAMERA (webcam / iPad camera) ==========
+  const camOverlay = document.getElementById("camOverlay");
+  const camVideo   = document.getElementById("camVideo");
+  const camError   = document.getElementById("camError");
+  const camStatus  = document.getElementById("camStatus");
+  const camShoot   = document.getElementById("camShoot");
+  const camTitle   = document.getElementById("camTitle");
+  let CAM_STREAM = null;
+  let CAM_MODE = "one";  // "one" or "many"
+
+  async function openCamera(mode){
+    CAM_MODE = mode;
+    camTitle.textContent = mode === "many" ? "📷 Take a photo of the tray" : "📷 Take a photo of one part";
+    camStatus.textContent = "";
+    camError.style.display = "none";
+    camOverlay.style.display = "flex";
+    try {
+      CAM_STREAM = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1440 } },
+        audio: false,
+      });
+      camVideo.srcObject = CAM_STREAM;
+    } catch(e){
+      // No permission / no camera / HTTPS required → show fallback
+      camError.style.display = "flex";
+      camError.textContent = "Camera unavailable — use 'Upload file instead' below. (" + String(e.name || e) + ")";
+    }
+  }
+  function closeCamera(){
+    if (CAM_STREAM){ CAM_STREAM.getTracks().forEach((t) => t.stop()); CAM_STREAM = null; }
+    camVideo.srcObject = null;
+    camOverlay.style.display = "none";
+  }
+  document.getElementById("camClose").addEventListener("click", closeCamera);
+
+  async function captureFromVideo(){
+    if (!CAM_STREAM) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = camVideo.videoWidth;
+    canvas.height = camVideo.videoHeight;
+    canvas.getContext("2d").drawImage(camVideo, 0, 0);
+    return await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9));
+  }
+
+  camShoot.addEventListener("click", async () => {
+    camStatus.textContent = "Capturing...";
+    const blob = await captureFromVideo();
+    if (!blob){ camStatus.textContent = "Capture failed — camera not ready."; return; }
+    closeCamera();
+    if (CAM_MODE === "many") await processBulkPhoto(blob);
+    else await processSinglePhoto(blob);
+  });
+  document.getElementById("camFileFallback").addEventListener("change", async (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    closeCamera();
+    if (CAM_MODE === "many") await processBulkPhoto(f);
+    else await processSinglePhoto(f);
+    ev.target.value = "";
+  });
+
+  // Hook up the two buttons.
+  document.getElementById("scanOneBtn").addEventListener("click", () => openCamera("one"));
+
+  async function processSinglePhoto(fileOrBlob){
+    const dbg = document.getElementById("priceDebug");
+    if (dbg) dbg.textContent = "scan: uploading " + Math.round(fileOrBlob.size/1024) + " KB to Brickognize...";
+    const fd = new FormData();
+    fd.append("query_image", fileOrBlob, "scan.jpg");
+    try {
+      const r = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
+      const text = await r.text();
+      let j = null;
+      try { j = JSON.parse(text); } catch(_){}
+      if (!r.ok || !j || !j.top){
+        if (dbg) dbg.textContent = "scan: no part recognized (HTTP " + r.status + "). " + (j && j.error || text.slice(0, 100));
+        return;
+      }
+      const top = j.top;
+      document.getElementById("defItemId").value = top.id;
+      if (dbg) dbg.textContent = "scan: " + top.id + " — " + top.name + " (" + Math.round(top.score * 100) + "% confidence)";
+      try { localStorage.setItem("pp_bl_defItemId", top.id); } catch(e){}
+    } catch (e) {
+      if (dbg) dbg.textContent = "scan: network error — " + String(e);
+    }
+  }
+
   // ========== BULK SCAN (grid of parts in one photo) ==========
   const scanOverlay = document.getElementById("scanManyOverlay");
   const scanGridEl  = document.getElementById("scanManyGrid");
@@ -1361,21 +1463,18 @@
   const scanAddBtn  = document.getElementById("scanManyAddAll");
   let SCAN_RESULTS = [];
 
-  document.getElementById("scanBulkBtn").addEventListener("click", () => {
+  document.getElementById("scanBulkBtn").addEventListener("click", () => openCamera("many"));
+  document.getElementById("scanManyClose").addEventListener("click", () => {
+    scanOverlay.style.display = "none";
+  });
+
+  async function processBulkPhoto(file){
     scanOverlay.style.display = "flex";
     scanGridEl.innerHTML = "";
     scanStatus.textContent = "";
     scanSummary.textContent = "";
     scanAddBtn.disabled = true;
     SCAN_RESULTS = [];
-  });
-  document.getElementById("scanManyClose").addEventListener("click", () => {
-    scanOverlay.style.display = "none";
-  });
-
-  document.getElementById("scanManyFile").addEventListener("change", async (ev) => {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
     const rows = Math.max(1, Math.min(20, parseInt(document.getElementById("scanRows").value, 10) || 4));
     const cols = Math.max(1, Math.min(20, parseInt(document.getElementById("scanCols").value, 10) || 5));
     const nCells = rows * cols;
@@ -1459,7 +1558,7 @@
     const good = SCAN_RESULTS.filter((r) => r && r.status === "ok").length;
     scanSummary.textContent = good + " of " + nCells + " parts identified. Click Add all to stamp them into the grid.";
     scanAddBtn.disabled = good === 0;
-  });
+  }
 
   scanAddBtn.addEventListener("click", () => {
     snapshotGrid();  // make it undoable
@@ -1498,32 +1597,7 @@
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
   });
 
-  document.getElementById("scanFile").addEventListener("change", async (ev) => {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
-    const dbg = document.getElementById("priceDebug");
-    if (dbg) dbg.textContent = "scan: uploading " + Math.round(file.size/1024) + " KB to Brickognize...";
-    const fd = new FormData();
-    fd.append("query_image", file, file.name || "scan.jpg");
-    try {
-      const r = await fetch("/employees/api/colors/scan", { method: "POST", body: fd, credentials: "include" });
-      const text = await r.text();
-      let j = null;
-      try { j = JSON.parse(text); } catch(_){}
-      if (!r.ok || !j || !j.top){
-        if (dbg) dbg.textContent = "scan: no part recognized (HTTP " + r.status + "). " + (j && j.error || text.slice(0, 100));
-        return;
-      }
-      const top = j.top;
-      document.getElementById("defItemId").value = top.id;
-      if (dbg) dbg.textContent = "scan: " + top.id + " — " + top.name + " (" + Math.round(top.score * 100) + "% confidence)";
-      try { localStorage.setItem("pp_bl_defItemId", top.id); } catch(e){}
-    } catch (e) {
-      if (dbg) dbg.textContent = "scan: network error — " + String(e);
-    } finally {
-      ev.target.value = "";  // let the same file be re-picked next time
-    }
-  });
+  // (Old scanFile handler replaced by live-camera processSinglePhoto.)
   document.getElementById("clearDefaultsBtn").addEventListener("click", () => {
     ["defItemId","defColor","defQty","defPrice","defCondition","defDescription","defRemarks"].forEach((id) => {
       const el = document.getElementById(id);
