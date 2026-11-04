@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v5-nogroupmerge" />
+  <meta name="pp-build" content="v2026-11-04-vision-v6-phantombg" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -203,7 +203,7 @@
         <summary style="cursor:pointer;font-weight:700;color:#92400e;font-size:.88rem;font-family:'Fredoka','Nunito'">&#128161; Tips for better scans (open if accuracy is low)</summary>
         <ul style="margin:10px 0 2px 18px;padding:0;color:#78350f;font-size:.82rem;line-height:1.55">
           <li><strong>Spread parts out.</strong> At least a finger-width of gap between each piece. Parts that touch get merged into one blob.</li>
-          <li><strong>Plain, high-contrast background.</strong> A plain white poster board or a plain black cloth works best. Avoid wood grain, patterns, or anything with text.</li>
+          <li><strong>Plain, high-contrast background.</strong> A plain white poster board or a plain black cloth works best. <span style="background:#fef2f2;padding:1px 4px;border-radius:3px">DO NOT shoot on carpet, rug, speckled countertop, granite, wood grain, bedding, or any textured surface.</span> The speckle pattern clusters into "phantom" blobs that look like parts to the detector.</li>
           <li><strong>Camera straight overhead.</strong> Angle the phone directly down, not tilted. Tilted shots stretch parts and break the color sampling.</li>
           <li><strong>Even lighting, no harsh shadows.</strong> Daylight from a window or a ring light. Overhead room lights that cast a shadow of the phone onto the parts hurt a lot.</li>
           <li><strong>15&ndash;25 parts per photo</strong>, not more. More parts means smaller parts in the frame, means weaker ID. Two scans of 20 beats one scan of 40.</li>
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v5</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v6</span>
   </div>
 
   <div class="wrap">
@@ -2110,6 +2110,15 @@
         blobId++;
         const stack = [idx];
         let minX = x, maxX = x, minY = y, maxY = y, area = 0;
+        // Accumulate the blob's mean Lab for a phantom-rejection check:
+        // a speckled or carpet background will generate low-contrast
+        // clusters that pass the FG threshold but whose mean color is
+        // near-identical to the border background. Real LEGO parts
+        // contrast against the background by design. See the Nov 4
+        // regression where shots on speckled carpet produced blobs #5
+        // and #13 — empty background rectangles — because the local
+        // speckle happened to cluster above threshold.
+        let sumL = 0, sumA = 0, sumB2 = 0;
         while (stack.length){
           const p = stack.pop();
           if (visited[p]) continue;
@@ -2119,6 +2128,11 @@
           const px = p % sw, py = Math.floor(p / sw);
           if (px < minX) minX = px; if (px > maxX) maxX = px;
           if (py < minY) minY = py; if (py > maxY) maxY = py;
+          // Sample the ORIGINAL image's RGB at this scaled-down pixel's
+          // source position, convert to Lab for the mean.
+          const sp = ((py * scale) * W + (px * scale)) * 4;
+          const sLab = rgb2lab(img[sp], img[sp+1], img[sp+2]);
+          sumL += sLab[0]; sumA += sLab[1]; sumB2 += sLab[2];
           if (px > 0 && closed[p-1] && !visited[p-1]) stack.push(p-1);
           if (px < sw-1 && closed[p+1] && !visited[p+1]) stack.push(p+1);
           if (py > 0 && closed[p-sw] && !visited[p-sw]) stack.push(p-sw);
@@ -2137,7 +2151,18 @@
         // Reject only when BOTH signals indicate shadow/noise: very long AND
         // very sparse. Or when ultra-low fill (clear noise).
         const isLikelyShadow = (aspect > 8 && fillDensity < 0.3) || fillDensity < 0.1;
-        if (area >= minAreaPx && !isLikelyShadow){
+        // Phantom-background rejection. Compute the blob's mean Lab and
+        // compare to the border bgLab. A real part on a plain background
+        // sits ~20+ ΔE away; the noisy speckle clusters that fool FG
+        // thresholding sit <10 ΔE. We use a slightly higher cutoff than
+        // the FG threshold because a blob needs HEADROOM over bg to be
+        // credible, not just to have one pixel above threshold. If the
+        // background is heavily textured (bgNoise high) we tighten more.
+        const meanL = sumL / area, meanA = sumA / area, meanB = sumB2 / area;
+        const meanContrast = labDist([meanL, meanA, meanB], bgLab);
+        const phantomCutoff = Math.max(8, 6 + bgNoise * 1.5);
+        const isPhantomBg = meanContrast < phantomCutoff;
+        if (area >= minAreaPx && !isLikelyShadow && !isPhantomBg){
           const pad = 10;
           const bx = Math.max(0, minX * scale - pad);
           const by = Math.max(0, minY * scale - pad);
