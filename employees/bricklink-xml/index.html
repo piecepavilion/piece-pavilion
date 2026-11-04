@@ -1823,9 +1823,13 @@
     });
 
     // Combined scoring. LOWER distance is better. HIGHER bg score is better.
-    // Weight 25: bg score 1.0 is worth 25 ΔE of pixel distance. Enough to
-    // break real ties, not enough to override a clear pixel winner (gap >30).
-    const BG_WEIGHT = 25;
+    // Weight 25 default: bg score 1.0 is worth 25 ΔE of pixel distance.
+    // BOOSTED to 40 when the sampled color is nearly gray — pixel sampling
+    // is less reliable on low-saturation colors (Light Gray vs Light Bluish
+    // Gray vs Dark Tan are often within 5-10 ΔE of each other), so defer
+    // more to Brickognize's trained model.
+    const sampleIsGray = (Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2])) < 20;
+    const BG_WEIGHT = sampleIsGray ? 40 : 25;
     let best = { color: pixelTop, combined: ranked[0].dist };
     ranked.forEach((r) => {
       const idStr = String(r.color.id);
