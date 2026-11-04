@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v16-dualscan" />
+  <meta name="pp-build" content="v2026-11-04-vision-v17-nomatchfallback" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v16</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v17</span>
   </div>
 
   <div class="wrap">
@@ -2854,8 +2854,17 @@
           // Client-side cache keyed on phash: if Dad re-scans the same
           // tray (same blobs = same phashes), re-use the stored CLIP
           // response instead of re-hitting Workers AI. 24h TTL.
+          //
+          // Workers AI CLIP availability flag. Cloudflare has deprecated
+          // @cf/openai/clip-vit-base-patch32 from the current Workers AI
+          // catalog. Until browser-side CLIP (Phase 3 via transformers.js)
+          // lands, /match will error; a session-wide flag kills calls after
+          // the first failure so we don't rack up failed requests on every
+          // blob of every tray.
           let customMatched = null;
-          try {
+          if (window.PP_MATCH_DISABLED) {
+            /* skip entirely for this session */
+          } else try {
             let mJ = null;
             const cacheKey = phash ? ("pp_match_" + phash) : null;
             if (cacheKey){
@@ -2877,6 +2886,12 @@
                 if (cacheKey && mJ){
                   try { localStorage.setItem(cacheKey, JSON.stringify({ data: mJ, ts: Date.now() })); } catch(_){}
                 }
+              } else if (mResp.status >= 500){
+                // The /match endpoint is reporting a server-side failure
+                // (most commonly Workers AI CLIP being unavailable). Kill
+                // further attempts this session so we don't thrash a
+                // broken endpoint on every blob.
+                window.PP_MATCH_DISABLED = true;
               }
             }
             if (mJ){
