@@ -360,6 +360,7 @@
           <button class="btn ghost" id="undoBtn" type="button" disabled title="Revert the last action">&#8630; Undo</button>
           <button class="btn ghost" id="pasteRowsBtn" type="button">&#128203; Paste from spreadsheet</button>
           <button class="btn ghost" id="copySheetBtn" type="button" title="Copy every row with values as tab-separated text -- paste into Excel, Google Sheets, or Numbers">&#128196; Copy as spreadsheet</button>
+          <button class="btn ghost" id="downloadCsvBtn" type="button" title="Download the grid as a CSV file">&#11015; Download CSV</button>
           <button class="btn ghost" id="addRowsBtn" type="button">+ 25 more rows</button>
           <button class="btn ghost" id="clearGridBtn" type="button">Clear grid</button>
         </div>
@@ -1449,6 +1450,45 @@
     })();
   }
   document.getElementById("copySheetBtn").addEventListener("click", copyGridAsSpreadsheet);
+
+  // Download as CSV. Same columns as Copy-as-spreadsheet. Uses the CSV
+  // dialect that Excel + Google Sheets + Numbers all expect:
+  // double-quoted fields, commas between, CRLF between rows, inner
+  // double quotes escaped as "".
+  document.getElementById("downloadCsvBtn").addEventListener("click", () => {
+    const cols = ["ITEMID", "COLOR", "QTY", "PRICE", "CONDITION", "DESCRIPTION", "REMARKS"];
+    const header = ["Part ID", "Color", "Qty", "Price", "Condition", "Description", "Remarks"];
+    const csvCell = (s) => '"' + String(s || "").replace(/"/g, '""') + '"';
+    const rows = [header.map(csvCell).join(",")];
+    let kept = 0;
+    Array.from(GRID_BODY.children).forEach((tr) => {
+      const vals = cols.map((k) => {
+        const el = tr.querySelector('[data-k="' + k + '"]');
+        return el ? el.value : "";
+      });
+      if (vals.some((v) => String(v).trim())) {
+        rows.push(vals.map(csvCell).join(","));
+        kept++;
+      }
+    });
+    if (!kept) {
+      gridMsg("err", "Nothing in the grid to export.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 1800);
+      return;
+    }
+    const csv = rows.join("\r\n") + "\r\n";
+    // UTF-8 BOM so Excel on Windows reads non-ASCII (color names like
+    // "Olive Green", "Pearl Gold") as UTF-8 instead of mangling them.
+    const bomBlob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(bomBlob);
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const a = document.createElement("a");
+    a.href = url; a.download = "pp-bricklink-" + stamp + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    gridMsg("ok", "Downloaded " + kept + " row" + (kept === 1 ? "" : "s") + " as CSV.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2800);
+  });
 
   // ========== BRICKOGNIZE SCAN ==========
   // Take/upload a photo of one part → send to Brickognize via Worker → drop
