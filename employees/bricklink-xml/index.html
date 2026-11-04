@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v12-invbias" />
+  <meta name="pp-build" content="v2026-11-04-vision-v13-ppcatalog" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v12</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v13</span>
   </div>
 
   <div class="wrap">
@@ -2122,8 +2122,9 @@
     // made on a visually-similar blob. Not a Brickognize prediction this
     // round. Shown so Dad can spot when the learning layer's doing work.
     const learnedTag = r.learned ? ' <span style="background:#ede9fe;color:#5b21b6;font-size:.6rem;padding:0 4px;border-radius:3px;font-weight:700" title="Promoted from your prior corrections">LEARNED</span>' : '';
+    const ppTag = r.ppMatch ? ' <span style="background:#dbeafe;color:#1e3a8a;font-size:.6rem;padding:0 4px;border-radius:3px;font-weight:700" title="Piece Pavilion custom catalog match (CLIP embedding)">PP MATCH</span>' : '';
     tileEl.querySelector(".sc-label").innerHTML =
-      '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong>' + warning + learnedTag + ' &middot; ' + pct + '%' + altsNote +
+      '<strong style="color:var(--ink);font-family:\'Nunito\'">' + r.id + '</strong>' + warning + learnedTag + ppTag + ' &middot; ' + pct + '%' + altsNote +
       '<br><span style="font-family:\'Nunito\';color:var(--slate)">' + (r.name || "") + '</span>' +
       colorBit;
     // Load BrickLink's official reference image so Dad can eyeball
@@ -2766,6 +2767,46 @@
           // ranking too, and the subsequent cross-reference pass sees it.
           options.length = 0;
           biasedOptions.forEach((o) => options.push(o));
+
+          // Custom catalog matcher. Dad's own CLIP-embedded inventory
+          // catalog (project #2, 2026-11-04). Only fires when Brickognize
+          // is unsure OR when its top guess is outside Dad's inventory --
+          // a second opinion that's cheap to ignore when Brickognize is
+          // confident. On a confident catalog hit we promote the match
+          // to the top of options with a "PP MATCH" tag.
+          const topScoreSoFar = (options[0] && options[0].score) || 0;
+          const topId = (options[0] && options[0].id || "").toLowerCase();
+          const topInStock = INVENTORY_BIAS.parts && INVENTORY_BIAS.parts.has(topId);
+          let customMatched = null;
+          if (topScoreSoFar < 0.70 || !topInStock){
+            try {
+              const mFd = new FormData();
+              mFd.append("query_image", blobTight, "cell-" + i + "-tight.jpg");
+              const mResp = await fetch("/employees/api/colors/match?top_k=5", {
+                method: "POST", credentials: "include", body: mFd,
+              });
+              if (mResp.ok){
+                const mJ = await mResp.json();
+                const n0 = mJ && mJ.nearest && mJ.nearest[0];
+                if (n0 && n0.similarity >= 0.70){
+                  // Catalog's top-1 at a strong similarity. If it's in
+                  // Brickognize's top-5, promote it; otherwise inject it
+                  // as an alternative without displacing Brickognize's
+                  // top entirely (we still show it as the chosen but mark
+                  // it as a PP-Catalog pick so Dad can audit).
+                  const idx = options.findIndex((o) => (o.id || "").toLowerCase() === n0.item_id.toLowerCase());
+                  const promoted = { id: n0.item_id, name: "(PP catalog match)", score: n0.similarity };
+                  if (idx >= 0){
+                    const [v] = options.splice(idx, 1);
+                    options.unshift({ ...v, score: Math.max(v.score || 0, n0.similarity) });
+                  } else {
+                    options.unshift(promoted);
+                  }
+                  customMatched = n0;
+                }
+              }
+            } catch(_){ /* catalog match is a bonus; failures don't block the scan */ }
+          }
           let chosen = options[0];
           // Learning-layer lookup. If Dad has corrected a visually similar
           // blob of the same color before, promote that correction to the
@@ -2792,7 +2833,7 @@
             const blValid = partsSet && partsSet.size > 0
               ? partsSet.has((chosen.id || "").toLowerCase())
               : null;  // unknown
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid, phash, learned: !!learnedCorrection, originalBrickognizeId: learnedCorrection ? (learnedCorrection.originalId || (options[1] && options[1].id) || "") : "" };
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid, phash, learned: !!learnedCorrection, ppMatch: !!customMatched, originalBrickognizeId: learnedCorrection ? (learnedCorrection.originalId || (options[1] && options[1].id) || "") : "" };
             renderScanTile(i);
           } else {
             SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor: finalColor, phash };
@@ -2875,11 +2916,15 @@
     const low = SCAN_RESULTS.filter((r) => r && r.status === "ok" && (r.score || 0) < 0.40).length;
     const crossref = SCAN_RESULTS.filter((r) => r && r.crossRefMatched).length;
     const learned = SCAN_RESULTS.filter((r) => r && r.learned).length;
+    const ppMatched = SCAN_RESULTS.filter((r) => r && r.ppMatch).length;
     const lowMidTotal = low + mid;
     scanSummary.innerHTML = good + " of " + nCells + " identified &mdash; " +
       hi + " high, " + mid + " mid, " + low + " low confidence. Click Check &amp; group next." +
       (learned > 0
         ? '<br><span style="color:#5b21b6;font-size:.78rem;font-weight:600">' + learned + ' tile' + (learned === 1 ? '' : 's') + ' auto-corrected from your prior scans (learning layer v1).</span>'
+        : '') +
+      (ppMatched > 0
+        ? '<br><span style="color:#1e3a8a;font-size:.78rem;font-weight:600">' + ppMatched + ' tile' + (ppMatched === 1 ? '' : 's') + ' promoted via the PP custom catalog (CLIP embedding match).</span>'
         : '') +
       (crossref > 0
         ? '<br><span style="color:#065f46;font-size:.78rem;font-weight:600">' + crossref + ' tile' + (crossref === 1 ? '' : 's') + ' promoted via same-color cross-reference (upside-down matches merged with their studs-up neighbors).</span>'
