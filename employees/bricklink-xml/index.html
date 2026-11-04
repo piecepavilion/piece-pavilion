@@ -1614,14 +1614,94 @@
     return h;
   }
 
+  // k-means++ seeding: pick K centroids that are well-spread. More stable
+  // than random seeding, so repeat calls on the same blob give consistent
+  // results.
+  function kmeansPlusPlusSeeds(points, K, seed){
+    // Deterministic pseudo-random — seeded so two calls on the same blob
+    // give the same seeds.
+    let state = seed || 1;
+    const rand = () => { state = (state * 1103515245 + 12345) & 0x7fffffff; return state / 0x7fffffff; };
+    const n = points.length;
+    const first = Math.floor(rand() * n);
+    const centroids = [points[first].slice()];
+    const chosen = new Set([first]);
+    while (centroids.length < K){
+      // Compute d² from each point to its nearest existing centroid.
+      let total = 0;
+      const dd = new Float64Array(n);
+      for (let i = 0; i < n; i++){
+        if (chosen.has(i)){ dd[i] = 0; continue; }
+        let best = Infinity;
+        for (const c of centroids){
+          const d = labDist(points[i], c);
+          if (d < best) best = d;
+        }
+        dd[i] = best * best;
+        total += dd[i];
+      }
+      if (!total) break;  // all same point
+      // Weighted-random pick proportional to d².
+      let r = rand() * total, pick = -1;
+      for (let i = 0; i < n; i++){
+        r -= dd[i];
+        if (r <= 0){ pick = i; break; }
+      }
+      if (pick < 0 || chosen.has(pick)) break;
+      chosen.add(pick);
+      centroids.push(points[pick].slice());
+    }
+    return centroids;
+  }
+
+  // Run a single k-means trial with the given seeds. Returns the dominant
+  // cluster's RGB plus a fraction (how big that cluster is vs total).
+  function kmeansDominant(pxR, pxG, pxB, pxLab, centroids){
+    const K = centroids.length;
+    const assign = new Int32Array(pxR.length);
+    for (let iter = 0; iter < 15; iter++){
+      let changed = 0;
+      for (let i = 0; i < pxR.length; i++){
+        let bi = 0, bd = Infinity;
+        for (let k = 0; k < K; k++){
+          const d = labDist(pxLab[i], centroids[k]);
+          if (d < bd){ bd = d; bi = k; }
+        }
+        if (assign[i] !== bi){ assign[i] = bi; changed++; }
+      }
+      const sumL = new Float32Array(K), sumA = new Float32Array(K), sumB = new Float32Array(K), cnt = new Int32Array(K);
+      for (let i = 0; i < pxR.length; i++){
+        const k = assign[i], v = pxLab[i];
+        sumL[k] += v[0]; sumA[k] += v[1]; sumB[k] += v[2]; cnt[k]++;
+      }
+      for (let k = 0; k < K; k++){
+        if (!cnt[k]) continue;
+        centroids[k] = [sumL[k]/cnt[k], sumA[k]/cnt[k], sumB[k]/cnt[k]];
+      }
+      if (!changed) break;
+    }
+    const cnt = new Int32Array(K);
+    for (let i = 0; i < assign.length; i++) cnt[assign[i]]++;
+    let bk = 0; for (let k = 1; k < K; k++){ if (cnt[k] > cnt[bk]) bk = k; }
+    let sR = 0, sG = 0, sB = 0, n = 0;
+    for (let i = 0; i < pxR.length; i++){
+      if (assign[i] !== bk) continue;
+      sR += pxR[i]; sG += pxG[i]; sB += pxB[i]; n++;
+    }
+    if (!n) return null;
+    return {
+      rgb: [Math.round(sR/n), Math.round(sG/n), Math.round(sB/n)],
+      fraction: n / pxR.length,
+    };
+  }
+
   // Sample the dominant foreground color inside a blob's mask (NOT the
-  // bounding box). Uses k-means in Lab space (k=3) and returns the largest
-  // cluster center as RGB. This fixes printed parts (print marks + bg are
-  // small minority clusters; the base plastic color is the dominant one).
+  // bounding box). Uses k-means++ seeding for stability, runs 3 trials,
+  // picks the trial with the biggest dominant cluster (largest fraction =
+  // most "obvious" color). Also returns a confidence estimate.
   function dominantRgbInMask(sourceImg, W, blob, mask, sw, sh, scale){
     const pxR = [], pxG = [], pxB = [], pxLab = [];
     const bx0 = blob.x, by0 = blob.y, bw = blob.w, bh = blob.h;
-    // Walk every ~2nd pixel inside the bbox; keep only if mask[y/scale, x/scale] is set.
     const step = Math.max(1, Math.floor(Math.min(bw, bh) / 80));
     for (let y = by0; y < by0 + bh; y += step){
       for (let x = bx0; x < bx0 + bw; x += step){
@@ -1639,54 +1719,18 @@
     }
     if (pxR.length < 30) return null;
 
-    // k-means k=3 in Lab (10 iters). Seed with 3 well-separated samples.
     const K = Math.min(3, pxR.length);
-    const centroids = [];
-    const seen = new Set();
-    while (centroids.length < K){
-      const i = Math.floor(Math.random() * pxR.length);
-      if (seen.has(i)) continue;
-      seen.add(i);
-      centroids.push(pxLab[i].slice());
+    // 3 trials with different seeds — pick the one with the largest dominant
+    // cluster (most stable color signal).
+    const trials = [];
+    for (let s = 0; s < 3; s++){
+      const seeds = kmeansPlusPlusSeeds(pxLab, K, 17 + s * 1000003);
+      const res = kmeansDominant(pxR, pxG, pxB, pxLab, seeds);
+      if (res) trials.push(res);
     }
-    const assign = new Int32Array(pxR.length);
-    for (let iter = 0; iter < 10; iter++){
-      // assign
-      let changed = 0;
-      for (let i = 0; i < pxR.length; i++){
-        let bi = 0, bd = Infinity;
-        for (let k = 0; k < K; k++){
-          const d = labDist(pxLab[i], centroids[k]);
-          if (d < bd){ bd = d; bi = k; }
-        }
-        if (assign[i] !== bi){ assign[i] = bi; changed++; }
-      }
-      // update
-      const sumL = new Float32Array(K), sumA = new Float32Array(K), sumB = new Float32Array(K), cnt = new Int32Array(K);
-      for (let i = 0; i < pxR.length; i++){
-        const k = assign[i], v = pxLab[i];
-        sumL[k] += v[0]; sumA[k] += v[1]; sumB[k] += v[2]; cnt[k]++;
-      }
-      for (let k = 0; k < K; k++){
-        if (!cnt[k]) continue;
-        centroids[k] = [sumL[k]/cnt[k], sumA[k]/cnt[k], sumB[k]/cnt[k]];
-      }
-      if (!changed) break;
-    }
-    // Pick the biggest cluster.
-    const cnt = new Int32Array(K);
-    for (let i = 0; i < assign.length; i++) cnt[assign[i]]++;
-    let bk = 0; for (let k = 1; k < K; k++){ if (cnt[k] > cnt[bk]) bk = k; }
-    // Average the RGBs of the biggest cluster (not Lab back-conversion — we
-    // already have the originals, and the average RGB is what we want to
-    // show as a swatch).
-    let sR = 0, sG = 0, sB = 0, n = 0;
-    for (let i = 0; i < pxR.length; i++){
-      if (assign[i] !== bk) continue;
-      sR += pxR[i]; sG += pxG[i]; sB += pxB[i]; n++;
-    }
-    if (!n) return null;
-    return [Math.round(sR/n), Math.round(sG/n), Math.round(sB/n)];
+    if (!trials.length) return null;
+    trials.sort((a, b) => b.fraction - a.fraction);
+    return trials[0].rgb;
   }
 
   // Legacy single-canvas sampler (still used by the single-part scan path).
