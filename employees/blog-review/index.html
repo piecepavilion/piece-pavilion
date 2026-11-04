@@ -509,7 +509,7 @@
       btn.disabled = true; btn.textContent = 'Publishing…';
       try {
         const r = await api('POST', '/publish/' + encodeURIComponent(d.id));
-        toast('Published! ' + (r.url || ''));
+        toast('Published! Verifying ' + (r.url || '') + ' is live...');
         celebrate(d.title);
         await refreshCounts();
         state.tab = 'published';
@@ -517,10 +517,40 @@
         state.selected = d.id;
         await loadList();
         await selectItem(d.id);
+        // Post-publish 404 sweep (Dad asked for this 2026-11-04). GitHub
+        // Pages deploys the new page in 30-120s; before that the live URL
+        // 404s. Poll every 15s for up to 4 minutes, reporting a
+        // reassurance toast when it goes live. If it is still 404 after 4
+        // minutes we show a red warning so Dad knows the Pages deploy
+        // actually failed, not just slow.
+        if (r.url) {
+          verifyLive(r.url);
+        }
       } catch (e) {
         toast('Publish failed: ' + e.message, 'err');
         btn.disabled = false; btn.textContent = 'Publish to Site →';
       }
+    }
+
+    async function verifyLive(url) {
+      // Can't fetch cross-origin with HEAD and no CORS header, so we
+      // fetch no-cors and treat opaque successful responses as "live".
+      // We DO get the status for same-origin fetches, which this is
+      // (piecepavilion.com -> piecepavilion.com).
+      const deadline = Date.now() + 4 * 60 * 1000;
+      const interval = 15 * 1000;
+      while (Date.now() < deadline) {
+        try {
+          const r = await fetch(url, { method: 'GET', cache: 'no-store' });
+          if (r.status === 200) {
+            toast(url + ' is live.', 'ok');
+            return true;
+          }
+        } catch (_) { /* network blip -- retry */ }
+        await new Promise((res) => setTimeout(res, interval));
+      }
+      toast('WARNING: ' + url + ' is still 404 after 4 min. GitHub Pages deploy may have failed -- check the Actions tab.', 'err');
+      return false;
     }
 
     // ===== CELEBRATION OVERLAY =====
