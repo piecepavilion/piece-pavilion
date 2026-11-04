@@ -1823,9 +1823,8 @@
     });
 
     // Combined scoring. LOWER distance is better. HIGHER bg score is better.
-    // We convert: combined = pixelDist - 25 * bgScore.
-    // Weight 25 chosen so a bg score of 1.0 is worth 25 ΔE — enough to break
-    // real ties, not enough to override a clear pixel winner (ΔE > 30 gap).
+    // Weight 25: bg score 1.0 is worth 25 ΔE of pixel distance. Enough to
+    // break real ties, not enough to override a clear pixel winner (gap >30).
     const BG_WEIGHT = 25;
     let best = { color: pixelTop, combined: ranked[0].dist };
     ranked.forEach((r) => {
@@ -1838,6 +1837,38 @@
       }
     });
     return best.color;
+  }
+
+  // Low-level color sampler that walks the whole crop (not the mask) and
+  // returns a median-of-foreground RGB. Used as a 2nd opinion when
+  // dominantRgbInMask returned null or looks suspicious.
+  function medianRgbInCrop(sourceCanvas){
+    const ctx = sourceCanvas.getContext("2d");
+    const data = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
+    const vals = [[], [], []];
+    // Estimate bg from border
+    const W = sourceCanvas.width, H = sourceCanvas.height;
+    let bL = 0, bA = 0, bB = 0, bN = 0;
+    const walk = (x, y) => {
+      const p = (y*W+x)*4;
+      const lab = rgb2lab(data[p], data[p+1], data[p+2]);
+      bL += lab[0]; bA += lab[1]; bB += lab[2]; bN++;
+    };
+    const step = Math.max(1, Math.floor(Math.min(W,H)/40));
+    for (let x = 0; x < W; x += step){ walk(x, 0); walk(x, H-1); }
+    for (let y = 0; y < H; y += step){ walk(0, y); walk(W-1, y); }
+    const bgLab = [bL/bN, bA/bN, bB/bN];
+    for (let i = 0; i < data.length; i += 4){
+      const R = data[i], G = data[i+1], B = data[i+2];
+      if (labDist(rgb2lab(R, G, B), bgLab) < 15) continue;  // skip near-bg
+      const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+      if (mn > 240 || mx < 15) continue;
+      vals[0].push(R); vals[1].push(G); vals[2].push(B);
+    }
+    if (vals[0].length < 30) return null;
+    vals.forEach((v) => v.sort((a, b) => a - b));
+    const mid = Math.floor(vals[0].length / 2);
+    return [vals[0][mid], vals[1][mid], vals[2][mid]];
   }
 
   // ========== BULK SCAN (grid of parts in one photo) ==========
@@ -2348,13 +2379,18 @@
         padded.getContext("2d").drawImage(canvas, pbx, pby, pbw, pbh, 0, 0, pbw, pbh);
 
         // Sample the dominant color from the actual blob mask (not the bbox).
-        // Store the raw RGB sample on the row so later reconciliation can
-        // consider Brickognize's hint. Actual BL color pick happens below
-        // after we have Brickognize's output.
+        // Fallback to median-in-crop if mask-based sampling returns null
+        // (blob mask too small, or edge case). Store the raw RGB sample on
+        // the row so later reconciliation can consider Brickognize's hint.
         let sampledRgb = null;
         try {
           sampledRgb = dominantRgbInMask(blobOut.sourceImg, blobOut.W, box, blobOut.mask, blobOut.sw, blobOut.sh, blobOut.scale);
-        } catch(_){}
+        } catch(err){ console.warn("dominantRgbInMask threw:", err); }
+        if (!sampledRgb){
+          try {
+            sampledRgb = medianRgbInCrop(sub);
+          } catch(_){}
+        }
 
         const blobTight = await new Promise((res) => sub.toBlob(res, "image/jpeg", 0.9));
         const blobPad = await new Promise((res) => padded.toBlob(res, "image/jpeg", 0.9));
