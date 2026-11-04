@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <!-- Build tag v2026-11-04-undo-persist — change this each major edit so
        Dad can tell at a glance which version he's looking at. -->
-  <meta name="pp-build" content="v2026-11-04-vision-v14-shadow-color" />
+  <meta name="pp-build" content="v2026-11-04-vision-v15-rotcatalog-sheet" />
   <meta name="theme-color" content="#e3000b" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -252,7 +252,7 @@
       <h1>BrickLink Bulk Add XML</h1>
     </div>
     <a class="back" href="/employees/">&larr; Back to staff</a>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v14</span>
+    <span style="color:rgba(255,255,255,.4);font-size:.7rem;font-family:'JetBrains Mono','Consolas',monospace;margin-left:8px;align-self:center">v11-04-vision-v15</span>
   </div>
 
   <div class="wrap">
@@ -359,6 +359,7 @@
           <button class="btn" id="buildFromGridBtn" type="button">Build XML &rarr;</button>
           <button class="btn ghost" id="undoBtn" type="button" disabled title="Revert the last action">&#8630; Undo</button>
           <button class="btn ghost" id="pasteRowsBtn" type="button">&#128203; Paste from spreadsheet</button>
+          <button class="btn ghost" id="copySheetBtn" type="button" title="Copy every row with values as tab-separated text -- paste into Excel, Google Sheets, or Numbers">&#128196; Copy as spreadsheet</button>
           <button class="btn ghost" id="addRowsBtn" type="button">+ 25 more rows</button>
           <button class="btn ghost" id="clearGridBtn" type="button">Clear grid</button>
         </div>
@@ -1402,6 +1403,52 @@
   updateFillButtonLabel();
   document.getElementById("pasteRowsBtn").addEventListener("click", pasteFromClipboard);
   document.getElementById("priceAvgBtn").addEventListener("click", priceAtBlAverage);
+
+  // Copy as spreadsheet. Writes every grid row with any value to the
+  // clipboard as a tab-separated block with a header row. Paste into
+  // Excel, Google Sheets, or Numbers and the columns land in the right
+  // places. Dad asked (2026-11-04) to not forget about the spreadsheet
+  // side of the flow -- this is the missing export we were lacking.
+  function copyGridAsSpreadsheet(){
+    const cols = ["ITEMID", "COLOR", "QTY", "PRICE", "CONDITION", "DESCRIPTION", "REMARKS"];
+    const header = ["Part ID", "Color", "Qty", "Price", "Condition", "Description", "Remarks"];
+    const rows = [header.join("\t")];
+    let kept = 0;
+    Array.from(GRID_BODY.children).forEach((tr) => {
+      const vals = cols.map((k) => {
+        const el = tr.querySelector('[data-k="' + k + '"]');
+        return el ? String(el.value || "").replace(/[\t\r\n]/g, " ") : "";
+      });
+      if (vals.some((v) => v.trim())) { rows.push(vals.join("\t")); kept++; }
+    });
+    if (!kept) {
+      gridMsg("err", "Nothing in the grid to copy.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 1800);
+      return;
+    }
+    const tsv = rows.join("\n");
+    (async () => {
+      try {
+        await navigator.clipboard.writeText(tsv);
+        gridMsg("ok", "Copied " + kept + " row" + (kept === 1 ? "" : "s") + " as tab-separated text. Paste into Excel, Google Sheets, or Numbers.");
+      } catch (e) {
+        // Clipboard API blocked -- show a textarea Dad can select from.
+        const ta = document.createElement("textarea");
+        ta.value = tsv;
+        ta.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80vw;height:50vh;z-index:9999;background:#fff;border:2px solid var(--line);padding:12px;font-family:monospace;font-size:.85rem";
+        document.body.appendChild(ta);
+        ta.select();
+        const closer = document.createElement("button");
+        closer.textContent = "Close";
+        closer.style.cssText = "position:fixed;top:5vh;right:5vw;z-index:10000;padding:8px 14px";
+        closer.onclick = () => { ta.remove(); closer.remove(); };
+        document.body.appendChild(closer);
+        gridMsg("ok", "Clipboard access blocked. Copy from the box, then close it.");
+      }
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3500);
+    })();
+  }
+  document.getElementById("copySheetBtn").addEventListener("click", copyGridAsSpreadsheet);
 
   // ========== BRICKOGNIZE SCAN ==========
   // Take/upload a photo of one part → send to Brickognize via Worker → drop
