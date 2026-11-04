@@ -1108,10 +1108,10 @@
             return;
           }
           if (tr.dataset.priceManual !== "1"){
-            priceEl.value = Number(p).toFixed(3);
+            priceEl.value = Number(p).toFixed(2);
             priceEl.style.background = "#d1fae5";
             flagRow(tr); recountGrid(); saveGridDebounced();
-            if (dbg) dbg.textContent = "price: " + no + " c=" + (color || "n/a") + " " + cond + " → $" + Number(p).toFixed(3) +
+            if (dbg) dbg.textContent = "price: " + no + " c=" + (color || "n/a") + " " + cond + " → $" + Number(p).toFixed(2) +
               " | qty_avg=" + j.qty_avg_price + " avg=" + j.avg_price +
               " min=" + j.min_price + " max=" + j.max_price + " sold=" + (j.sold_qty || 0) +
               (j.cached ? " (CACHED)" : "");
@@ -1297,7 +1297,7 @@
           const price = j.qty_avg_price > 0 ? j.qty_avg_price : j.avg_price;
           if (price > 0){
             const el = tr.querySelector('[data-k="PRICE"]');
-            el.value = Number(price).toFixed(3);
+            el.value = Number(price).toFixed(2);
             flagRow(tr);
             updated++;
           } else failed++;
