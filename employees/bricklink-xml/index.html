@@ -2614,17 +2614,22 @@
 
   scanAddBtn.addEventListener("click", () => {
     snapshotGrid();  // make it undoable
-    // If the Check preview was rendered, use its snapshot so indices and
-    // checkbox state line up. Otherwise build fresh.
+    // Always rebuild groups fresh so dropped tiles and any last-second
+    // changes are reflected. If the Check preview was rendered, also honor
+    // its checkbox state — but map keeps/drops by (itemid, color) pair so
+    // a reshuffled index doesn't apply the wrong check to the wrong row.
+    const freshRows = buildGroupedRows();
     const checkboxes = Array.from(document.querySelectorAll(".chk-keep"));
-    let rows;
+    let rows = freshRows;
     if (checkboxes.length && CHECK_ROWS_SNAPSHOT.length){
-      const keepIdx = new Set(
-        checkboxes.filter((cb) => cb.checked).map((cb) => parseInt(cb.dataset.r, 10))
-      );
-      rows = CHECK_ROWS_SNAPSHOT.filter((_, i) => keepIdx.has(i));
-    } else {
-      rows = buildGroupedRows();
+      const droppedKeys = new Set();
+      checkboxes.forEach((cb) => {
+        if (cb.checked) return;
+        const snapIdx = parseInt(cb.dataset.r, 10);
+        const snapRow = CHECK_ROWS_SNAPSHOT[snapIdx];
+        if (snapRow) droppedKeys.add(snapRow.itemid + "\u0001" + snapRow.color);
+      });
+      rows = freshRows.filter((r) => !droppedKeys.has(r.itemid + "\u0001" + r.color));
     }
     if (!rows.length){
       gridMsg("err", "Nothing to add — all rows unchecked.");
