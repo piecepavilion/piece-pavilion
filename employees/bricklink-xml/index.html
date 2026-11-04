@@ -953,6 +953,7 @@
     addRows(30);
     GRID_MSG.className = "msg hidden"; GRID_MSG.textContent = "";
     FILL_ROW_STEP = 0;
+    saveFillStep();
     updateFillButtonLabel();
     saveGrid();
   }
@@ -1017,7 +1018,13 @@
   // Progressive row fill — each press fills ONE MORE row with every
   // default set above. Press 1 = row 1, press 2 = row 2, ... Keeps
   // going row by row; after the last existing row, adds a new one.
-  let FILL_ROW_STEP = 0;
+  // Persist FILL_ROW_STEP across refreshes — Dad doesn't want to keep
+  // pressing Fill back up to where he was after a reload.
+  const FILL_STEP_KEY = "pp_bl_fill_row_step";
+  let FILL_ROW_STEP = parseInt(localStorage.getItem(FILL_STEP_KEY) || "0", 10) || 0;
+  function saveFillStep(){
+    try { localStorage.setItem(FILL_STEP_KEY, String(FILL_ROW_STEP)); } catch(e){}
+  }
 
   function updateFillButtonLabel(){
     const btn = document.getElementById("applyDefaultsBtn");
@@ -1046,6 +1053,7 @@
     }
 
     FILL_ROW_STEP++;
+    saveFillStep();
     while (GRID_BODY.children.length < FILL_ROW_STEP) addRows(1);
     const tr = GRID_BODY.children[FILL_ROW_STEP - 1];
 
@@ -1076,6 +1084,7 @@
     const i = Array.from(GRID_BODY.children).indexOf(tr);
     if (i < 0) return;
     FILL_ROW_STEP = i;  // next press will fill i+1
+    saveFillStep();
     updateFillButtonLabel();
   }
 
@@ -1307,6 +1316,7 @@
       try { localStorage.removeItem("pp_bl_" + id); } catch(_){}
     });
     FILL_ROW_STEP = 0;
+    saveFillStep();
     updateFillButtonLabel();
     gridMsg("ok", "Template cleared.");
     setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 1600);
