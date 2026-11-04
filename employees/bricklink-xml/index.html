@@ -1062,10 +1062,12 @@
     const t = setTimeout(() => {
       const get = (k) => (tr.querySelector('[data-k="'+k+'"]').value || "").trim();
       const no = get("ITEMID"); if (!no) return;
-      // Only skip if Dad TYPED a price himself. If the price was auto-filled
-      // from the yellow defaults bar, override with the BL average.
       if (tr.dataset.priceManual === "1" && (get("PRICE") || "").trim()) return;
-      const cond = (get("CONDITION") || "N").toUpperCase();
+      // Require EXPLICIT condition selection — don't guess "New" and
+      // overwrite before Dad picks.
+      const condRaw = get("CONDITION");
+      if (!condRaw) return;
+      const cond = condRaw.toUpperCase();
       const colorRaw = get("COLOR");
       const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(no);
       const color = colorRaw ? colorNameToId(colorRaw) : "";
@@ -1109,7 +1111,10 @@
             priceEl.value = Number(p).toFixed(3);
             priceEl.style.background = "#d1fae5";
             flagRow(tr); recountGrid(); saveGridDebounced();
-            if (dbg) dbg.textContent = "price: " + no + " → $" + Number(p).toFixed(3) + " (" + (j.sold_qty || 0) + " sold)";
+            if (dbg) dbg.textContent = "price: " + no + " c=" + (color || "n/a") + " " + cond + " → $" + Number(p).toFixed(3) +
+              " | qty_avg=" + j.qty_avg_price + " avg=" + j.avg_price +
+              " min=" + j.min_price + " max=" + j.max_price + " sold=" + (j.sold_qty || 0) +
+              (j.cached ? " (CACHED)" : "");
             setTimeout(() => { priceEl.style.background = ""; }, 1800);
           } else {
             if (dbg) dbg.textContent = "price: skipped " + no + " (you typed it manually)";
