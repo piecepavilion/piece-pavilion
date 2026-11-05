@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Banner Editor (Site Tracker 2.0) — Piece Pavilion Staff</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<style>
+  :root {
+    --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --blue:#0057a8;
+    --ink:#15151f; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
+    --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec; --green:#16a34a;
+    --shadow-sm:0 2px 8px rgba(20,22,29,.05);
+    --shadow:0 6px 18px rgba(20,22,29,.08);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { min-height:100vh; }
+  body { font-family:'Nunito',system-ui,sans-serif; background:var(--bg); color:var(--ink); padding-bottom:90px; }
+  h1,h2,h3 { font-weight:800; letter-spacing:-.01em; }
+  a { color:var(--red); text-decoration:none; }
+  code { background:var(--cream); padding:1px 6px; border-radius:4px; font-family:ui-monospace,Menlo,monospace; font-size:.85em; }
+
+  .topbar { background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+    color:#fff; padding:14px 24px; display:flex; align-items:center; gap:14px;
+    box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55); }
+  .topbar img { height:40px; border-radius:50%; }
+  .topbar h1 { font-size:1.2rem; color:#fff; }
+  .topbar .crumb { font-size:.85rem; color:rgba(255,255,255,.78); font-weight:700; margin-right:6px; }
+  .topbar .back { margin-left:auto; color:#fff; font-weight:800; font-size:.86rem;
+    border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
+  .topbar .back:hover { background:rgba(255,255,255,.14); }
+
+  .wrap { max-width:960px; margin:0 auto; padding:24px 20px 20px; }
+  .intro { background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:18px 22px; margin-bottom:16px; box-shadow:var(--shadow-sm); }
+  .intro h2 { font-size:1.2rem; margin-bottom:4px; }
+  .intro p { color:var(--mid); font-size:.9rem; }
+
+  /* Live preview of the actual banner */
+  .preview-strip { background:var(--ink); color:#fff; padding:10px 14px;
+    border-radius:10px; overflow:hidden; margin-bottom:16px; }
+  .preview-strip .label { font-size:.7rem; color:var(--yellow); font-weight:800;
+    text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
+  .preview-track { display:flex; gap:20px; align-items:center;
+    font-size:.95rem; font-weight:700; flex-wrap:wrap; }
+  .preview-item { display:inline-flex; align-items:center; gap:8px; }
+  .preview-pill { background:var(--red); color:#fff; font-size:.68rem;
+    padding:2px 8px; border-radius:50px; font-weight:800; letter-spacing:.04em; }
+  .preview-pill.blog { background:var(--blue); }
+  .preview-pill.added { background:#1a8a3c; }
+  .preview-sep { color:#555; }
+  .preview-empty { color:var(--mid); font-style:italic; font-weight:400; }
+
+  /* Form sections */
+  .section { background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:18px 22px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
+  .section h3 { font-size:1rem; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .section h3 .dot { width:10px; height:10px; border-radius:50%; background:var(--red); flex-shrink:0; }
+  .section h3.featured .dot { background:var(--yellow); }
+  .section h3.blog .dot { background:var(--blue); }
+  .section h3.added .dot { background:#1a8a3c; }
+
+  .row { display:grid; grid-template-columns:160px 1fr; gap:14px; align-items:center; margin-bottom:10px; }
+  .row:last-child { margin-bottom:0; }
+  .row label { font-weight:700; color:var(--ink); font-size:.88rem; }
+  .row .hint { font-size:.75rem; color:var(--mid); grid-column:2; margin-top:-4px; }
+  .row input[type=text], .row input[type=url], .row textarea, .row input[type=number] {
+    font:inherit; font-size:.92rem; padding:8px 12px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; width:100%;
+  }
+  .row textarea { resize:vertical; min-height:60px; }
+  .row input:focus, .row textarea:focus { outline:none; border-color:var(--red); }
+
+  /* Toggle */
+  .toggle { display:inline-flex; align-items:center; gap:10px; cursor:pointer; }
+  .toggle input { display:none; }
+  .toggle .track { width:40px; height:22px; background:#cbd0d8; border-radius:50px; position:relative; transition:background .15s; }
+  .toggle .track::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px;
+    background:#fff; border-radius:50%; transition:transform .15s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .toggle input:checked + .track { background:var(--green); }
+  .toggle input:checked + .track::after { transform:translateX(18px); }
+
+  .announcement-slot { border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin-top:10px; background:#fafbfd; }
+  .announcement-slot h4 { font-size:.85rem; font-weight:800; color:var(--mid); margin-bottom:10px; }
+
+  /* Sticky save bar */
+  .savebar { position:fixed; bottom:0; left:0; right:0; z-index:40;
+    background:#15151f; color:#fff; padding:14px 24px;
+    display:flex; align-items:center; gap:16px;
+    box-shadow:0 -6px 24px rgba(0,0,0,.3); }
+  .savebar .status { color:#a8a9b4; font-size:.85rem; }
+  .savebar .status.dirty { color:#ffce00; font-weight:700; }
+  .savebar .status.saved { color:#7cea8e; font-weight:700; }
+  .savebar .spacer { flex:1; }
+  .savebar button, .savebar a {
+    font:inherit; font-weight:800; font-size:.95rem;
+    padding:11px 22px; border-radius:50px; border:0; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+  }
+  .btn-save { background:var(--green); color:#fff; }
+  .btn-save:hover { background:#108d3f; }
+  .btn-save:disabled { background:#555; cursor:not-allowed; }
+  .btn-refresh { background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.4) !important; }
+  .btn-view { background:var(--yellow); color:var(--ink); }
+
+  .toast { position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
+    background:#15151f; color:#fff; padding:10px 18px; border-radius:50px;
+    font-weight:700; opacity:0; pointer-events:none; transition:opacity .2s; z-index:50; }
+  .toast.show { opacity:1; }
+  .toast.err { background:#9b0008; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="/logo-white.png" alt="" onerror="this.style.display='none'" />
+  <div><span class="crumb">Staff /</span><h1 style="display:inline;">Banner Editor &mdash; Site Tracker 2.0</h1></div>
+  <a class="back" href="/employees/">&larr; Staff home</a>
+</header>
+<main class="wrap">
+  <div class="intro">
+    <h2>Edit the homepage banner directly</h2>
+    <p>Everything the banner shows &mdash; the scrolling announcements, the Latest Blog chip, the Just Added products &mdash; all controlled here. Saves hit a Cloudflare KV, which the live site reads on every page load. Your Google Sheet is still the fallback, so nothing breaks if KV is down.</p>
+  </div>
+
+  <div class="preview-strip">
+    <div class="label">Live preview &mdash; what the banner will say</div>
+    <div class="preview-track" id="preview-track">Loading current config&hellip;</div>
+  </div>
+
+  <div class="section">
+    <h3><span class="dot"></span> Master switch</h3>
+    <div class="row">
+      <label for="enabled">Show banner on every page</label>
+      <label class="toggle"><input type="checkbox" id="enabled" checked><span class="track"></span></label>
+    </div>
+    <div class="row"><div></div><div class="hint">Turn OFF to hide the banner site-wide (homepage, blog, everywhere).</div></div>
+  </div>
+
+  <div class="section">
+    <h3><span class="dot"></span> Announcements (up to 3 scrolling items)</h3>
+    <div id="announcements"></div>
+  </div>
+
+  <div class="section">
+    <h3 class="blog"><span class="dot"></span> Latest Blog chip</h3>
+    <div class="row">
+      <label for="show_latest_blog">Include the latest blog post</label>
+      <label class="toggle"><input type="checkbox" id="show_latest_blog" checked><span class="track"></span></label>
+    </div>
+    <div class="row"><div></div><div class="hint">Auto-fetches the newest post from <code>/blog/</code> and shows it as a chip.</div></div>
+  </div>
+
+  <div class="section">
+    <h3 class="added"><span class="dot"></span> Just Added products</h3>
+    <div class="row">
+      <label for="show_just_added">Include Just Added products</label>
+      <label class="toggle"><input type="checkbox" id="show_just_added" checked><span class="track"></span></label>
+    </div>
+    <div class="row">
+      <label for="just_added_count">How many products</label>
+      <input type="number" id="just_added_count" min="1" max="8" value="3" style="max-width:120px;">
+    </div>
+    <div class="row"><div></div><div class="hint">Pulls from the homepage's "Just Added" row. Max 8.</div></div>
+  </div>
+</main>
+
+<div class="savebar">
+  <span class="status" id="save-status">Loading&hellip;</span>
+  <div class="spacer"></div>
+  <a class="btn-view" href="https://piecepavilion.com/" target="_blank">View homepage &nearr;</a>
+  <button class="btn-refresh" id="refresh-btn">&#8635; Reload</button>
+  <button class="btn-save" id="save-btn" disabled>&#128190; Save</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const state = {
+    enabled: true,
+    announcements: [
+      { message:'', link:'', link_text:'' },
+      { message:'', link:'', link_text:'' },
+      { message:'', link:'', link_text:'' },
+    ],
+    show_latest_blog: true,
+    show_just_added: true,
+    just_added_count: 3,
+  };
+  let savedState = JSON.stringify(state);
+  const $ = id => document.getElementById(id);
+  const toast = $('toast');
+  const showToast = (m, err) => {
+    toast.textContent = m; toast.classList.toggle('err', !!err); toast.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(() => toast.classList.remove('show'), 2000);
+  };
+
+  function esc(s) { return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderAnnouncements() {
+    const wrap = $('announcements');
+    wrap.innerHTML = state.announcements.map((a, i) => `
+      <div class="announcement-slot">
+        <h4>Slot ${i+1}</h4>
+        <div class="row">
+          <label>Message</label>
+          <textarea data-idx="${i}" data-k="message" placeholder="The main text visitors read (emoji welcome)">${esc(a.message)}</textarea>
+        </div>
+        <div class="row">
+          <label>Link text (small)</label>
+          <input type="text" data-idx="${i}" data-k="link_text" value="${esc(a.link_text)}" placeholder="e.g. Read more →">
+        </div>
+        <div class="row">
+          <label>Link URL</label>
+          <input type="text" data-idx="${i}" data-k="link" value="${esc(a.link)}" placeholder="/blog/some-post/ or https://… (empty = /blog/)">
+        </div>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('textarea, input').forEach(el => {
+      el.addEventListener('input', e => {
+        const i = +e.target.dataset.idx, k = e.target.dataset.k;
+        state.announcements[i][k] = e.target.value;
+        refreshPreview(); markDirty();
+      });
+    });
+  }
+
+  function refreshPreview() {
+    const track = $('preview-track');
+    const parts = [];
+    state.announcements.forEach(a => {
+      if (!a.message.trim()) return;
+      const cta = a.link_text ? ` <span style="color:#aaa;font-weight:600;">${esc(a.link_text)}</span>` : '';
+      parts.push(`<span class="preview-item"><span class="preview-pill">News</span><span>${esc(a.message).slice(0,80)}${a.message.length>80?'…':''}${cta}</span></span>`);
+    });
+    if (state.show_latest_blog) parts.push('<span class="preview-item"><span class="preview-pill blog">Latest Blog</span><span>(latest post title)</span></span>');
+    if (state.show_just_added) parts.push(`<span class="preview-item"><span class="preview-pill added">Just added</span><span>${state.just_added_count} product(s)</span></span>`);
+    if (!parts.length) { track.innerHTML = '<span class="preview-empty">Nothing to show &mdash; add an announcement or enable Latest Blog / Just Added.</span>'; return; }
+    track.innerHTML = parts.join('<span class="preview-sep">•</span>');
+  }
+
+  function markDirty() {
+    const dirty = JSON.stringify(state) !== savedState;
+    const s = $('save-status');
+    s.textContent = dirty ? 'Unsaved changes — click Save' : 'All changes saved';
+    s.className = 'status ' + (dirty ? 'dirty' : 'saved');
+    $('save-btn').disabled = !dirty;
+  }
+
+  async function loadFromServer() {
+    $('save-status').textContent = 'Loading…'; $('save-status').className = 'status';
+    try {
+      const r = await fetch('/employees/api/banner/get?v=' + Date.now(), { cache:'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      state.enabled = d.enabled !== false;
+      state.announcements = (d.announcements || state.announcements).map(a => ({
+        message: a.message || '', link: a.link || '', link_text: a.link_text || ''
+      }));
+      while (state.announcements.length < 3) state.announcements.push({ message:'', link:'', link_text:'' });
+      state.show_latest_blog = d.show_latest_blog !== false;
+      state.show_just_added = d.show_just_added !== false;
+      state.just_added_count = d.just_added_count || 3;
+      savedState = JSON.stringify(state);
+      applyToForm();
+      renderAnnouncements();
+      refreshPreview();
+      markDirty();
+    } catch (e) {
+      showToast('Load failed: ' + e.message, true);
+      $('save-status').textContent = 'Load failed — try Reload';
+      $('save-status').className = 'status dirty';
+    }
+  }
+
+  function applyToForm() {
+    $('enabled').checked = state.enabled;
+    $('show_latest_blog').checked = state.show_latest_blog;
+    $('show_just_added').checked = state.show_just_added;
+    $('just_added_count').value = state.just_added_count;
+  }
+
+  function wireForm() {
+    $('enabled').addEventListener('change', e => { state.enabled = e.target.checked; refreshPreview(); markDirty(); });
+    $('show_latest_blog').addEventListener('change', e => { state.show_latest_blog = e.target.checked; refreshPreview(); markDirty(); });
+    $('show_just_added').addEventListener('change', e => { state.show_just_added = e.target.checked; refreshPreview(); markDirty(); });
+    $('just_added_count').addEventListener('input', e => { state.just_added_count = Math.max(1, Math.min(8, +e.target.value||3)); refreshPreview(); markDirty(); });
+  }
+
+  async function save() {
+    $('save-btn').disabled = true;
+    $('save-status').textContent = 'Saving…'; $('save-status').className = 'status';
+    try {
+      const r = await fetch('/employees/api/banner/save', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(state),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (!d.ok) throw new Error('rejected');
+      // Verify round-trip from public endpoint.
+      const v = await fetch('/banner/config.json?v=' + Date.now(), { cache:'no-store' });
+      const live = await v.json();
+      const liveMsgs = (live.announcements || []).map(a => a.message).join('|');
+      const expectedMsgs = state.announcements.map(a => a.message).join('|');
+      if (liveMsgs !== expectedMsgs) throw new Error('round-trip mismatch');
+      savedState = JSON.stringify(state);
+      markDirty();
+      showToast('Saved — hard-refresh homepage to see it live');
+    } catch (e) {
+      $('save-btn').disabled = false;
+      $('save-status').textContent = 'Save failed'; $('save-status').className = 'status dirty';
+      showToast('Save failed: ' + e.message, true);
+    }
+  }
+
+  $('save-btn').addEventListener('click', save);
+  $('refresh-btn').addEventListener('click', () => {
+    if (JSON.stringify(state) !== savedState && !confirm('Discard unsaved changes?')) return;
+    loadFromServer();
+  });
+  window.addEventListener('beforeunload', e => {
+    if (JSON.stringify(state) !== savedState) { e.preventDefault(); e.returnValue=''; }
+  });
+
+  wireForm();
+  loadFromServer();
+</script>
+</body>
+</html>

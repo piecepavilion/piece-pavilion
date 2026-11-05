@@ -344,9 +344,28 @@ const loadBannerConfig = () => {
   const banner = tickerBanner();
   if (!banner) return Promise.resolve();
 
-  // Primary source: the staff "PiecePavilion Site Banner" Google Sheet
-  // (edited from /employees — same Google login). Fallback: /banner.txt.
+  // Site Tracker 2.0: Dad's staff editor at /employees/banner-editor/ saves
+  // the config to Cloudflare KV, which the pp-partout worker exposes here.
+  // Falls back to the Google Sheet, then to /banner.txt, then to the
+  // hardcoded fallback — so an older browser tab or a worker outage still
+  // renders *something*.
+  const KV_URL = '/banner/config.json';
   const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/gviz/tq?tqx=out:csv&sheet=Banner';
+
+  // Translate the KV-native payload into the flat cfg shape apply() expects.
+  const parseKv = (data) => {
+    const cfg = {};
+    if (typeof data !== 'object' || !data) return cfg;
+    if (data.enabled === false) cfg.enabled = 'NO';
+    const a = Array.isArray(data.announcements) ? data.announcements : [];
+    if (a[0]) { cfg.message = a[0].message || ''; cfg.link = a[0].link || ''; cfg.link_text = a[0].link_text || ''; }
+    if (a[1]) { cfg.message_2 = a[1].message || ''; cfg.link_2 = a[1].link || ''; cfg.link_text_2 = a[1].link_text || ''; }
+    if (a[2]) { cfg.message_3 = a[2].message || ''; cfg.link_3 = a[2].link || ''; cfg.link_text_3 = a[2].link_text || ''; }
+    if (data.show_latest_blog === false) cfg.show_latest_blog = 'NO';
+    if (data.show_just_added === false)  cfg.show_just_added  = 'NO';
+    if (data.just_added_count) cfg.just_added_count = String(data.just_added_count);
+    return cfg;
+  };
 
   const parseSheetCsv = (txt) => {
     const cfg = {};
@@ -418,10 +437,13 @@ const loadBannerConfig = () => {
     renderTicker(true);
   };
 
-  // cache-busting query so edits appear in ~1 min
-  return fetch(SHEET_CSV + '&_=' + Date.now())
-    .then((r) => { if (!r.ok) throw new Error('sheet unavailable'); return r.text(); })
-    .then(parseSheetCsv)
+  // Primary: KV staff editor (instant). Fallback chain: Sheet -> banner.txt.
+  return fetch(KV_URL + '?_=' + Date.now(), { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error('kv unavailable'); return r.json(); })
+    .then(parseKv)
+    .catch(() => fetch(SHEET_CSV + '&_=' + Date.now())
+      .then((r) => { if (!r.ok) throw new Error('sheet unavailable'); return r.text(); })
+      .then(parseSheetCsv))
     .catch(() => fetch('/banner.txt?_=' + Date.now())
       .then((r) => { if (!r.ok) throw new Error('no banner.txt'); return r.text(); })
       .then(parseTxt))
