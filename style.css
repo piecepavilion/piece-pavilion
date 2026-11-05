@@ -652,25 +652,36 @@ img { display: block; max-width: 100%; }
   padding: 10px 48px 10px 16px;
   position: relative;
   overflow: hidden;
-  /* Hidden until renderTicker() finishes building the full marquee.
-     Reveal via a translateY dropdown so the banner "drops in from above
-     the viewport" like a curtain opening -- feels dramatic without being
-     slow. visibility is kept at hidden until .is-ready to avoid a flash
-     of yellow during page load. */
+  /* Big-theater curtain reveal. The band starts above the viewport
+     at translateY(-110%) and falls down with a longer easing curve
+     (1200 ms) plus a chunkier overshoot (-15 % pullback before
+     settling). The br-animation runs it through scaleY compression
+     during the arrival so it reads as "SLAM" + spring-back rather
+     than a soft slide. visibility stays hidden until .is-ready
+     avoids a flash of yellow during page load. */
   visibility: hidden;
-  transform: translateY(-100%);
+  transform-origin: top center;
+  transform: translateY(-110%) scaleY(0.9);
   transition:
-    transform 850ms cubic-bezier(0.34, 1.26, 0.64, 1),
+    transform 1200ms cubic-bezier(0.19, 1.6, 0.28, 0.98),
     visibility 0s linear 0s;
 }
 .announcement-banner.is-ready {
   visibility: visible;
-  transform: translateY(0);
+  animation: bannerCurtain 1200ms cubic-bezier(0.19, 1.6, 0.28, 0.98) both;
+}
+@keyframes bannerCurtain {
+  0%   { transform: translateY(-110%) scaleY(0.88); }
+  55%  { transform: translateY(6%)    scaleY(1.08); }    /* overshoot DOWN past rest, stretched */
+  72%  { transform: translateY(-3%)   scaleY(0.96); }    /* pull back up a touch */
+  85%  { transform: translateY(1.5%)  scaleY(1.02); }    /* tiny secondary bounce */
+  100% { transform: translateY(0)     scaleY(1); }
 }
 @media (prefers-reduced-motion: reduce) {
   .announcement-banner {
     transition: none;
     transform: none;
+    animation: none;
   }
 }
 /* A sticky-head wrapper doesn't reserve the yellow stripe until the banner
