@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Buyer Leaderboard — Piece Pavilion Staff</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    --red:#e3000b; --yellow:#ffce00; --blue:#0057a8; --cream:#fff8e7;
+    --ink:#15151f; --mute:#5a5e6b; --line:#e5e7ec; --surface:#fff;
+    --radius:14px; --shadow:0 2px 8px rgba(0,0,0,.05);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:#f4f5f8; color:var(--ink); min-height:100vh; }
+  .topbar { background:var(--ink); color:#fff; padding:12px 24px;
+    display:flex; align-items:center; gap:16px; }
+  .topbar img { height:40px; border-radius:50%; }
+  .topbar h1 { font-size:18px; font-weight:800; }
+  .topbar .back { margin-left:auto; color:#fff; text-decoration:none;
+    border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:6px 14px; font-size:13px; }
+  .topbar .back:hover { background:rgba(255,255,255,.14); }
+  .wrap { max-width:960px; margin:0 auto; padding:24px 20px 60px; }
+  h2 { font-size:28px; margin-bottom:6px; }
+  .sub { color:var(--mute); margin-bottom:22px; }
+  .totals { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:22px; }
+  .pill { background:var(--surface); border:1px solid var(--line);
+    border-radius:12px; padding:10px 14px; box-shadow:var(--shadow); }
+  .pill b { font-size:20px; display:block; }
+  .pill span { color:var(--mute); font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .top5 { background:linear-gradient(180deg,var(--cream),#fff);
+    border:2px solid var(--yellow); border-radius:var(--radius);
+    padding:18px 20px 10px; margin-bottom:26px; box-shadow:var(--shadow); }
+  .top5 h3 { font-size:16px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .top5 ol { list-style:none; padding:0; }
+  .top5 li { display:grid; grid-template-columns:36px 1fr auto auto;
+    gap:10px; align-items:center; padding:10px 0; border-top:1px solid #f0e7c8; }
+  .top5 li:first-of-type { border-top:none; }
+  .rank { font-weight:900; color:var(--red); font-size:20px; text-align:center; }
+  .top5 .buyer { font-weight:700; }
+  .top5 .spend { font-weight:800; color:var(--ink); }
+  .top5 .orders { color:var(--mute); font-size:13px; }
+  table { width:100%; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); border-collapse:separate; border-spacing:0;
+    overflow:hidden; box-shadow:var(--shadow); }
+  th, td { padding:10px 14px; text-align:left; border-bottom:1px solid var(--line); font-size:14px; }
+  th { background:#fafbfd; font-weight:700; color:var(--mute);
+    text-transform:uppercase; font-size:11px; letter-spacing:.05em; cursor:pointer; user-select:none; }
+  th:hover { background:#f3f4f8; }
+  tbody tr:nth-child(even) { background:#fafbfd; }
+  td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  td:first-child { color:var(--mute); font-variant-numeric:tabular-nums; width:50px; }
+  .loading { text-align:center; padding:40px; color:var(--mute); }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="/circle_pp.png" alt="" onerror="this.style.display='none'" />
+  <h1>Buyer Leaderboard</h1>
+  <a class="back" href="/employees/">&larr; Staff</a>
+</header>
+<main class="wrap">
+  <h2>Every buyer, ranked</h2>
+  <p class="sub">All completed and shipped orders, pulled from BrickLink.</p>
+  <div class="totals" id="totals"></div>
+
+  <section class="top5">
+    <h3>Top 5 buyers</h3>
+    <ol id="top5"></ol>
+  </section>
+
+  <table id="all">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Buyer</th>
+        <th class="n" data-sort="spend">Spend</th>
+        <th class="n" data-sort="orders">Orders</th>
+        <th class="n" data-sort="last">Last order</th>
+      </tr>
+    </thead>
+    <tbody><tr><td colspan="5" class="loading">Loading&hellip;</td></tr></tbody>
+  </table>
+</main>
+<script>
+(async () => {
+  const money = n => '$' + n.toFixed(2);
+  const r = await fetch('buyers.json?v=' + Date.now());
+  const { count, buyers } = await r.json();
+
+  const totalSpend = buyers.reduce((s,b) => s + b.spend, 0);
+  const totalOrders = buyers.reduce((s,b) => s + b.orders, 0);
+  document.getElementById('totals').innerHTML = `
+    <div class="pill"><b>${count}</b><span>Buyers</span></div>
+    <div class="pill"><b>${totalOrders}</b><span>Orders</span></div>
+    <div class="pill"><b>${money(totalSpend)}</b><span>Total spend</span></div>
+    <div class="pill"><b>${money(totalSpend/totalOrders)}</b><span>Avg order</span></div>
+  `;
+
+  document.getElementById('top5').innerHTML = buyers.slice(0,5).map((b,i) => `
+    <li>
+      <div class="rank">${i+1}</div>
+      <div class="buyer">${b.buyer}</div>
+      <div class="spend">${money(b.spend)}</div>
+      <div class="orders">${b.orders} order${b.orders===1?'':'s'}</div>
+    </li>
+  `).join('');
+
+  let sortKey = 'spend', sortDir = -1;
+  const render = () => {
+    const sorted = [...buyers].sort((a,b) => (a[sortKey] > b[sortKey] ? 1 : -1) * sortDir);
+    const tbody = document.querySelector('#all tbody');
+    tbody.innerHTML = sorted.map((b,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><b>${b.buyer}</b></td>
+        <td class="n">${money(b.spend)}</td>
+        <td class="n">${b.orders}</td>
+        <td class="n">${b.last}</td>
+      </tr>
+    `).join('');
+  };
+  render();
+
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      if (sortKey === k) sortDir *= -1;
+      else { sortKey = k; sortDir = -1; }
+      render();
+    });
+  });
+})();
+</script>
+</body>
+</html>
