@@ -209,6 +209,7 @@
         <p>Change hero copy, swap the hero image, hide or show sections. When you save, click <strong>Copy to Sheet</strong>, open the Site Config sheet, and paste. Changes go live in about a minute.</p>
       </div>
       <div class="actions">
+        <a class="btn btn-gold" href="#featured-items">&#9733; Featured items</a>
         <a class="btn btn-ghost" href="https://piecepavilion.com/" target="_blank" rel="noopener">Preview live site &#8599;</a>
         <a class="btn btn-primary" id="open-sheet" href="https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/edit" target="_blank" rel="noopener">Open Site Config sheet &rarr;</a>
       </div>
@@ -216,6 +217,27 @@
 
     <div class="layout">
       <div class="editor-col">
+
+        <!-- FEATURED ITEMS EDITOR (top of editor so it's the first thing you see) -->
+        <section class="section featured-editor" id="featured-items" style="border:2px solid var(--yellow); background:linear-gradient(180deg,var(--cream) 0%,#fff 60%);">
+          <div class="section-head">
+            <h3><span class="dot" style="background:var(--yellow)"></span> Featured items (hero + featured + just-added) &mdash; NEW</h3>
+          </div>
+          <p style="color:var(--mid);font-size:.88rem;margin-bottom:14px;">
+            Type the BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sw0547</code> &middot; parts: <code>3024</code>) and pick the type. Leave a section empty to keep the automatic daily picks. Preview updates live; Save gives you JSON to paste into <code>data/featured_overrides.json</code>.
+          </p>
+          <div id="fe-sections"></div>
+          <div class="output-card" style="margin-top:12px;">
+            <div class="ohead">
+              <h4>&#128190; Copy this JSON into <code>data/featured_overrides.json</code></h4>
+              <button class="btn btn-copy" id="fe-copy">Copy JSON</button>
+            </div>
+            <pre id="fe-json" style="max-height:220px;">{"hero":[],"featured":[],"newest":[]}</pre>
+            <p style="color:#a8a9b4;font-size:.78rem;margin-top:8px;line-height:1.55;">
+              After paste + commit, the daily refresh (or a manual run of <code>update_featured.py</code>) will use your picks instead of the auto ones.
+            </p>
+          </div>
+        </section>
 
         <!-- HERO -->
         <section class="section hero-section">
@@ -258,27 +280,6 @@ Destination</textarea>
           </div>
           <div id="toggles"></div>
           <span class="hint">Tip: hide seasonal sections before a photo shoot or test, show them again right after. No code touch needed.</span>
-        </section>
-
-        <!-- FEATURED ITEMS EDITOR -->
-        <section class="section featured-editor">
-          <div class="section-head">
-            <h3><span class="dot" style="background:var(--yellow)"></span> Featured items (hero + featured + just-added)</h3>
-          </div>
-          <p style="color:var(--mid);font-size:.88rem;margin-bottom:14px;">
-            Type the BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sw0547</code> &middot; parts: <code>3024</code>) and pick the type. Leave a section empty to keep the automatic daily picks. Preview updates live; Save gives you JSON to paste into <code>data/featured_overrides.json</code>.
-          </p>
-          <div id="fe-sections"></div>
-          <div class="output-card" style="margin-top:12px;">
-            <div class="ohead">
-              <h4>&#128190; Copy this JSON into <code>data/featured_overrides.json</code></h4>
-              <button class="btn btn-copy" id="fe-copy">Copy JSON</button>
-            </div>
-            <pre id="fe-json" style="max-height:220px;">{"hero":[],"featured":[],"newest":[]}</pre>
-            <p style="color:#a8a9b4;font-size:.78rem;margin-top:8px;line-height:1.55;">
-              After paste + commit, the daily refresh (or a manual run of <code>update_featured.py</code>) will use your picks instead of the auto ones.
-            </p>
-          </div>
         </section>
 
         <!-- OUTPUT -->
