@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Featured Items Editor — Piece Pavilion Staff</title>
+<meta name="robots" content="noindex,nofollow" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --blue:#0057a8;
+    --ink:#15151f; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
+    --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec;
+    --radius:12px; --shadow-sm:0 2px 8px rgba(20,22,29,.05);
+    --shadow:0 6px 18px rgba(20,22,29,.08);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+  h1,h2,h3 { font-weight:800; letter-spacing:-.01em; }
+  a { color:var(--red); text-decoration:none; }
+  .topbar { background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
+    color:#fff; padding:16px 24px; display:flex; align-items:center; gap:14px;
+    box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55); }
+  .topbar img { height:40px; border-radius:50%; }
+  .topbar h1 { font-size:1.2rem; color:#fff; }
+  .topbar .crumb { font-size:.85rem; color:rgba(255,255,255,.78); font-weight:700; margin-right:6px; }
+  .topbar .back { margin-left:auto; color:#fff; font-weight:800; font-size:.86rem;
+    border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
+  .topbar .back:hover { background:rgba(255,255,255,.14); }
+  .wrap { max-width:1000px; margin:0 auto; padding:28px 24px 60px; }
+  .intro { background:var(--surface); border-radius:14px; border:1px solid var(--line);
+    box-shadow:var(--shadow-sm); padding:22px 26px; margin-bottom:22px; }
+  .intro h2 { font-size:1.3rem; margin-bottom:6px; }
+  .intro p { color:var(--mid); font-size:.95rem; }
+  .intro code { background:var(--cream); padding:1px 6px; border-radius:4px;
+    font-family:ui-monospace,Menlo,monospace; font-size:.85em; }
+  .btn { font:inherit; font-weight:800; font-size:.9rem; padding:10px 18px;
+    border-radius:999px; cursor:pointer; border:0; display:inline-flex; align-items:center; gap:6px; }
+  .btn-primary { background:var(--red); color:#fff; }
+  .btn-primary:hover { background:var(--red-dark); }
+  .btn-ghost { background:#fff; color:var(--ink); border:1.5px solid var(--line); }
+  .btn-ghost:hover { border-color:var(--ink); }
+  .btn-gold { background:var(--yellow); color:var(--ink); }
+  .fe-block { border:1px solid var(--line); border-radius:12px; padding:14px 16px;
+    margin-bottom:12px; background:#fff; box-shadow:var(--shadow-sm); }
+  .fe-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+  .fe-head strong { font-size:1.05rem; }
+  .fe-hint { color:var(--mid); font-size:.8rem; margin-bottom:10px; }
+  .fe-rows { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .fe-row { display:grid; grid-template-columns:52px 1fr 130px 32px 32px 32px;
+    gap:8px; align-items:center; background:#f9fafc; border:1px solid var(--line);
+    border-radius:10px; padding:6px 8px; }
+  .fe-thumb { width:48px; height:48px; object-fit:contain; background:#fff;
+    border-radius:6px; border:1px solid var(--line); }
+  .fe-row input, .fe-row select { font:inherit; padding:6px 8px;
+    border:1px solid var(--line); border-radius:6px; background:#fff; }
+  .fe-row button { background:#fff; border:1px solid var(--line); border-radius:8px;
+    font-weight:700; cursor:pointer; padding:6px 0; }
+  .fe-row button:hover { background:var(--cream); }
+  .fe-rm { color:var(--red); }
+  .fe-empty { color:var(--mid); font-size:.85rem; font-style:italic; padding:8px 0; }
+  .fe-add { font-size:.82rem; padding:8px 14px; }
+  .output { margin-top:16px; background:#15151f; color:#eef; border-radius:12px;
+    padding:14px 18px; box-shadow:var(--shadow); }
+  .output .ohead { display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:8px; color:#ffce00; }
+  .output pre { background:#0d0d14; padding:10px 12px; border-radius:8px;
+    font-family:ui-monospace,Menlo,monospace; font-size:.82rem; overflow:auto;
+    max-height:260px; white-space:pre-wrap; word-break:break-all; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:#15151f; color:#fff; padding:10px 18px; border-radius:50px;
+    font-weight:700; opacity:0; pointer-events:none; transition:opacity .2s; z-index:50; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="/circle_pp.png" alt="" onerror="this.style.display='none'" />
+  <div><span class="crumb">Staff /</span><h1 style="display:inline;">Featured Items Editor</h1></div>
+  <a class="back" href="/employees/">&larr; Staff home</a>
+</header>
+<main class="wrap">
+  <div class="intro">
+    <h2>Hand-pick what shows on the homepage</h2>
+    <p>Three sections on <a href="https://piecepavilion.com/" target="_blank">piecepavilion.com</a>:
+      the <strong>hero carousel</strong> at the top, the <strong>Just Added</strong> amber row below it,
+      and <strong>Featured From Our Store</strong> farther down. Type a BrickLink item number
+      (sets: <code>10262-1</code> &middot; minifigs: <code>sw0547</code> &middot; parts: <code>3024</code>)
+      and pick the type. Leave a section empty to keep the automatic daily picks.
+      When you're happy, click <strong>Copy JSON</strong> and paste it into
+      <code>data/featured_overrides.json</code> in the repo &mdash; the daily refresh will use your picks.</p>
+  </div>
+
+  <div id="fe-sections"></div>
+
+  <div class="output">
+    <div class="ohead">
+      <strong>&#128190; Copy this JSON into <code>data/featured_overrides.json</code></strong>
+      <button class="btn btn-gold" id="fe-copy">Copy JSON</button>
+    </div>
+    <pre id="fe-json">{"hero":[],"featured":[],"newest":[]}</pre>
+  </div>
+</main>
+<div class="toast" id="toast">Copied.</div>
+
+<script>
+  const FE_SECTIONS = [
+    { key:'hero',     label:'Hero carousel (top of homepage)',     max:5,  hint:'Up to 5 cards. First card shows first.' },
+    { key:'featured', label:'Featured From Our Store (middle)',    max:12, hint:'Up to 12. Mix sets, minifigs, parts, keychains.' },
+    { key:'newest',   label:'Just Added (amber row below hero)',   max:8,  hint:'Up to 8. Reads as "latest listings".' },
+  ];
+  const TYPES = [
+    { v:'SET',     label:'Set',            prefix:'S' },
+    { v:'MINIFIG', label:'Minifig',        prefix:'M' },
+    { v:'PART',    label:'Part',           prefix:'P' },
+    { v:'GEAR',    label:'Gear/Keychain',  prefix:'G' },
+  ];
+  let feState = { hero:[], featured:[], newest:[] };
+
+  fetch('/data/featured_overrides.json?v=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d) return;
+      for (const k of ['hero','featured','newest']) {
+        feState[k] = (d[k] || []).map(e => typeof e === 'string'
+          ? { no:e.toUpperCase(), type:'' }
+          : { no:(e.no||'').toUpperCase(), type:(e.type||'').toUpperCase() });
+      }
+      renderFE();
+    }).catch(()=>{});
+
+  const imgURL = (no, type) => {
+    const t = TYPES.find(x => x.v === type);
+    return (!t || !no) ? '' : `https://img.bricklink.com/ItemImage/${t.prefix}N/0/${encodeURIComponent(no)}.png`;
+  };
+
+  function renderFE() {
+    const wrap = document.getElementById('fe-sections');
+    wrap.innerHTML = FE_SECTIONS.map(sec => {
+      const rows = feState[sec.key].map((e,i) => `
+        <div class="fe-row" data-sec="${sec.key}" data-i="${i}">
+          <img class="fe-thumb" src="${imgURL(e.no, e.type)}" alt="" onerror="this.style.visibility='hidden'">
+          <input class="fe-no" type="text" placeholder="Item No" value="${e.no}" />
+          <select class="fe-type">
+            <option value="">type…</option>
+            ${TYPES.map(t => `<option value="${t.v}"${t.v===e.type?' selected':''}>${t.label}</option>`).join('')}
+          </select>
+          <button class="fe-up"   title="Move up">&uarr;</button>
+          <button class="fe-down" title="Move down">&darr;</button>
+          <button class="fe-rm"   title="Remove">&times;</button>
+        </div>`).join('');
+      return `
+        <div class="fe-block">
+          <div class="fe-head">
+            <strong>${sec.label}</strong>
+            <span style="color:var(--mid);font-size:.82rem;">${feState[sec.key].length}/${sec.max}</span>
+          </div>
+          <div class="fe-hint">${sec.hint}</div>
+          <div class="fe-rows">${rows || '<div class="fe-empty">Empty &rarr; falls back to automatic daily picks.</div>'}</div>
+          <button class="btn btn-ghost fe-add" data-sec="${sec.key}" ${feState[sec.key].length >= sec.max ? 'disabled' : ''}>+ Add item</button>
+        </div>`;
+    }).join('');
+
+    wrap.querySelectorAll('.fe-add').forEach(b => b.addEventListener('click', () => {
+      feState[b.dataset.sec].push({ no:'', type:'' }); renderFE();
+    }));
+    wrap.querySelectorAll('.fe-row').forEach(row => {
+      const sec = row.dataset.sec, i = +row.dataset.i;
+      row.querySelector('.fe-no').addEventListener('input', e => {
+        feState[sec][i].no = e.target.value.trim().toUpperCase();
+        const img = row.querySelector('.fe-thumb');
+        img.src = imgURL(feState[sec][i].no, feState[sec][i].type);
+        img.style.visibility = '';
+        updateFEJson();
+      });
+      row.querySelector('.fe-type').addEventListener('change', e => {
+        feState[sec][i].type = e.target.value;
+        const img = row.querySelector('.fe-thumb');
+        img.src = imgURL(feState[sec][i].no, feState[sec][i].type);
+        img.style.visibility = '';
+        updateFEJson();
+      });
+      row.querySelector('.fe-rm').addEventListener('click', () => { feState[sec].splice(i,1); renderFE(); });
+      row.querySelector('.fe-up').addEventListener('click', () => {
+        if (i > 0) { const a = feState[sec]; [a[i-1],a[i]] = [a[i],a[i-1]]; renderFE(); }
+      });
+      row.querySelector('.fe-down').addEventListener('click', () => {
+        const a = feState[sec]; if (i < a.length - 1) { [a[i+1],a[i]] = [a[i],a[i+1]]; renderFE(); }
+      });
+    });
+    updateFEJson();
+  }
+
+  function updateFEJson() {
+    const clean = {};
+    for (const k of ['hero','featured','newest']) {
+      clean[k] = feState[k].filter(e => e.no)
+        .map(e => e.type ? { no:e.no, type:e.type } : e.no);
+    }
+    document.getElementById('fe-json').textContent = JSON.stringify(clean, null, 2);
+  }
+
+  const toast = document.getElementById('toast');
+  const showToast = msg => {
+    toast.textContent = msg; toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+  };
+  document.getElementById('fe-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById('fe-json').textContent);
+      showToast('JSON copied — paste into data/featured_overrides.json');
+    } catch (e) { showToast('Could not copy — select JSON above'); }
+  });
+
+  renderFE();
+</script>
+</body>
+</html>
