@@ -1,0 +1,6 @@
+{
+  "_help": "Lists of item numbers Dad hand-picks for the homepage. Empty list = fall back to automatic daily picks. Entries can be a bare item number (e.g. '10262-1') or {no, type}. Edited from /employees/site-editor/.",
+  "hero": [],
+  "featured": [],
+  "newest": []
+}
