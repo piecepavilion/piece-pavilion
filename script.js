@@ -154,7 +154,7 @@ function readJustAdded() {
     .filter(Boolean);
 }
 
-function renderTicker() {
+function renderTicker(force) {
   const banner = tickerBanner();
   if (!banner) return;
 
@@ -250,8 +250,14 @@ function renderTicker() {
   const newInner =
     '<div class="ticker-viewport"><div class="ticker-track">' + trackInner + '</div></div>' +
     '<button class="announcement-close" aria-label="Dismiss">&times;</button>';
-  if (banner.classList.contains('is-ready') && banner.firstChild) {
-    // Already rendered + revealed — leave it alone.
+  // Only skip the swap when the already-rendered content is byte-identical
+  // (same marquee avoids the position jump the old guard was protecting
+  // against). A `force` caller (sheet-driven apply() after the hardcoded
+  // boot render) always wins — otherwise Dad's edits in the Banner sheet
+  // would never appear, because the race always resolves late.
+  if (!force && banner.classList.contains('is-ready') && banner.firstChild
+      && banner.innerHTML === newInner) {
+    // Same content already visible — leave the marquee running.
   } else {
     banner.innerHTML = newInner;
   }
@@ -330,7 +336,7 @@ const loadLatestBlog = () => fetch('/blog/?_=' + Date.now())
     const title = (card.querySelector('h2') || {}).textContent || 'Read our latest post';
     const href = card.getAttribute('href') || '/blog/';
     tickerState.latestBlog = { title: title.trim(), href };
-    renderTicker();
+    renderTicker(true);
   })
   .catch(() => {});
 
@@ -406,7 +412,10 @@ const loadBannerConfig = () => {
     const n = parseInt(cfg.just_added_count, 10);
     tickerState.cfg.justAddedCount = (isFinite(n) && n > 0 && n <= 8) ? n : 3;
 
-    renderTicker();
+    // Force the swap: the sheet fetch resolves after the initial render +
+    // reveal, so without force the "don't touch a live banner" guard would
+    // keep Dad's custom announcement from ever appearing.
+    renderTicker(true);
   };
 
   // cache-busting query so edits appear in ~1 min
