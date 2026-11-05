@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Featured Items Editor — Piece Pavilion Staff</title>
 <meta name="robots" content="noindex,nofollow" />
 <link rel="icon" href="/favicon.ico" />
@@ -115,7 +118,11 @@
 <body>
 <header class="topbar">
   <img src="/circle_pp.png" alt="" onerror="this.style.display='none'" />
-  <div><span class="crumb">Staff /</span><h1 style="display:inline;">Featured Items Editor</h1></div>
+  <div>
+    <span class="crumb">Staff /</span>
+    <h1 style="display:inline;">Featured Items Editor</h1>
+    <span style="background:var(--yellow);color:var(--ink);font-size:.72rem;font-weight:800;padding:2px 8px;border-radius:50px;margin-left:8px;">v2 &middot; Save enabled</span>
+  </div>
   <a class="back" href="/employees/">&larr; Staff home</a>
 </header>
 <main class="wrap">
@@ -222,8 +229,12 @@
         headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) {
+        const txt = await r.text().catch(()=>'');
+        throw new Error('HTTP ' + r.status + (txt ? ' — ' + txt.slice(0,120) : ''));
+      }
       const d = await r.json();
+      if (!d || !d.ok) throw new Error('Server rejected payload');
       // The worker returns the cleaned payload — use it as the new saved state
       // so we match server-side normalisation (dedup, uppercase, etc.).
       for (const k of ['hero','featured','newest']) {
@@ -233,7 +244,19 @@
       }
       savedState = JSON.stringify(serializeState());
       renderFE();
-      showToast('Saved — homepage will update on the next refresh');
+      // Round-trip verify: fetch public KV read and confirm it matches
+      // what the worker just acked. Catches silent KV write failures.
+      try {
+        const verify = await fetch('/featured/overrides.json?v=' + Date.now());
+        const live = await verify.json();
+        const total = (live.hero||[]).length + (live.featured||[]).length + (live.newest||[]).length;
+        const expected = feState.hero.filter(e=>e.no).length + feState.featured.filter(e=>e.no).length + feState.newest.filter(e=>e.no).length;
+        if (total !== expected) throw new Error('Server stored ' + total + ' items, expected ' + expected);
+      } catch (ve) {
+        showToast('Save ack\'d but verification failed: ' + ve.message, true);
+        return;
+      }
+      showToast('Saved to server — homepage will update on the next refresh');
     } catch (e) {
       saveBtn.disabled = false;
       statusEl.textContent = 'Save failed — try again';
