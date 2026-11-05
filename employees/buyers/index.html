@@ -42,6 +42,8 @@
   .top5 .buyer { font-weight:700; }
   .top5 .spend { font-weight:800; color:var(--ink); }
   .top5 .orders { color:var(--mute); font-size:13px; }
+  .top5 li { cursor:pointer; transition:background .1s; }
+  .top5 li:hover { background:rgba(255,206,0,.25); border-radius:8px; }
   table { width:100%; background:var(--surface); border:1px solid var(--line);
     border-radius:var(--radius); border-collapse:separate; border-spacing:0;
     overflow:hidden; box-shadow:var(--shadow); }
@@ -50,9 +52,30 @@
     text-transform:uppercase; font-size:11px; letter-spacing:.05em; cursor:pointer; user-select:none; }
   th:hover { background:#f3f4f8; }
   tbody tr:nth-child(even) { background:#fafbfd; }
+  tbody tr.buyer-row { cursor:pointer; }
+  tbody tr.buyer-row:hover { background:#fff7cc; }
+  tbody tr.buyer-row.open { background:#fff2a8; }
+  tbody tr.buyer-row.open td { border-bottom-color:transparent; font-weight:700; }
   td.n { text-align:right; font-variant-numeric:tabular-nums; }
   td:first-child { color:var(--mute); font-variant-numeric:tabular-nums; width:50px; }
   .loading { text-align:center; padding:40px; color:var(--mute); }
+  .drill { background:#fffcee; }
+  .drill td { padding:14px 18px 18px; }
+  .orderblock { margin-bottom:14px; border:1px solid #efe4b8; background:#fff;
+    border-radius:10px; padding:10px 14px; }
+  .orderblock:last-child { margin-bottom:0; }
+  .orderblock h4 { font-size:13px; color:var(--mute); margin-bottom:6px;
+    display:flex; gap:12px; flex-wrap:wrap; }
+  .orderblock h4 b { color:var(--ink); }
+  .orderblock h4 .status { background:var(--ink); color:#fff; padding:1px 8px;
+    border-radius:50px; font-size:11px; font-weight:700; }
+  .lines { width:100%; border-collapse:collapse; font-size:13px; }
+  .lines th, .lines td { padding:5px 8px; border:none; background:transparent; }
+  .lines thead th { font-size:10px; background:transparent; }
+  .lines tbody tr:nth-child(even) { background:#faf7e6; }
+  .lines td.n { text-align:right; }
+  .lines .no { color:var(--blue); font-weight:600; font-size:12px; }
+  .pn { color:var(--red); font-size:12px; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -100,27 +123,74 @@
   `;
 
   document.getElementById('top5').innerHTML = buyers.slice(0,5).map((b,i) => `
-    <li>
+    <li data-jump="${b.buyer.replace(/"/g,'&quot;')}">
       <div class="rank">${i+1}</div>
       <div class="buyer">${b.buyer}</div>
       <div class="spend">${money(b.spend)}</div>
       <div class="orders">${b.orders} order${b.orders===1?'':'s'}</div>
     </li>
   `).join('');
+  document.querySelectorAll('#top5 li').forEach(li => {
+    li.addEventListener('click', () => {
+      openBuyer = li.dataset.jump; render();
+      const row = document.querySelector(`.buyer-row[data-buyer="${li.dataset.jump.replace(/"/g,'\\"')}"]`);
+      if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
 
-  let sortKey = 'spend', sortDir = -1;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const drillHTML = (b) => b.order_list.map(o => {
+    const rows = o.items.map(it => {
+      const url = it.no
+        ? `https://www.bricklink.com/v2/catalog/catalogitem.page?${it.type==='SET'?'S':it.type==='MINIFIG'?'M':'P'}=${encodeURIComponent(it.no)}`
+        : null;
+      const name = url
+        ? `<a href="${url}" target="_blank" rel="noopener">${esc(it.name)}</a>`
+        : esc(it.name);
+      return `<tr>
+        <td class="no">${esc(it.no)}</td>
+        <td>${name}${it.color ? `<span class="pn">${esc(it.color)}</span>` : ''}</td>
+        <td class="n">${it.qty}</td>
+        <td class="n">${money(it.unit)}</td>
+        <td class="n">${money(it.total)}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="orderblock">
+      <h4>
+        <b>#${o.id}</b>
+        <span>${o.date}</span>
+        <span class="status">${esc(o.status)}</span>
+        <span>${o.lots} lots &middot; ${o.qty} pcs</span>
+        <span style="margin-left:auto"><b>${money(o.total)}</b></span>
+      </h4>
+      <table class="lines">
+        <thead><tr><th>No.</th><th>Item</th><th class="n">Qty</th><th class="n">Unit</th><th class="n">Line</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#888">No line items</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  let sortKey = 'spend', sortDir = -1, openBuyer = null;
   const render = () => {
     const sorted = [...buyers].sort((a,b) => (a[sortKey] > b[sortKey] ? 1 : -1) * sortDir);
     const tbody = document.querySelector('#all tbody');
     tbody.innerHTML = sorted.map((b,i) => `
-      <tr>
+      <tr class="buyer-row${openBuyer === b.buyer ? ' open' : ''}" data-buyer="${esc(b.buyer)}">
         <td>${i+1}</td>
-        <td><b>${b.buyer}</b></td>
+        <td><b>${esc(b.buyer)}</b></td>
         <td class="n">${money(b.spend)}</td>
         <td class="n">${b.orders}</td>
         <td class="n">${b.last}</td>
       </tr>
+      ${openBuyer === b.buyer ? `<tr class="drill"><td colspan="5">${drillHTML(b)}</td></tr>` : ''}
     `).join('');
+    tbody.querySelectorAll('.buyer-row').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const name = tr.dataset.buyer;
+        openBuyer = (openBuyer === name) ? null : name;
+        render();
+      });
+    });
   };
   render();
 
