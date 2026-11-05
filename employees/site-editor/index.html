@@ -179,18 +179,6 @@
       z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,.25);
     }
     .toast.show { opacity:1; }
-    .fe-block { border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; background:#fff; }
-    .fe-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
-    .fe-hint { color:var(--mid); font-size:.78rem; margin-bottom:10px; }
-    .fe-rows { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
-    .fe-row { display:grid; grid-template-columns:52px 1fr 130px 32px 32px 32px; gap:8px; align-items:center; background:#f9fafc; border:1px solid var(--line); border-radius:10px; padding:6px 8px; }
-    .fe-thumb { width:48px; height:48px; object-fit:contain; background:#fff; border-radius:6px; border:1px solid var(--line); }
-    .fe-row input, .fe-row select { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }
-    .fe-row button { background:#fff; border:1px solid var(--line); border-radius:8px; font-weight:700; cursor:pointer; padding:6px 0; }
-    .fe-row button:hover { background:var(--cream); }
-    .fe-rm { color:var(--red); }
-    .fe-empty { color:var(--mid); font-size:.85rem; font-style:italic; padding:8px 0; }
-    .fe-add { font-size:.82rem; padding:8px 14px; }
   </style>
 </head>
 <body>
@@ -211,7 +199,6 @@
         <p>Change hero copy, swap the hero image, hide or show sections. When you save, click <strong>Copy to Sheet</strong>, open the Site Config sheet, and paste. Changes go live in about a minute.</p>
       </div>
       <div class="actions">
-        <a class="btn btn-gold" href="#featured-items">&#9733; Featured items</a>
         <a class="btn btn-ghost" href="https://piecepavilion.com/" target="_blank" rel="noopener">Preview live site &#8599;</a>
         <a class="btn btn-primary" id="open-sheet" href="https://docs.google.com/spreadsheets/d/1XPxYTHrGU3DyIWGWcyfRhylGV--6P7WmaMWuXrUozts/edit" target="_blank" rel="noopener">Open Site Config sheet &rarr;</a>
       </div>
@@ -219,27 +206,6 @@
 
     <div class="layout">
       <div class="editor-col">
-
-        <!-- FEATURED ITEMS EDITOR (top of editor so it's the first thing you see) -->
-        <section class="section featured-editor" id="featured-items" style="border:2px solid var(--yellow); background:linear-gradient(180deg,var(--cream) 0%,#fff 60%);">
-          <div class="section-head">
-            <h3><span class="dot" style="background:var(--yellow)"></span> Featured items (hero + featured + just-added) &mdash; NEW</h3>
-          </div>
-          <p style="color:var(--mid);font-size:.88rem;margin-bottom:14px;">
-            Type the BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sw0547</code> &middot; parts: <code>3024</code>) and pick the type. Leave a section empty to keep the automatic daily picks. Preview updates live; Save gives you JSON to paste into <code>data/featured_overrides.json</code>.
-          </p>
-          <div id="fe-sections"></div>
-          <div class="output-card" style="margin-top:12px;">
-            <div class="ohead">
-              <h4>&#128190; Copy this JSON into <code>data/featured_overrides.json</code></h4>
-              <button class="btn btn-copy" id="fe-copy">Copy JSON</button>
-            </div>
-            <pre id="fe-json" style="max-height:220px;">{"hero":[],"featured":[],"newest":[]}</pre>
-            <p style="color:#a8a9b4;font-size:.78rem;margin-top:8px;line-height:1.55;">
-              After paste + commit, the daily refresh (or a manual run of <code>update_featured.py</code>) will use your picks instead of the auto ones.
-            </p>
-          </div>
-        </section>
 
         <!-- HERO -->
         <section class="section hero-section">
@@ -384,117 +350,6 @@ Destination</textarea>
       }
     });
 
-    /* ===== Featured-items editor ===== */
-    const FE_SECTIONS = [
-      { key: 'hero',     label: 'Hero carousel (top of homepage)', max: 5,  hint: 'Up to 5 cards. First card shows first.' },
-      { key: 'featured', label: 'Featured From Our Store (middle)', max: 12, hint: 'Up to 12. Mix sets, minifigs, parts, keychains.' },
-      { key: 'newest',   label: 'Just Added (amber row below hero)', max: 8,  hint: 'Up to 8. Reads as "latest listings".' },
-    ];
-    const TYPES = [
-      { v: 'SET', label: 'Set',       prefix: 'S' },
-      { v: 'MINIFIG', label: 'Minifig', prefix: 'M' },
-      { v: 'PART', label: 'Part',      prefix: 'P' },
-      { v: 'GEAR', label: 'Gear/Keychain', prefix: 'G' },
-    ];
-    let feState = { hero: [], featured: [], newest: [] };
-
-    // Pre-load whatever is currently saved in the repo.
-    fetch('/data/featured_overrides.json?v=' + Date.now())
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (!d) return;
-        for (const k of ['hero','featured','newest']) {
-          feState[k] = (d[k] || []).map(e => typeof e === 'string'
-            ? { no: e.toUpperCase(), type: '' }
-            : { no: (e.no || '').toUpperCase(), type: (e.type || '').toUpperCase() });
-        }
-        renderFE();
-      }).catch(()=>{});
-
-    function imgURL(no, type) {
-      const t = TYPES.find(x => x.v === type);
-      if (!t || !no) return '';
-      return `https://img.bricklink.com/ItemImage/${t.prefix}N/0/${encodeURIComponent(no)}.png`;
-    }
-
-    function renderFE() {
-      const wrap = document.getElementById('fe-sections');
-      wrap.innerHTML = FE_SECTIONS.map(sec => {
-        const rows = feState[sec.key].map((e,i) => `
-          <div class="fe-row" data-sec="${sec.key}" data-i="${i}">
-            <img class="fe-thumb" src="${imgURL(e.no, e.type)}" alt="" onerror="this.style.visibility='hidden'">
-            <input class="fe-no" type="text" placeholder="Item No" value="${e.no}" />
-            <select class="fe-type">
-              <option value="">type…</option>
-              ${TYPES.map(t => `<option value="${t.v}"${t.v===e.type?' selected':''}>${t.label}</option>`).join('')}
-            </select>
-            <button class="fe-up"   title="Move up">&uarr;</button>
-            <button class="fe-down" title="Move down">&darr;</button>
-            <button class="fe-rm"   title="Remove">&times;</button>
-          </div>`).join('');
-        return `
-          <div class="fe-block">
-            <div class="fe-head">
-              <strong>${sec.label}</strong>
-              <span style="color:var(--mid);font-size:.82rem;">${feState[sec.key].length}/${sec.max}</span>
-            </div>
-            <div class="fe-hint">${sec.hint}</div>
-            <div class="fe-rows">${rows || '<div class="fe-empty">Empty &rarr; falls back to automatic daily picks.</div>'}</div>
-            <button class="btn btn-ghost fe-add" data-sec="${sec.key}" ${feState[sec.key].length >= sec.max ? 'disabled' : ''}>+ Add item</button>
-          </div>`;
-      }).join('');
-
-      wrap.querySelectorAll('.fe-add').forEach(b => b.addEventListener('click', () => {
-        feState[b.dataset.sec].push({ no: '', type: '' });
-        renderFE();
-      }));
-      wrap.querySelectorAll('.fe-row').forEach(row => {
-        const sec = row.dataset.sec, i = +row.dataset.i;
-        row.querySelector('.fe-no').addEventListener('input', e => {
-          feState[sec][i].no = e.target.value.trim().toUpperCase();
-          const img = row.querySelector('.fe-thumb');
-          img.src = imgURL(feState[sec][i].no, feState[sec][i].type);
-          img.style.visibility = '';
-          updateFEJson();
-        });
-        row.querySelector('.fe-type').addEventListener('change', e => {
-          feState[sec][i].type = e.target.value;
-          const img = row.querySelector('.fe-thumb');
-          img.src = imgURL(feState[sec][i].no, feState[sec][i].type);
-          img.style.visibility = '';
-          updateFEJson();
-        });
-        row.querySelector('.fe-rm').addEventListener('click', () => {
-          feState[sec].splice(i,1); renderFE();
-        });
-        row.querySelector('.fe-up').addEventListener('click', () => {
-          if (i>0) { const a = feState[sec]; [a[i-1],a[i]] = [a[i],a[i-1]]; renderFE(); }
-        });
-        row.querySelector('.fe-down').addEventListener('click', () => {
-          const a = feState[sec]; if (i<a.length-1) { [a[i+1],a[i]] = [a[i],a[i+1]]; renderFE(); }
-        });
-      });
-      updateFEJson();
-    }
-
-    function updateFEJson() {
-      const clean = {};
-      for (const k of ['hero','featured','newest']) {
-        clean[k] = feState[k]
-          .filter(e => e.no)
-          .map(e => e.type ? { no: e.no, type: e.type } : e.no);
-      }
-      document.getElementById('fe-json').textContent = JSON.stringify(clean, null, 2);
-    }
-
-    document.getElementById('fe-copy').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(document.getElementById('fe-json').textContent);
-        showToast('JSON copied — paste into data/featured_overrides.json');
-      } catch (e) { showToast('Could not copy — select the JSON above'); }
-    });
-
-    renderFE();
   </script>
 </body>
 </html>
