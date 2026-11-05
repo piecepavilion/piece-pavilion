@@ -162,9 +162,9 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const bname = name => {
     const n = esc(name);
-    return n.length <= 1
-      ? `<span class="buyer-name">${n}</span>`
-      : `<span class="buyer-name"><span class="first">${n[0]}</span><span class="rest">${n.slice(1)}</span></span>`;
+    if (n.length <= 1) return `<span class="buyer-name">${n}</span>`;
+    if (n.length === 2) return `<span class="buyer-name"><span class="first">${n[0]}</span><span class="first">${n[1]}</span></span>`;
+    return `<span class="buyer-name"><span class="first">${n[0]}</span><span class="rest">${n.slice(1,-1)}</span><span class="first">${n.slice(-1)}</span></span>`;
   };
 
   const bySpend  = [...buyers].sort((a,b) => b.spend - a.spend).slice(0,5);
@@ -189,8 +189,8 @@
       });
     });
   };
-  renderTop5('top5-spend',  bySpend,  b => `<span class="blur-money">${money(b.spend)}</span>`,  b => `${b.orders} order${b.orders===1?'':'s'}`);
-  renderTop5('top5-orders', byOrders, b => `${b.orders} orders`, b => `<span class="blur-money">${money(b.spend)}</span>`);
+  renderTop5('top5-spend',  bySpend,  b => money(b.spend),  b => `${b.orders} order${b.orders===1?'':'s'}`);
+  renderTop5('top5-orders', byOrders, b => `${b.orders} orders`, b => money(b.spend));
 
   const drillHTML = (b) => b.order_list.map(o => {
     const rows = o.items.map(it => {
@@ -204,8 +204,8 @@
         <td class="no">${esc(it.no)}</td>
         <td>${name}${it.color ? `<span class="pn">${esc(it.color)}</span>` : ''}</td>
         <td class="n">${it.qty}</td>
-        <td class="n blur-money">${money(it.unit)}</td>
-        <td class="n blur-money">${money(it.total)}</td>
+        <td class="n">${money(it.unit)}</td>
+        <td class="n">${money(it.total)}</td>
       </tr>`;
     }).join('');
     return `<div class="orderblock">
@@ -214,7 +214,7 @@
         <span>${o.date}</span>
         <span class="status">${esc(o.status)}</span>
         <span>${o.lots} lots &middot; ${o.qty} pcs</span>
-        <span style="margin-left:auto"><b class="blur-money">${money(o.total)}</b></span>
+        <span style="margin-left:auto"><b>${money(o.total)}</b></span>
       </h4>
       <table class="lines">
         <thead><tr><th>No.</th><th>Item</th><th class="n">Qty</th><th class="n">Unit</th><th class="n">Line</th></tr></thead>
@@ -231,7 +231,7 @@
       <tr class="buyer-row${openBuyer === b.buyer ? ' open' : ''}" data-buyer="${esc(b.buyer)}">
         <td>${i+1}</td>
         <td><b>${bname(b.buyer)}</b></td>
-        <td class="n blur-money">${money(b.spend)}</td>
+        <td class="n">${money(b.spend)}</td>
         <td class="n">${b.orders}</td>
         <td class="n">${b.last}</td>
       </tr>
