@@ -55,6 +55,11 @@
   .vid-toggle.on::before { content:'\25CF '; }
   .buyer-name .rest { transition:filter .15s; }
   body.video-mode .buyer-name .rest { filter:blur(5px); color:#555; }
+  /* Video mode: also blur dollar figures (total spend, avg order, per-row
+     spend, top-5 metrics, drilldown order totals). Keep buyer/order counts
+     visible so the structure still reads on camera. */
+  .blur-money { transition:filter .15s; }
+  body.video-mode .blur-money { filter:blur(5px); color:#555; }
   table { width:100%; background:var(--surface); border:1px solid var(--line);
     border-radius:var(--radius); border-collapse:separate; border-spacing:0;
     overflow:hidden; box-shadow:var(--shadow); }
@@ -150,8 +155,8 @@
   document.getElementById('totals').innerHTML = `
     <div class="pill"><b>${count}</b><span>Buyers</span></div>
     <div class="pill"><b>${totalOrders}</b><span>Orders</span></div>
-    <div class="pill"><b>${money(totalSpend)}</b><span>Total spend</span></div>
-    <div class="pill"><b>${money(totalSpend/totalOrders)}</b><span>Avg order</span></div>
+    <div class="pill"><b class="blur-money">${money(totalSpend)}</b><span>Total spend</span></div>
+    <div class="pill"><b class="blur-money">${money(totalSpend/totalOrders)}</b><span>Avg order</span></div>
   `;
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -184,8 +189,8 @@
       });
     });
   };
-  renderTop5('top5-spend',  bySpend,  b => money(b.spend),  b => `${b.orders} order${b.orders===1?'':'s'}`);
-  renderTop5('top5-orders', byOrders, b => `${b.orders} orders`, b => money(b.spend));
+  renderTop5('top5-spend',  bySpend,  b => `<span class="blur-money">${money(b.spend)}</span>`,  b => `${b.orders} order${b.orders===1?'':'s'}`);
+  renderTop5('top5-orders', byOrders, b => `${b.orders} orders`, b => `<span class="blur-money">${money(b.spend)}</span>`);
 
   const drillHTML = (b) => b.order_list.map(o => {
     const rows = o.items.map(it => {
@@ -199,8 +204,8 @@
         <td class="no">${esc(it.no)}</td>
         <td>${name}${it.color ? `<span class="pn">${esc(it.color)}</span>` : ''}</td>
         <td class="n">${it.qty}</td>
-        <td class="n">${money(it.unit)}</td>
-        <td class="n">${money(it.total)}</td>
+        <td class="n blur-money">${money(it.unit)}</td>
+        <td class="n blur-money">${money(it.total)}</td>
       </tr>`;
     }).join('');
     return `<div class="orderblock">
@@ -209,7 +214,7 @@
         <span>${o.date}</span>
         <span class="status">${esc(o.status)}</span>
         <span>${o.lots} lots &middot; ${o.qty} pcs</span>
-        <span style="margin-left:auto"><b>${money(o.total)}</b></span>
+        <span style="margin-left:auto"><b class="blur-money">${money(o.total)}</b></span>
       </h4>
       <table class="lines">
         <thead><tr><th>No.</th><th>Item</th><th class="n">Qty</th><th class="n">Unit</th><th class="n">Line</th></tr></thead>
@@ -226,7 +231,7 @@
       <tr class="buyer-row${openBuyer === b.buyer ? ' open' : ''}" data-buyer="${esc(b.buyer)}">
         <td>${i+1}</td>
         <td><b>${bname(b.buyer)}</b></td>
-        <td class="n">${money(b.spend)}</td>
+        <td class="n blur-money">${money(b.spend)}</td>
         <td class="n">${b.orders}</td>
         <td class="n">${b.last}</td>
       </tr>

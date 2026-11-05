@@ -10,14 +10,17 @@
   :root {
     --red:#e3000b; --red-dark:#9b0008; --yellow:#ffce00; --blue:#0057a8;
     --ink:#15151f; --mid:#6b7280; --muted:#9ca3af; --line:#e6e8ec;
-    --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec;
+    --bg:#f5f6f9; --surface:#fff; --cream:#fff8ec; --green:#16a34a;
     --radius:12px; --shadow-sm:0 2px 8px rgba(20,22,29,.05);
     --shadow:0 6px 18px rgba(20,22,29,.08);
   }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Nunito',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+  body { font-family:'Nunito',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; padding-bottom:90px; }
   h1,h2,h3 { font-weight:800; letter-spacing:-.01em; }
   a { color:var(--red); text-decoration:none; }
+  code { background:var(--cream); padding:1px 6px; border-radius:4px;
+    font-family:ui-monospace,Menlo,monospace; font-size:.85em; }
+
   .topbar { background:linear-gradient(135deg,#15151f 0%,#2c0c0c 55%,#4a0a10 100%);
     color:#fff; padding:16px 24px; display:flex; align-items:center; gap:14px;
     box-shadow:inset 0 -2px 0 0 rgba(255,206,0,.55); }
@@ -27,29 +30,24 @@
   .topbar .back { margin-left:auto; color:#fff; font-weight:800; font-size:.86rem;
     border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
   .topbar .back:hover { background:rgba(255,255,255,.14); }
-  .wrap { max-width:1000px; margin:0 auto; padding:28px 24px 60px; }
+
+  .wrap { max-width:1100px; margin:0 auto; padding:24px 20px 20px; }
   .intro { background:var(--surface); border-radius:14px; border:1px solid var(--line);
-    box-shadow:var(--shadow-sm); padding:22px 26px; margin-bottom:22px; }
-  .intro h2 { font-size:1.3rem; margin-bottom:6px; }
-  .intro p { color:var(--mid); font-size:.95rem; }
-  .intro code { background:var(--cream); padding:1px 6px; border-radius:4px;
-    font-family:ui-monospace,Menlo,monospace; font-size:.85em; }
-  .btn { font:inherit; font-weight:800; font-size:.9rem; padding:10px 18px;
-    border-radius:999px; cursor:pointer; border:0; display:inline-flex; align-items:center; gap:6px; }
-  .btn-primary { background:var(--red); color:#fff; }
-  .btn-primary:hover { background:var(--red-dark); }
-  .btn-ghost { background:#fff; color:var(--ink); border:1.5px solid var(--line); }
-  .btn-ghost:hover { border-color:var(--ink); }
-  .btn-gold { background:var(--yellow); color:var(--ink); }
+    box-shadow:var(--shadow-sm); padding:20px 24px; margin-bottom:18px; }
+  .intro h2 { font-size:1.2rem; margin-bottom:4px; }
+  .intro p { color:var(--mid); font-size:.9rem; }
+
   .fe-block { border:1px solid var(--line); border-radius:12px; padding:14px 16px;
     margin-bottom:12px; background:#fff; box-shadow:var(--shadow-sm); }
   .fe-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
   .fe-head strong { font-size:1.05rem; }
   .fe-hint { color:var(--mid); font-size:.8rem; margin-bottom:10px; }
-  .fe-rows { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
-  .fe-row { display:grid; grid-template-columns:52px 1fr 130px 32px 32px 32px;
-    gap:8px; align-items:center; background:#f9fafc; border:1px solid var(--line);
-    border-radius:10px; padding:6px 8px; }
+  .fe-rows { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; }
+
+  /* Edit row: inputs on the left, home preview on the right */
+  .fe-row { display:grid; grid-template-columns:52px 1fr 130px 32px 32px 32px 180px;
+    gap:10px; align-items:center; background:#f9fafc; border:1px solid var(--line);
+    border-radius:10px; padding:8px 10px; }
   .fe-thumb { width:48px; height:48px; object-fit:contain; background:#fff;
     border-radius:6px; border:1px solid var(--line); }
   .fe-row input, .fe-row select { font:inherit; padding:6px 8px;
@@ -59,18 +57,59 @@
   .fe-row button:hover { background:var(--cream); }
   .fe-rm { color:var(--red); }
   .fe-empty { color:var(--mid); font-size:.85rem; font-style:italic; padding:8px 0; }
-  .fe-add { font-size:.82rem; padding:8px 14px; }
-  .output { margin-top:16px; background:#15151f; color:#eef; border-radius:12px;
-    padding:14px 18px; box-shadow:var(--shadow); }
-  .output .ohead { display:flex; justify-content:space-between; align-items:center;
-    margin-bottom:8px; color:#ffce00; }
-  .output pre { background:#0d0d14; padding:10px 12px; border-radius:8px;
-    font-family:ui-monospace,Menlo,monospace; font-size:.82rem; overflow:auto;
-    max-height:260px; white-space:pre-wrap; word-break:break-all; }
-  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+
+  /* The right-column "what it looks like on the home screen" preview.
+     Styled to roughly mirror the homepage hero-card so Dad can tell at a glance. */
+  .preview-card {
+    display:flex; flex-direction:column; align-items:center;
+    background:linear-gradient(180deg,#fffbea,#fff);
+    border:2px solid var(--yellow); border-radius:10px; padding:6px 6px 8px;
+    text-align:center; font-size:11px; min-height:100px;
+  }
+  .preview-card img { width:100%; max-width:100px; height:66px; object-fit:contain; margin-bottom:3px; }
+  .preview-card .pv-tag { background:var(--red); color:#fff; font-weight:800;
+    padding:1px 8px; border-radius:50px; font-size:9px; letter-spacing:.04em; }
+  .preview-card .pv-name { font-weight:700; margin-top:2px; line-height:1.15; }
+  .preview-card .pv-price { color:var(--mid); font-weight:700; margin-top:1px; }
+  .preview-card.empty { background:#fafbfd; border:1.5px dashed var(--line); color:var(--muted); justify-content:center; }
+
+  .fe-add { font:inherit; font-weight:800; font-size:.82rem; padding:8px 16px;
+    border-radius:999px; border:1.5px dashed var(--line); background:#fff; cursor:pointer; }
+  .fe-add:hover:not(:disabled) { border-color:var(--ink); }
+  .fe-add:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* Sticky save bar — always visible at the bottom. */
+  .savebar { position:fixed; bottom:0; left:0; right:0; z-index:40;
+    background:#15151f; color:#fff; padding:14px 24px;
+    display:flex; align-items:center; gap:16px;
+    box-shadow:0 -6px 24px rgba(0,0,0,.3); }
+  .savebar .status { color:#a8a9b4; font-size:.85rem; }
+  .savebar .status.dirty { color:#ffce00; font-weight:700; }
+  .savebar .status.saved { color:#7cea8e; font-weight:700; }
+  .savebar .spacer { flex:1; }
+  .savebar button { font:inherit; font-weight:800; font-size:.95rem;
+    padding:11px 24px; border-radius:50px; border:0; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px; }
+  .btn-save { background:var(--green); color:#fff; }
+  .btn-save:hover { background:#108d3f; }
+  .btn-save:disabled { background:#555; cursor:not-allowed; }
+  .btn-refresh { background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.4) !important; }
+
+  .toast { position:fixed; bottom:88px; left:50%; transform:translateX(-50%);
     background:#15151f; color:#fff; padding:10px 18px; border-radius:50px;
     font-weight:700; opacity:0; pointer-events:none; transition:opacity .2s; z-index:50; }
   .toast.show { opacity:1; }
+  .toast.err { background:#9b0008; }
+
+  @media (max-width:720px) {
+    .fe-row { grid-template-columns:52px 1fr 100px; }
+    .fe-row .fe-up, .fe-row .fe-down, .fe-row .fe-rm { grid-column:span 1; }
+    .fe-row .fe-up { grid-column:1; }
+    .fe-row .fe-down { grid-column:2; }
+    .fe-row .fe-rm { grid-column:3; }
+    .fe-row .preview-card { grid-column:1/-1; flex-direction:row; justify-content:flex-start; gap:8px; min-height:auto; padding:6px 8px; }
+    .fe-row .preview-card img { width:48px; height:48px; margin-bottom:0; }
+  }
 </style>
 </head>
 <body>
@@ -81,26 +120,19 @@
 </header>
 <main class="wrap">
   <div class="intro">
-    <h2>Hand-pick what shows on the homepage</h2>
-    <p>Three sections on <a href="https://piecepavilion.com/" target="_blank">piecepavilion.com</a>:
-      the <strong>hero carousel</strong> at the top, the <strong>Just Added</strong> amber row below it,
-      and <strong>Featured From Our Store</strong> farther down. Type a BrickLink item number
-      (sets: <code>10262-1</code> &middot; minifigs: <code>sw0547</code> &middot; parts: <code>3024</code>)
-      and pick the type. Leave a section empty to keep the automatic daily picks.
-      When you're happy, click <strong>Copy JSON</strong> and paste it into
-      <code>data/featured_overrides.json</code> in the repo &mdash; the daily refresh will use your picks.</p>
+    <h2>Pick what shows on the homepage</h2>
+    <p>Type a BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sim024</code> &middot; parts: <code>3024</code>), pick the type, see the live preview card (what the homepage will look like). When you're done, click <strong>Save</strong>. Empty sections fall back to the automatic daily picks.</p>
   </div>
 
   <div id="fe-sections"></div>
-
-  <div class="output">
-    <div class="ohead">
-      <strong>&#128190; Copy this JSON into <code>data/featured_overrides.json</code></strong>
-      <button class="btn btn-gold" id="fe-copy">Copy JSON</button>
-    </div>
-    <pre id="fe-json">{"hero":[],"featured":[],"newest":[]}</pre>
-  </div>
 </main>
+
+<div class="savebar">
+  <span class="status" id="save-status">Loading…</span>
+  <div class="spacer"></div>
+  <button class="btn-refresh" id="refresh-btn" title="Reload what's currently saved">&#8635; Reload</button>
+  <button class="btn-save" id="save-btn" disabled>&#128190; Save</button>
+</div>
 <div class="toast" id="toast">Copied.</div>
 
 <script>
@@ -116,39 +148,129 @@
     { v:'GEAR',    label:'Gear/Keychain',  prefix:'G' },
   ];
   let feState = { hero:[], featured:[], newest:[] };
+  let savedState = JSON.stringify(feState);
+  let loading = true;
 
-  fetch('/data/featured_overrides.json?v=' + Date.now())
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d) return;
-      for (const k of ['hero','featured','newest']) {
-        feState[k] = (d[k] || []).map(e => typeof e === 'string'
-          ? { no:e.toUpperCase(), type:'' }
-          : { no:(e.no||'').toUpperCase(), type:(e.type||'').toUpperCase() });
-      }
-      renderFE();
-    }).catch(()=>{});
+  const statusEl = document.getElementById('save-status');
+  const saveBtn = document.getElementById('save-btn');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const toast = document.getElementById('toast');
+
+  const showToast = (msg, isErr) => {
+    toast.textContent = msg;
+    toast.classList.toggle('err', !!isErr);
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 2000);
+  };
 
   const imgURL = (no, type) => {
     const t = TYPES.find(x => x.v === type);
     return (!t || !no) ? '' : `https://img.bricklink.com/ItemImage/${t.prefix}N/0/${encodeURIComponent(no)}.png`;
   };
 
+  function serializeState() {
+    const clean = {};
+    for (const k of ['hero','featured','newest']) {
+      clean[k] = feState[k].filter(e => e.no)
+        .map(e => e.type ? { no:e.no, type:e.type } : e.no);
+    }
+    return clean;
+  }
+
+  function markDirty() {
+    const now = JSON.stringify(serializeState());
+    const dirty = now !== savedState;
+    statusEl.textContent = dirty ? 'Unsaved changes — click Save' : 'All changes saved';
+    statusEl.className = 'status ' + (dirty ? 'dirty' : 'saved');
+    saveBtn.disabled = !dirty || loading;
+  }
+
+  async function loadFromServer() {
+    loading = true;
+    statusEl.textContent = 'Loading…'; statusEl.className = 'status';
+    saveBtn.disabled = true;
+    try {
+      const r = await fetch('/employees/api/featured/get?v=' + Date.now());
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      for (const k of ['hero','featured','newest']) {
+        feState[k] = (d[k] || []).map(e => typeof e === 'string'
+          ? { no:e.toUpperCase(), type:'' }
+          : { no:(e.no||'').toUpperCase(), type:(e.type||'').toUpperCase() });
+      }
+      savedState = JSON.stringify(serializeState());
+      loading = false;
+      renderFE();
+      statusEl.textContent = 'All changes saved';
+      statusEl.className = 'status saved';
+    } catch (e) {
+      loading = false;
+      statusEl.textContent = 'Could not load — try Reload';
+      statusEl.className = 'status dirty';
+      showToast('Load failed: ' + e.message, true);
+    }
+  }
+
+  async function saveToServer() {
+    const payload = serializeState();
+    saveBtn.disabled = true;
+    statusEl.textContent = 'Saving…'; statusEl.className = 'status';
+    try {
+      const r = await fetch('/employees/api/featured/save', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      // The worker returns the cleaned payload — use it as the new saved state
+      // so we match server-side normalisation (dedup, uppercase, etc.).
+      for (const k of ['hero','featured','newest']) {
+        feState[k] = (d.saved[k] || []).map(e => typeof e === 'string'
+          ? { no:e.toUpperCase(), type:'' }
+          : { no:(e.no||'').toUpperCase(), type:(e.type||'').toUpperCase() });
+      }
+      savedState = JSON.stringify(serializeState());
+      renderFE();
+      showToast('Saved — homepage will update on the next refresh');
+    } catch (e) {
+      saveBtn.disabled = false;
+      statusEl.textContent = 'Save failed — try again';
+      statusEl.className = 'status dirty';
+      showToast('Save failed: ' + e.message, true);
+    }
+  }
+
   function renderFE() {
     const wrap = document.getElementById('fe-sections');
     wrap.innerHTML = FE_SECTIONS.map(sec => {
-      const rows = feState[sec.key].map((e,i) => `
-        <div class="fe-row" data-sec="${sec.key}" data-i="${i}">
-          <img class="fe-thumb" src="${imgURL(e.no, e.type)}" alt="" onerror="this.style.visibility='hidden'">
-          <input class="fe-no" type="text" placeholder="Item No" value="${e.no}" />
-          <select class="fe-type">
-            <option value="">type…</option>
-            ${TYPES.map(t => `<option value="${t.v}"${t.v===e.type?' selected':''}>${t.label}</option>`).join('')}
-          </select>
-          <button class="fe-up"   title="Move up">&uarr;</button>
-          <button class="fe-down" title="Move down">&darr;</button>
-          <button class="fe-rm"   title="Remove">&times;</button>
-        </div>`).join('');
+      const rows = feState[sec.key].map((e,i) => {
+        const url = imgURL(e.no, e.type);
+        const type = TYPES.find(t => t.v === e.type);
+        const previewFilled = e.no && e.type;
+        const prevHTML = previewFilled
+          ? `<div class="preview-card">
+               <img src="${url}" alt="" onerror="this.src=''">
+               <span class="pv-tag">${type ? type.label : ''}</span>
+               <div class="pv-name">${e.no}</div>
+               <div class="pv-price">Homepage preview</div>
+             </div>`
+          : `<div class="preview-card empty">Fill in # &amp; type<br>to preview</div>`;
+        return `
+          <div class="fe-row" data-sec="${sec.key}" data-i="${i}">
+            <img class="fe-thumb" src="${url}" alt="" onerror="this.style.visibility='hidden'">
+            <input class="fe-no" type="text" placeholder="Item No" value="${e.no}" />
+            <select class="fe-type">
+              <option value="">type…</option>
+              ${TYPES.map(t => `<option value="${t.v}"${t.v===e.type?' selected':''}>${t.label}</option>`).join('')}
+            </select>
+            <button class="fe-up"   title="Move up">&uarr;</button>
+            <button class="fe-down" title="Move down">&darr;</button>
+            <button class="fe-rm"   title="Remove">&times;</button>
+            ${prevHTML}
+          </div>`;
+      }).join('');
       return `
         <div class="fe-block">
           <div class="fe-head">
@@ -157,63 +279,69 @@
           </div>
           <div class="fe-hint">${sec.hint}</div>
           <div class="fe-rows">${rows || '<div class="fe-empty">Empty &rarr; falls back to automatic daily picks.</div>'}</div>
-          <button class="btn btn-ghost fe-add" data-sec="${sec.key}" ${feState[sec.key].length >= sec.max ? 'disabled' : ''}>+ Add item</button>
+          <button class="fe-add" data-sec="${sec.key}" ${feState[sec.key].length >= sec.max ? 'disabled' : ''}>+ Add item</button>
         </div>`;
     }).join('');
 
     wrap.querySelectorAll('.fe-add').forEach(b => b.addEventListener('click', () => {
-      feState[b.dataset.sec].push({ no:'', type:'' }); renderFE();
+      feState[b.dataset.sec].push({ no:'', type:'' }); renderFE(); markDirty();
     }));
     wrap.querySelectorAll('.fe-row').forEach(row => {
       const sec = row.dataset.sec, i = +row.dataset.i;
-      row.querySelector('.fe-no').addEventListener('input', e => {
+      const noIn = row.querySelector('.fe-no');
+      const typeIn = row.querySelector('.fe-type');
+      const thumbEl = row.querySelector('.fe-thumb');
+      const refresh = () => {
+        thumbEl.src = imgURL(feState[sec][i].no, feState[sec][i].type);
+        thumbEl.style.visibility = '';
+        const prev = row.querySelector('.preview-card');
+        const no = feState[sec][i].no, type = feState[sec][i].type;
+        const t = TYPES.find(x => x.v === type);
+        if (no && type) {
+          prev.className = 'preview-card';
+          prev.innerHTML = `
+            <img src="${imgURL(no, type)}" alt="" onerror="this.src=''">
+            <span class="pv-tag">${t ? t.label : ''}</span>
+            <div class="pv-name">${no}</div>
+            <div class="pv-price">Homepage preview</div>`;
+        } else {
+          prev.className = 'preview-card empty';
+          prev.innerHTML = 'Fill in # &amp; type<br>to preview';
+        }
+        markDirty();
+      };
+      noIn.addEventListener('input', e => {
         feState[sec][i].no = e.target.value.trim().toUpperCase();
-        const img = row.querySelector('.fe-thumb');
-        img.src = imgURL(feState[sec][i].no, feState[sec][i].type);
-        img.style.visibility = '';
-        updateFEJson();
+        refresh();
       });
-      row.querySelector('.fe-type').addEventListener('change', e => {
+      typeIn.addEventListener('change', e => {
         feState[sec][i].type = e.target.value;
-        const img = row.querySelector('.fe-thumb');
-        img.src = imgURL(feState[sec][i].no, feState[sec][i].type);
-        img.style.visibility = '';
-        updateFEJson();
+        refresh();
       });
-      row.querySelector('.fe-rm').addEventListener('click', () => { feState[sec].splice(i,1); renderFE(); });
+      row.querySelector('.fe-rm').addEventListener('click', () => { feState[sec].splice(i,1); renderFE(); markDirty(); });
       row.querySelector('.fe-up').addEventListener('click', () => {
-        if (i > 0) { const a = feState[sec]; [a[i-1],a[i]] = [a[i],a[i-1]]; renderFE(); }
+        if (i > 0) { const a = feState[sec]; [a[i-1],a[i]] = [a[i],a[i-1]]; renderFE(); markDirty(); }
       });
       row.querySelector('.fe-down').addEventListener('click', () => {
-        const a = feState[sec]; if (i < a.length - 1) { [a[i+1],a[i]] = [a[i],a[i+1]]; renderFE(); }
+        const a = feState[sec]; if (i < a.length - 1) { [a[i+1],a[i]] = [a[i],a[i+1]]; renderFE(); markDirty(); }
       });
     });
-    updateFEJson();
+    markDirty();
   }
 
-  function updateFEJson() {
-    const clean = {};
-    for (const k of ['hero','featured','newest']) {
-      clean[k] = feState[k].filter(e => e.no)
-        .map(e => e.type ? { no:e.no, type:e.type } : e.no);
-    }
-    document.getElementById('fe-json').textContent = JSON.stringify(clean, null, 2);
-  }
-
-  const toast = document.getElementById('toast');
-  const showToast = msg => {
-    toast.textContent = msg; toast.classList.add('show');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => toast.classList.remove('show'), 1800);
-  };
-  document.getElementById('fe-copy').addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(document.getElementById('fe-json').textContent);
-      showToast('JSON copied — paste into data/featured_overrides.json');
-    } catch (e) { showToast('Could not copy — select JSON above'); }
+  saveBtn.addEventListener('click', saveToServer);
+  refreshBtn.addEventListener('click', () => {
+    const now = JSON.stringify(serializeState());
+    if (now !== savedState && !confirm('You have unsaved changes. Reload and discard them?')) return;
+    loadFromServer();
   });
 
-  renderFE();
+  // Warn on tab close with unsaved changes.
+  window.addEventListener('beforeunload', (e) => {
+    if (JSON.stringify(serializeState()) !== savedState) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  loadFromServer();
 </script>
 </body>
 </html>
