@@ -30,20 +30,31 @@
     border-radius:12px; padding:10px 14px; box-shadow:var(--shadow); }
   .pill b { font-size:20px; display:block; }
   .pill span { color:var(--mute); font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .top5-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:26px; }
+  @media (max-width:640px) { .top5-grid { grid-template-columns:1fr; } }
   .top5 { background:linear-gradient(180deg,var(--cream),#fff);
     border:2px solid var(--yellow); border-radius:var(--radius);
-    padding:18px 20px 10px; margin-bottom:26px; box-shadow:var(--shadow); }
-  .top5 h3 { font-size:16px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    padding:18px 20px 10px; box-shadow:var(--shadow); }
+  .top5 h3 { font-size:15px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
   .top5 ol { list-style:none; padding:0; }
-  .top5 li { display:grid; grid-template-columns:36px 1fr auto auto;
-    gap:10px; align-items:center; padding:10px 0; border-top:1px solid #f0e7c8; }
+  .top5 li { display:grid; grid-template-columns:30px 1fr auto;
+    gap:10px; align-items:center; padding:9px 0; border-top:1px solid #f0e7c8;
+    cursor:pointer; transition:background .1s; }
   .top5 li:first-of-type { border-top:none; }
-  .rank { font-weight:900; color:var(--red); font-size:20px; text-align:center; }
-  .top5 .buyer { font-weight:700; }
-  .top5 .spend { font-weight:800; color:var(--ink); }
-  .top5 .orders { color:var(--mute); font-size:13px; }
-  .top5 li { cursor:pointer; transition:background .1s; }
   .top5 li:hover { background:rgba(255,206,0,.25); border-radius:8px; }
+  .rank { font-weight:900; color:var(--red); font-size:18px; text-align:center; }
+  .top5 .buyer { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .top5 .metric { font-weight:800; color:var(--ink); font-size:14px; }
+  .top5 .sub { color:var(--mute); font-size:11px; font-weight:600; }
+  .vid-toggle { background:var(--blue); color:#fff; border:none;
+    font:inherit; font-weight:800; font-size:13px; padding:8px 16px;
+    border-radius:50px; cursor:pointer; margin-left:auto;
+    display:inline-flex; align-items:center; gap:6px; transition:background .15s; }
+  .vid-toggle:hover { background:#003f80; }
+  .vid-toggle.on { background:#16a34a; }
+  .vid-toggle.on::before { content:'\25CF '; }
+  .buyer-name .rest { transition:filter .15s; }
+  body.video-mode .buyer-name .rest { filter:blur(5px); color:#555; }
   table { width:100%; background:var(--surface); border:1px solid var(--line);
     border-radius:var(--radius); border-collapse:separate; border-spacing:0;
     overflow:hidden; box-shadow:var(--shadow); }
@@ -82,17 +93,24 @@
 <header class="topbar">
   <img src="/circle_pp.png" alt="" onerror="this.style.display='none'" />
   <h1>Buyer Leaderboard</h1>
-  <a class="back" href="/employees/">&larr; Staff</a>
+  <button class="vid-toggle" id="vid-toggle" title="Blur buyer names for screen recording">Video mode</button>
+  <a class="back" href="/employees/" style="margin-left:12px;">&larr; Staff</a>
 </header>
 <main class="wrap">
   <h2>Every buyer, ranked</h2>
   <p class="sub">All completed and shipped orders, pulled from BrickLink.</p>
   <div class="totals" id="totals"></div>
 
-  <section class="top5">
-    <h3>Top 5 buyers</h3>
-    <ol id="top5"></ol>
-  </section>
+  <div class="top5-grid">
+    <section class="top5">
+      <h3>&#128176; Top 5 by spend</h3>
+      <ol id="top5-spend"></ol>
+    </section>
+    <section class="top5">
+      <h3>&#128230; Top 5 by orders</h3>
+      <ol id="top5-orders"></ol>
+    </section>
+  </div>
 
   <table id="all">
     <thead>
@@ -108,6 +126,20 @@
   </table>
 </main>
 <script>
+(() => {
+  const btn = document.getElementById('vid-toggle');
+  const apply = on => {
+    document.body.classList.toggle('video-mode', on);
+    btn.classList.toggle('on', on);
+    btn.textContent = on ? 'Video mode on' : 'Video mode';
+  };
+  try { apply(localStorage.getItem('pp-video-mode') === '1'); } catch(e){}
+  btn.addEventListener('click', () => {
+    const on = !document.body.classList.contains('video-mode');
+    apply(on);
+    try { localStorage.setItem('pp-video-mode', on ? '1' : '0'); } catch(e){}
+  });
+})();
 (async () => {
   const money = n => '$' + n.toFixed(2);
   const r = await fetch('buyers.json?v=' + Date.now());
@@ -122,23 +154,38 @@
     <div class="pill"><b>${money(totalSpend/totalOrders)}</b><span>Avg order</span></div>
   `;
 
-  document.getElementById('top5').innerHTML = buyers.slice(0,5).map((b,i) => `
-    <li data-jump="${b.buyer.replace(/"/g,'&quot;')}">
-      <div class="rank">${i+1}</div>
-      <div class="buyer">${b.buyer}</div>
-      <div class="spend">${money(b.spend)}</div>
-      <div class="orders">${b.orders} order${b.orders===1?'':'s'}</div>
-    </li>
-  `).join('');
-  document.querySelectorAll('#top5 li').forEach(li => {
-    li.addEventListener('click', () => {
-      openBuyer = li.dataset.jump; render();
-      const row = document.querySelector(`.buyer-row[data-buyer="${li.dataset.jump.replace(/"/g,'\\"')}"]`);
-      if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
+  const bySpend  = [...buyers].sort((a,b) => b.spend - a.spend).slice(0,5);
+  const byOrders = [...buyers].sort((a,b) => b.orders - a.orders || b.spend - a.spend).slice(0,5);
+
+  const renderTop5 = (elId, list, primary, sub) => {
+    document.getElementById(elId).innerHTML = list.map((b,i) => `
+      <li data-jump="${b.buyer.replace(/"/g,'&quot;')}">
+        <div class="rank">${i+1}</div>
+        <div class="buyer">${bname(b.buyer)}</div>
+        <div>
+          <div class="metric">${primary(b)}</div>
+          <div class="sub">${sub(b)}</div>
+        </div>
+      </li>
+    `).join('');
+    document.querySelectorAll('#'+elId+' li').forEach(li => {
+      li.addEventListener('click', () => {
+        openBuyer = li.dataset.jump; render();
+        const row = document.querySelector(`.buyer-row[data-buyer="${li.dataset.jump.replace(/"/g,'\\"')}"]`);
+        if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
+      });
     });
-  });
+  };
+  renderTop5('top5-spend',  bySpend,  b => money(b.spend),  b => `${b.orders} order${b.orders===1?'':'s'}`);
+  renderTop5('top5-orders', byOrders, b => `${b.orders} orders`, b => money(b.spend));
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const bname = name => {
+    const n = esc(name);
+    return n.length <= 1
+      ? `<span class="buyer-name">${n}</span>`
+      : `<span class="buyer-name"><span class="first">${n[0]}</span><span class="rest">${n.slice(1)}</span></span>`;
+  };
   const drillHTML = (b) => b.order_list.map(o => {
     const rows = o.items.map(it => {
       const url = it.no
@@ -177,7 +224,7 @@
     tbody.innerHTML = sorted.map((b,i) => `
       <tr class="buyer-row${openBuyer === b.buyer ? ' open' : ''}" data-buyer="${esc(b.buyer)}">
         <td>${i+1}</td>
-        <td><b>${esc(b.buyer)}</b></td>
+        <td><b>${bname(b.buyer)}</b></td>
         <td class="n">${money(b.spend)}</td>
         <td class="n">${b.orders}</td>
         <td class="n">${b.last}</td>
