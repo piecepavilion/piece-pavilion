@@ -60,6 +60,9 @@
   <button class="tab" role="tab" data-pane="spotlight" aria-selected="false">
     <span class="ico">&#128250;</span> Spotlight (BrickLink splash)
   </button>
+  <button class="tab" role="tab" data-pane="site" aria-selected="false">
+    <span class="ico">&#128295;</span> Site Tracker (hero/CTAs/sections)
+  </button>
 </div>
 <div class="panes">
   <section class="pane active" id="pane-featured" role="tabpanel">
@@ -71,11 +74,14 @@
   <section class="pane" id="pane-spotlight" role="tabpanel">
     <iframe src="/employees/spotlight/?embed=1" title="Spotlight editor"></iframe>
   </section>
+  <section class="pane" id="pane-site" role="tabpanel">
+    <iframe src="/employees/site-editor/?embed=1" title="Site Tracker (site-editor)"></iframe>
+  </section>
 </div>
 <script>
   // Start on whichever tab the URL hash names (#featured / #banner / #spotlight).
   const want = (location.hash || '').replace('#', '');
-  if (want === 'spotlight' || want === 'featured' || want === 'banner') {
+  if (['spotlight','featured','banner','site'].includes(want)) {
     document.querySelectorAll('.tab').forEach(t => {
       const on = t.dataset.pane === want;
       t.classList.toggle('active', on); t.setAttribute('aria-selected', on);

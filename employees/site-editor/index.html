@@ -195,6 +195,8 @@
 </head>
 <body>
 
+  <style>body.embed > .topbar { display:none; } body.embed .wrap { padding-top:16px; }</style>
+  <script>if (new URLSearchParams(location.search).get('embed')==='1') document.body.classList.add('embed');</script>
   <div class="topbar">
     <a href="/employees/" aria-label="Back to Staff Portal"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
     <div><span class="crumb">Staff / </span><h1 style="display:inline;">Site Editor</h1></div>
