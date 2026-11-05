@@ -28,21 +28,22 @@
     border:1.5px solid rgba(255,255,255,.4); border-radius:50px; padding:7px 14px; }
   .topbar .back:hover { background:rgba(255,255,255,.14); }
 
-  .split { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr;
-    gap:1px; background:var(--line); }
-  .col { background:var(--bg); display:flex; flex-direction:column; min-width:0; min-height:0; }
-  .col-head { background:#fff; border-bottom:1px solid var(--line);
-    padding:12px 18px; font-weight:800; font-size:.95rem;
-    display:flex; align-items:center; gap:10px; flex-shrink:0; }
-  .col-head .ico { font-size:1.1rem; }
-  .col-head .ver { background:var(--yellow); color:var(--ink); font-size:.65rem;
-    padding:2px 8px; border-radius:50px; font-weight:800; }
-  .col iframe { flex:1; width:100%; border:0; display:block; background:var(--bg); min-height:0; }
+  .tabs { background:#fff; border-bottom:1px solid var(--line); padding:0 24px;
+    display:flex; gap:2px; flex-shrink:0; }
+  .tab { font:inherit; background:transparent; border:0; cursor:pointer;
+    padding:14px 22px 12px; font-weight:800; color:var(--mid);
+    border-bottom:3px solid transparent; transition:color .15s, border-color .15s;
+    display:inline-flex; align-items:center; gap:8px; font-size:.95rem; }
+  .tab:hover { color:var(--ink); }
+  .tab.active { color:var(--red); border-bottom-color:var(--red); }
+  .tab .ico { font-size:1.1rem; }
+  .tab .ver { background:var(--yellow); color:var(--ink); font-size:.65rem;
+    padding:2px 7px; border-radius:50px; margin-left:4px; }
 
-  /* Below 1000px, stack the two columns vertically so each is still usable. */
-  @media (max-width: 1000px) {
-    .split { grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
-  }
+  .panes { flex:1; min-height:0; position:relative; background:var(--bg); }
+  .pane { position:absolute; inset:0; display:none; }
+  .pane.active { display:block; }
+  .pane iframe { width:100%; height:100%; border:0; display:block; background:var(--bg); }
 </style>
 </head>
 <body>
@@ -51,19 +52,42 @@
   <div><span class="crumb">Staff /</span><h1 style="display:inline;">Site Tracker</h1></div>
   <a class="back" href="/employees/">&larr; Staff home</a>
 </header>
-<div class="split">
-  <section class="col">
-    <div class="col-head">
-      <span class="ico">&#128295;</span> Site Tracker <span class="ver">v1 (Sheets)</span>
-    </div>
+<div class="tabs" role="tablist">
+  <button class="tab active" role="tab" data-pane="site" aria-selected="true">
+    <span class="ico">&#128295;</span> Site Tracker <span class="ver">v1 (Sheets)</span>
+  </button>
+  <button class="tab" role="tab" data-pane="banner" aria-selected="false">
+    <span class="ico">&#128226;</span> Site Tracker <span class="ver">v2.0 (Banner)</span>
+  </button>
+</div>
+<div class="panes">
+  <section class="pane active" id="pane-site" role="tabpanel">
     <iframe src="/employees/site-editor/?embed=1" title="Site Tracker (Google Sheet)"></iframe>
   </section>
-  <section class="col">
-    <div class="col-head">
-      <span class="ico">&#128226;</span> Site Tracker <span class="ver">v2.0 (Banner)</span>
-    </div>
+  <section class="pane" id="pane-banner" role="tabpanel">
     <iframe src="/employees/banner-editor/?embed=1" title="Site Tracker 2.0 (KV banner editor)"></iframe>
   </section>
 </div>
+<script>
+  const want = (location.hash || '').replace('#', '');
+  if (want === 'site' || want === 'banner') {
+    document.querySelectorAll('.tab').forEach(t => {
+      const on = t.dataset.pane === want;
+      t.classList.toggle('active', on); t.setAttribute('aria-selected', on);
+    });
+    document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + want));
+  }
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const name = tab.dataset.pane;
+      document.querySelectorAll('.tab').forEach(t => {
+        const on = t === tab;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on);
+      });
+      document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + name));
+      history.replaceState(null, '', '#' + name);
+    });
+  });
+</script>
 </body>
 </html>
