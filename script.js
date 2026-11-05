@@ -293,12 +293,11 @@ tickerState.hardcodedAnnouncement = readHardcodedAnnouncement();
 tickerState.justAdded = readJustAdded();
 renderTicker();
 
-// Fetch latest blog (ticker enriches once this resolves). Reveal the
-// banner only AFTER BOTH the latest-blog AND sheet-config fetches have
-// settled, so the first visible frame already contains the final
-// enriched marquee — no second render replacing innerHTML (and
-// restarting the CSS ticker-scroll animation at translateX(0)) while
-// the user is watching.
+// Reveal the banner IMMEDIATELY on first render so it appears in sync
+// with the welcome confetti + fireworks instead of trailing them by ~2s
+// after the blog/sheet fetches settle. The in-place innerHTML swap in
+// renderTicker() handles later enrichment without restarting the
+// marquee animation, so there's no visual glitch from this change.
 let bannerRevealed = false;
 const revealBanner = () => {
   if (bannerRevealed) return;
@@ -415,9 +414,12 @@ const loadBannerConfig = () => {
 // commonly takes 1-2s, so 2500ms gives it a real chance to land in
 // the first render. If it misses, renderTicker() leaves the already-
 // visible banner alone (see the is-ready guard in renderTicker).
-const bothLoaded = Promise.allSettled([loadLatestBlog(), loadBannerConfig()]);
-const timeout = new Promise((resolve) => setTimeout(resolve, 2500));
-Promise.race([bothLoaded, timeout]).then(revealBanner);
+// Fire the fetches, but reveal the banner right away so the first
+// visible frame is in sync with the confetti + fireworks. The fetches
+// will enrich the ticker in place when they land.
+loadLatestBlog();
+loadBannerConfig();
+revealBanner();
 
 // ===== HOMEPAGE "FROM THE BLOG" — auto-fill the 3 newest posts from /blog/ =====
 // Reads the blog index (newest-first) and rebuilds the preview grid, so the
@@ -765,15 +767,16 @@ if (usMap) {
   cv.height = window.innerHeight * dpr;
 
   if (halloween) runBats(ctx, cv, dpr);
-  else           runConfetti(ctx, cv, dpr);
+  else           runConfettiAndFireworks(ctx, cv, dpr);
 
-  function runConfetti(ctx, cv, dpr) {
+  function runConfettiAndFireworks(ctx, cv, dpr) {
     // Halloween colors (orange + black + purple) inside the Halloween window
     // so even if the bats fail for some reason, the fallback still feels festive.
     const insideHalloween = halloween || isHalloweenWindow(new Date());
     const COLORS = insideHalloween
       ? ['#ff6600', '#000000', '#7c3aed', '#ff8c1a', '#1a1a1a', '#ffce00']
       : ['#e3000b', '#ffce00', '#0057a8', '#1a8a3c', '#ff6600', '#ffffff'];
+    // --- Confetti particles. Rectangles with rotation, fall with gravity. ---
     const parts = [];
     for (let i = 0; i < 180; i++) {
       parts.push({
@@ -788,12 +791,64 @@ if (usMap) {
         color: COLORS[(Math.random() * COLORS.length) | 0],
       });
     }
-    const t0 = performance.now() + 350;
-    const DURATION = 3800;
+    // --- Fireworks. Each shell is a (cx, cy, when) spawn that bursts into
+    // ~60 radial sparks with gravity + per-spark fade. Scheduled at intervals
+    // across the 5s window so a shell is bursting roughly every 500ms.
+    const t0 = performance.now();
+    const DURATION = 5000;
+    const sparks = [];
+    const shells = [];
+    for (let i = 0; i < 9; i++) {
+      shells.push({
+        at: t0 + 120 + i * (DURATION / 10) + (Math.random() - 0.5) * 220,
+        cx: (0.15 + Math.random() * 0.7) * cv.width,
+        cy: (0.18 + Math.random() * 0.35) * cv.height,
+        color: COLORS[(Math.random() * COLORS.length) | 0],
+        fired: false,
+      });
+    }
+    const burstShell = (sh) => {
+      const N = 60;
+      for (let i = 0; i < N; i++) {
+        const angle = (i / N) * Math.PI * 2 + Math.random() * 0.08;
+        const speed = (3 + Math.random() * 5) * dpr;
+        sparks.push({
+          x: sh.cx,
+          y: sh.cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          decay: 0.012 + Math.random() * 0.012,
+          color: sh.color,
+          size: (1.6 + Math.random() * 1.4) * dpr,
+        });
+      }
+    };
     (function frame(t) {
-      const elapsed = (t || performance.now()) - t0;
+      const now = t || performance.now();
+      const elapsed = now - t0;
       ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.globalAlpha = elapsed > DURATION - 700 ? Math.max(0, (DURATION - elapsed) / 700) : 1;
+      const fade = elapsed > DURATION - 800 ? Math.max(0, (DURATION - elapsed) / 800) : 1;
+      // Fire any shells whose scheduled time has passed.
+      for (const sh of shells) {
+        if (!sh.fired && now >= sh.at) { sh.fired = true; burstShell(sh); }
+      }
+      // --- Draw fireworks sparks (behind the confetti). ---
+      ctx.globalAlpha = fade;
+      for (const s of sparks) {
+        s.x += s.vx;  s.y += s.vy;
+        s.vy += 0.08 * dpr;         // gravity, a touch stronger than confetti
+        s.vx *= 0.985;
+        s.life -= s.decay;
+        if (s.life <= 0) continue;
+        ctx.globalAlpha = Math.max(0, s.life) * fade;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size * Math.max(0.3, s.life), 0, Math.PI * 2);
+        ctx.fillStyle = s.color;
+        ctx.fill();
+      }
+      // --- Draw confetti rectangles on top. ---
+      ctx.globalAlpha = fade;
       for (const p of parts) {
         p.x += p.vx;  p.y += p.vy;
         p.vy += 0.06 * dpr;
