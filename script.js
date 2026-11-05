@@ -793,35 +793,40 @@ if (usMap) {
       });
     }
     // --- Fireworks. Each shell is a (cx, cy, when) spawn that bursts into
-    // ~60 radial sparks with gravity + per-spark fade. Scheduled at intervals
-    // across the 5s window so a shell is bursting roughly every 500ms.
+    // ~90 radial sparks with gravity + per-spark fade. 14 shells scheduled
+    // across the 5s window. Sparks render as a glow stack (soft outer
+    // halo + bright white core) so they pop against both the light hero
+    // background and whatever hero image Dad swaps in later. A brief
+    // white flash at burst time punches the shell's arrival.
     const t0 = performance.now();
     const DURATION = 5000;
     const sparks = [];
+    const flashes = [];
     const shells = [];
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 14; i++) {
       shells.push({
-        at: t0 + 120 + i * (DURATION / 10) + (Math.random() - 0.5) * 220,
-        cx: (0.15 + Math.random() * 0.7) * cv.width,
-        cy: (0.18 + Math.random() * 0.35) * cv.height,
+        at: t0 + 100 + i * (DURATION / 16) + (Math.random() - 0.5) * 180,
+        cx: (0.08 + Math.random() * 0.84) * cv.width,
+        cy: (0.15 + Math.random() * 0.38) * cv.height,
         color: COLORS[(Math.random() * COLORS.length) | 0],
         fired: false,
       });
     }
     const burstShell = (sh) => {
-      const N = 60;
+      flashes.push({ x: sh.cx, y: sh.cy, life: 1, decay: 0.08, color: sh.color });
+      const N = 90;
       for (let i = 0; i < N; i++) {
         const angle = (i / N) * Math.PI * 2 + Math.random() * 0.08;
-        const speed = (3 + Math.random() * 5) * dpr;
+        const speed = (4 + Math.random() * 6) * dpr;
         sparks.push({
           x: sh.cx,
           y: sh.cy,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           life: 1,
-          decay: 0.012 + Math.random() * 0.012,
+          decay: 0.009 + Math.random() * 0.010,
           color: sh.color,
-          size: (1.6 + Math.random() * 1.4) * dpr,
+          size: (2.6 + Math.random() * 2.4) * dpr,
         });
       }
     };
@@ -834,20 +839,52 @@ if (usMap) {
       for (const sh of shells) {
         if (!sh.fired && now >= sh.at) { sh.fired = true; burstShell(sh); }
       }
-      // --- Draw fireworks sparks (behind the confetti). ---
-      ctx.globalAlpha = fade;
+      // --- Draw burst flashes (behind sparks). ---
+      const hexToRgb = (h) => {
+        const m = h.replace("#", "");
+        const v = m.length === 3
+          ? m.split("").map((c) => parseInt(c + c, 16))
+          : [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
+        return v[0] + "," + v[1] + "," + v[2];
+      };
+      ctx.globalCompositeOperation = "lighter";  // additive -- glows read on light or dark
+      for (const f of flashes) {
+        f.life -= f.decay;
+        if (f.life <= 0) continue;
+        const r = (80 + (1 - f.life) * 160) * dpr;
+        const rgb = hexToRgb(f.color);
+        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
+        g.addColorStop(0, "rgba(255,255,255," + (0.65 * f.life * fade).toFixed(3) + ")");
+        g.addColorStop(0.4, "rgba(" + rgb + "," + (0.35 * f.life * fade).toFixed(3) + ")");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
+      }
+      // --- Draw fireworks sparks: outer colored glow + bright white core. ---
       for (const s of sparks) {
         s.x += s.vx;  s.y += s.vy;
         s.vy += 0.08 * dpr;         // gravity, a touch stronger than confetti
         s.vx *= 0.985;
         s.life -= s.decay;
         if (s.life <= 0) continue;
-        ctx.globalAlpha = Math.max(0, s.life) * fade;
+        const alpha = Math.max(0, s.life) * fade;
+        const r = s.size * Math.max(0.3, s.life);
+        // Outer colored glow (additive-blended).
+        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r * 3.5);
+        g.addColorStop(0, s.color);
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.fillStyle = g;
+        ctx.fillRect(s.x - r * 3.5, s.y - r * 3.5, r * 7, r * 7);
+        // Bright white core.
+        ctx.globalAlpha = alpha;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size * Math.max(0.3, s.life), 0, Math.PI * 2);
-        ctx.fillStyle = s.color;
+        ctx.arc(s.x, s.y, r * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
         ctx.fill();
       }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = fade;
       // --- Draw confetti rectangles on top. ---
       ctx.globalAlpha = fade;
       for (const p of parts) {
