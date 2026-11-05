@@ -47,7 +47,14 @@
     text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
   .preview-track { display:flex; gap:20px; align-items:center;
     font-size:.95rem; font-weight:700; flex-wrap:wrap; }
-  .preview-item { display:inline-flex; align-items:center; gap:8px; }
+  .preview-item { display:inline-flex; flex-direction:column; align-items:center; gap:4px;
+    background:rgba(255,255,255,.04); padding:6px 10px 5px; border-radius:8px; }
+  .preview-item .row { display:inline-flex; align-items:center; gap:8px; font-weight:700; }
+  .preview-item .arrows { display:inline-flex; gap:4px; }
+  .preview-item .arrows button { background:#333; color:#fff; border:0; cursor:pointer;
+    font-weight:900; font-size:.75rem; padding:2px 7px; border-radius:50px; line-height:1; }
+  .preview-item .arrows button:hover:not(:disabled) { background:var(--red); }
+  .preview-item .arrows button:disabled { opacity:.3; cursor:not-allowed; }
   .preview-pill { background:var(--red); color:#fff; font-size:.68rem;
     padding:2px 8px; border-radius:50px; font-weight:800; letter-spacing:.04em; }
   .preview-pill.blog { background:var(--blue); }
@@ -190,6 +197,10 @@
     show_latest_blog: true,
     show_just_added: true,
     just_added_count: 3,
+    // Order of items in the live banner. Keys: a0/a1/a2 = announcements,
+    // blog = Latest Blog chip, added = Just Added. Arrow buttons in the
+    // preview strip reorder this; the homepage reads it and renders left-to-right.
+    order: ['a0', 'a1', 'a2', 'blog', 'added'],
   };
   let savedState = JSON.stringify(state);
   const $ = id => document.getElementById(id);
@@ -229,18 +240,71 @@
     });
   }
 
-  function refreshPreview() {
-    const track = $('preview-track');
-    const parts = [];
-    state.announcements.forEach(a => {
-      if (!a.message.trim()) return;
+  function itemForKey(key) {
+    if (key === 'blog') {
+      if (!state.show_latest_blog) return null;
+      return { key, pill:'Latest Blog', pillClass:'blog', text:'(latest post title)' };
+    }
+    if (key === 'added') {
+      if (!state.show_just_added) return null;
+      return { key, pill:'Just added', pillClass:'added', text:`${state.just_added_count} product(s)` };
+    }
+    if (/^a\d+$/.test(key)) {
+      const i = +key.slice(1);
+      const a = state.announcements[i];
+      if (!a || !a.message.trim()) return null;
       const cta = a.link_text ? ` <span style="color:#aaa;font-weight:600;">${esc(a.link_text)}</span>` : '';
-      parts.push(`<span class="preview-item"><span class="preview-pill">News</span><span>${esc(a.message).slice(0,80)}${a.message.length>80?'…':''}${cta}</span></span>`);
+      const msg = esc(a.message).slice(0, 80) + (a.message.length > 80 ? '…' : '') + cta;
+      return { key, pill:'News', pillClass:'', text: msg };
+    }
+    return null;
+  }
+
+  function ensureOrder() {
+    const all = ['a0','a1','a2','blog','added'];
+    if (!Array.isArray(state.order)) state.order = all.slice();
+    // Add any keys missing from order (future-proof), keep existing positions.
+    all.forEach(k => { if (!state.order.includes(k)) state.order.push(k); });
+    state.order = state.order.filter(k => all.includes(k));
+  }
+
+  function refreshPreview() {
+    ensureOrder();
+    const track = $('preview-track');
+    const visible = state.order.map(itemForKey).filter(Boolean);
+    if (!visible.length) {
+      track.innerHTML = '<span class="preview-empty">Nothing to show &mdash; add an announcement or enable Latest Blog / Just Added.</span>';
+      return;
+    }
+    const sep = '<span class="preview-sep">•</span>';
+    track.innerHTML = visible.map((it, i) => `
+      <span class="preview-item">
+        <span class="row"><span class="preview-pill ${it.pillClass}">${it.pill}</span><span>${it.text}</span></span>
+        <span class="arrows">
+          <button data-key="${it.key}" data-dir="left"  ${i === 0 ? 'disabled' : ''} title="Move left">&#9664;</button>
+          <button data-key="${it.key}" data-dir="right" ${i === visible.length - 1 ? 'disabled' : ''} title="Move right">&#9654;</button>
+        </span>
+      </span>
+    `).join(sep);
+    track.querySelectorAll('.arrows button').forEach(b => {
+      b.addEventListener('click', () => moveItem(b.dataset.key, b.dataset.dir));
     });
-    if (state.show_latest_blog) parts.push('<span class="preview-item"><span class="preview-pill blog">Latest Blog</span><span>(latest post title)</span></span>');
-    if (state.show_just_added) parts.push(`<span class="preview-item"><span class="preview-pill added">Just added</span><span>${state.just_added_count} product(s)</span></span>`);
-    if (!parts.length) { track.innerHTML = '<span class="preview-empty">Nothing to show &mdash; add an announcement or enable Latest Blog / Just Added.</span>'; return; }
-    track.innerHTML = parts.join('<span class="preview-sep">•</span>');
+  }
+
+  function moveItem(key, dir) {
+    ensureOrder();
+    // Swap with the nearest OTHER visible item in that direction (skip
+    // disabled rows, so a left/right arrow behaves intuitively even when
+    // some slots are empty).
+    const visibleKeys = state.order.filter(k => itemForKey(k));
+    const idx = visibleKeys.indexOf(key);
+    if (idx < 0) return;
+    const swapWith = dir === 'left' ? visibleKeys[idx - 1] : visibleKeys[idx + 1];
+    if (!swapWith) return;
+    const a = state.order.indexOf(key), b = state.order.indexOf(swapWith);
+    if (a < 0 || b < 0) return;
+    [state.order[a], state.order[b]] = [state.order[b], state.order[a]];
+    refreshPreview(); markDirty();
   }
 
   function markDirty() {
@@ -265,6 +329,8 @@
       state.show_latest_blog = d.show_latest_blog !== false;
       state.show_just_added = d.show_just_added !== false;
       state.just_added_count = d.just_added_count || 3;
+      state.order = Array.isArray(d.order) && d.order.length ? d.order.slice() : ['a0','a1','a2','blog','added'];
+      ensureOrder();
       savedState = JSON.stringify(state);
       applyToForm();
       renderAnnouncements();

@@ -182,47 +182,51 @@ function renderTicker(force) {
     }
   }
 
-  // Build items.
-  const items = [];
-
-  // 1. Custom announcements. Prefer staff sheet rows; if none, fall back
-  //    to the hardcoded one so there's always something to show.
-  const announcements = tickerState.cfg.announcements.length
+  // Build items, honoring Dad's custom order from the staff editor.
+  // Keys: a0/a1/a2 = announcement slots, blog = Latest Blog chip,
+  // added = Just Added products. If tickerState.cfg.order isn't set
+  // (older sheet/banner.txt source), we fall back to the historical
+  // announcements -> latest blog -> just added order.
+  const cfgAnnouncements = tickerState.cfg.announcements.length
     ? tickerState.cfg.announcements
     : (tickerState.hardcodedAnnouncement ? [tickerState.hardcodedAnnouncement] : []);
-  announcements.forEach(a => {
-    const cta = a.cta ? ' <span style="color:rgba(255,255,255,0.7);font-weight:600;">' + a.cta + '</span>' : '';
-    items.push(
-      '<a class="ticker-item" href="' + esc(a.href) + '">' +
+  const htmlFor = (key) => {
+    if (/^a\d+$/.test(key)) {
+      const a = cfgAnnouncements[+key.slice(1)];
+      if (!a || !a.message) return '';
+      const cta = a.cta ? ' <span style="color:rgba(255,255,255,0.7);font-weight:600;">' + a.cta + '</span>' : '';
+      return '<a class="ticker-item" href="' + esc(a.href) + '">' +
         '<span class="ticker-pill hot">News</span>' +
         '<span class="ticker-text">' + a.message + cta + '</span>' +
-      '</a>'
-    );
-  });
-
-  // 2. Latest blog post
-  if (tickerState.cfg.showLatestBlog && tickerState.latestBlog) {
-    const b = tickerState.latestBlog;
-    items.push(
-      '<a class="ticker-item" href="' + esc(b.href) + '">' +
+      '</a>';
+    }
+    if (key === 'blog') {
+      if (!tickerState.cfg.showLatestBlog || !tickerState.latestBlog) return '';
+      const b = tickerState.latestBlog;
+      return '<a class="ticker-item" href="' + esc(b.href) + '">' +
         '<span class="ticker-pill blog">Latest Blog</span>' +
         '<span class="ticker-text">' + esc(b.title) + '</span>' +
-      '</a>'
-    );
-  }
-
-  // 3. Just Added products
-  if (tickerState.cfg.showJustAdded) {
-    tickerState.justAdded.slice(0, tickerState.cfg.justAddedCount).forEach(p => {
-      items.push(
-        '<a class="ticker-item" href="' + esc(p.href) + '" target="_blank" rel="noopener">' +
-          '<img src="' + esc(p.img) + '" alt="" loading="lazy">' +
-          '<span class="ticker-pill">Just added</span>' +
-          '<span class="ticker-text">' + esc(p.name) + '<span class="price">' + esc(p.price) + '</span></span>' +
-        '</a>'
-      );
-    });
-  }
+      '</a>';
+    }
+    if (key === 'added') {
+      if (!tickerState.cfg.showJustAdded) return '';
+      return tickerState.justAdded
+        .slice(0, tickerState.cfg.justAddedCount)
+        .map(p =>
+          '<a class="ticker-item" href="' + esc(p.href) + '" target="_blank" rel="noopener">' +
+            '<img src="' + esc(p.img) + '" alt="" loading="lazy">' +
+            '<span class="ticker-pill">Just added</span>' +
+            '<span class="ticker-text">' + esc(p.name) + '<span class="price">' + esc(p.price) + '</span></span>' +
+          '</a>')
+        .join('');
+    }
+    return '';
+  };
+  const items = [];
+  const orderKeys = Array.isArray(tickerState.cfg.order) && tickerState.cfg.order.length
+    ? tickerState.cfg.order
+    : ['a0','a1','a2','blog','added'];
+  orderKeys.forEach(k => { const h = htmlFor(k); if (h) items.push(h); });
 
   if (!items.length) {
     banner.classList.add('hidden');
@@ -364,6 +368,8 @@ const loadBannerConfig = () => {
     if (data.show_latest_blog === false) cfg.show_latest_blog = 'NO';
     if (data.show_just_added === false)  cfg.show_just_added  = 'NO';
     if (data.just_added_count) cfg.just_added_count = String(data.just_added_count);
+    // Carry Dad's custom item order from KV through to apply().
+    if (Array.isArray(data.order) && data.order.length) cfg.__order = data.order.slice();
     return cfg;
   };
 
@@ -430,6 +436,10 @@ const loadBannerConfig = () => {
     tickerState.cfg.showJustAdded = (cfg.show_just_added || '').trim().toUpperCase() !== 'NO';
     const n = parseInt(cfg.just_added_count, 10);
     tickerState.cfg.justAddedCount = (isFinite(n) && n > 0 && n <= 8) ? n : 3;
+
+    // Custom item order (KV-only). Sheet/banner.txt sources leave this
+    // undefined, which renderTicker falls back to the historical layout.
+    tickerState.cfg.order = Array.isArray(cfg.__order) ? cfg.__order : undefined;
 
     // Force the swap: the sheet fetch resolves after the initial render +
     // reveal, so without force the "don't touch a live banner" guard would
