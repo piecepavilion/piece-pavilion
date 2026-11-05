@@ -116,6 +116,8 @@
 </style>
 </head>
 <body>
+<style>body.embed > header.topbar { display:none; } body.embed { padding-bottom:80px; }</style>
+<script>if (new URLSearchParams(location.search).get('embed')==='1') document.body.classList.add('embed');</script>
 <header class="topbar">
   <img src="/circle_pp.png" alt="" onerror="this.style.display='none'" />
   <div>

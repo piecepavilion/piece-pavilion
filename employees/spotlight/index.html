@@ -50,6 +50,8 @@
   </style>
 </head>
 <body>
+  <style>body.embed > .bar { display:none; }</style>
+  <script>if (new URLSearchParams(location.search).get('embed')==='1') document.body.classList.add('embed');</script>
   <div class="bar">
     <a href="/" aria-label="Back to piecepavilion.com"><img src="/logo-white.png" alt="Piece Pavilion" /></a>
     <div class="t"><div class="sub">Employees</div><h1>Spotlight Editor</h1></div>
