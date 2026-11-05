@@ -310,19 +310,44 @@ renderTicker();
   requestAnimationFrame(() => pill.classList.add('is-ready'));
 })();
 
-// Reveal the banner IMMEDIATELY on first render so it appears in sync
-// with the welcome confetti + fireworks instead of trailing them by ~2s
-// after the blog/sheet fetches settle. The in-place innerHTML swap in
-// renderTicker() handles later enrichment without restarting the
-// marquee animation, so there's no visual glitch from this change.
+// Welcome balloon. Pops in at centre of the viewport, inflates to huge,
+// explodes. Timed so the banner drops AFTER the balloon pops -- the pop
+// reveals the rest of the welcome (banner + ticker + brick wallpaper).
+// If the page doesn't have a balloon element, this is a no-op and the
+// banner reveals immediately.
+let balloonDonePromise = Promise.resolve();
+(function playWelcomeBalloon() {
+  const bal = document.getElementById('welcome-balloon');
+  if (!bal) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    bal.remove();
+    return;
+  }
+  balloonDonePromise = new Promise((resolve) => {
+    bal.addEventListener('animationend', () => {
+      bal.classList.add('popped');
+      resolve();
+    }, { once: true });
+    // Safety net in case animationend never fires.
+    setTimeout(() => { bal.classList.add('popped'); resolve(); }, 2800);
+  });
+  // Expose for the confetti/fireworks IIFE which needs to wait on the pop.
+  window.balloonDonePromise = balloonDonePromise;
+})();
+
+// Reveal the banner AFTER the balloon pops. On pages without a balloon
+// (non-homepage), the Promise is already resolved and this fires on
+// first render as before.
 let bannerRevealed = false;
 const revealBanner = () => {
   if (bannerRevealed) return;
   bannerRevealed = true;
-  const b = tickerBanner();
-  if (b && !b.classList.contains('hidden')) {
-    requestAnimationFrame(() => b.classList.add('is-ready'));
-  }
+  balloonDonePromise.then(() => {
+    const b = tickerBanner();
+    if (b && !b.classList.contains('hidden')) {
+      requestAnimationFrame(() => b.classList.add('is-ready'));
+    }
+  });
 };
 const loadLatestBlog = () => fetch('/blog/?_=' + Date.now())
   .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
@@ -784,8 +809,14 @@ if (usMap) {
   cv.width  = window.innerWidth  * dpr;
   cv.height = window.innerHeight * dpr;
 
-  if (halloween) runBats(ctx, cv, dpr);
-  else           runConfettiAndFireworks(ctx, cv, dpr);
+  // Delay the confetti + fireworks until the welcome balloon pops --
+  // then they fly out of the burst as if the balloon exploded into
+  // paper + sparks. On pages without a balloon, balloonDonePromise is
+  // already resolved and this fires right away.
+  (window.balloonDonePromise || Promise.resolve()).then(() => {
+    if (halloween) runBats(ctx, cv, dpr);
+    else           runConfettiAndFireworks(ctx, cv, dpr);
+  });
 
   function runConfettiAndFireworks(ctx, cv, dpr) {
     // Halloween colors (orange + black + purple) inside the Halloween window
