@@ -738,10 +738,11 @@ if (usMap) {
   const forced     = /[?&](confetti|bats)/.test(location.search);
   const forceBats  = /[?&]bats/.test(location.search);
   const forceConfetti = /[?&]confetti/.test(location.search) && !forceBats;
-  const key = 'pp-welcome-' + new Date().toDateString();
-  if (!forced && sessionStorage.getItem(key)) return;
+  // Fire on EVERY homepage load (Dad's 2026-11-04 ask): the confetti +
+  // fireworks should play again when he refreshes the page, not stay
+  // suppressed for the rest of the session. Only honour the OS-level
+  // "reduced motion" accessibility preference.
   if (!forced && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  sessionStorage.setItem(key, '1');
 
   function isHalloweenWindow(now) {
     const y = now.getFullYear();
