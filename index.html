@@ -59,7 +59,7 @@
 
   <!-- ?v= busts the Cloudflare/browser cache — bump it whenever style.css or script.js changes -->
   <style>.announcement-banner{visibility:hidden}.announcement-banner.is-ready{visibility:visible}</style>
-  <link rel="stylesheet" href="style.css?v=20261104e" />
+  <link rel="stylesheet" href="style.css?v=20261104f" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -179,47 +179,51 @@
   </div>
   </div> <!-- /.sticky-head -->
 
+  <!-- Floating LEGO bricks: viewport-wide, bouncing around all the time
+       (Dad's 2026-11-04 welcome pass). Lives OUTSIDE the hero so its
+       fixed-position stays attached to the viewport while the user
+       scrolls the rest of the page. 5 bricks, each with its own slow
+       bounce path defined in style.css. -->
+  <div class="floating-bricks" aria-hidden="true">
+    <svg class="brick-1" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+      <circle cx="14" cy="12" r="8" fill="currentColor"/>
+      <circle cx="38" cy="12" r="8" fill="currentColor"/>
+      <circle cx="62" cy="12" r="8" fill="currentColor"/>
+      <circle cx="86" cy="12" r="8" fill="currentColor"/>
+    </svg>
+    <svg class="brick-2" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+      <circle cx="14" cy="12" r="8" fill="currentColor"/>
+      <circle cx="38" cy="12" r="8" fill="currentColor"/>
+      <circle cx="62" cy="12" r="8" fill="currentColor"/>
+      <circle cx="86" cy="12" r="8" fill="currentColor"/>
+    </svg>
+    <svg class="brick-3" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+      <circle cx="14" cy="12" r="8" fill="currentColor"/>
+      <circle cx="38" cy="12" r="8" fill="currentColor"/>
+      <circle cx="62" cy="12" r="8" fill="currentColor"/>
+      <circle cx="86" cy="12" r="8" fill="currentColor"/>
+    </svg>
+    <svg class="brick-4" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+      <circle cx="14" cy="12" r="8" fill="currentColor"/>
+      <circle cx="38" cy="12" r="8" fill="currentColor"/>
+      <circle cx="62" cy="12" r="8" fill="currentColor"/>
+      <circle cx="86" cy="12" r="8" fill="currentColor"/>
+    </svg>
+    <svg class="brick-5" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
+      <circle cx="14" cy="12" r="8" fill="currentColor"/>
+      <circle cx="38" cy="12" r="8" fill="currentColor"/>
+      <circle cx="62" cy="12" r="8" fill="currentColor"/>
+      <circle cx="86" cy="12" r="8" fill="currentColor"/>
+    </svg>
+  </div>
+
   <!-- ===== HERO ===== -->
   <section class="hero" id="hero">
-    <!-- Floating LEGO brick wallpaper (decorative, aria-hidden). The 2x4 brick
-         SVG is reused with different sizes/colors/positions via .brick-1 etc. -->
-    <div class="hero-bricks" aria-hidden="true">
-      <svg class="brick-1" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
-        <circle cx="14" cy="12" r="8" fill="currentColor"/>
-        <circle cx="38" cy="12" r="8" fill="currentColor"/>
-        <circle cx="62" cy="12" r="8" fill="currentColor"/>
-        <circle cx="86" cy="12" r="8" fill="currentColor"/>
-      </svg>
-      <svg class="brick-2" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
-        <circle cx="14" cy="12" r="8" fill="currentColor"/>
-        <circle cx="38" cy="12" r="8" fill="currentColor"/>
-        <circle cx="62" cy="12" r="8" fill="currentColor"/>
-        <circle cx="86" cy="12" r="8" fill="currentColor"/>
-      </svg>
-      <svg class="brick-3" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
-        <circle cx="14" cy="12" r="8" fill="currentColor"/>
-        <circle cx="38" cy="12" r="8" fill="currentColor"/>
-        <circle cx="62" cy="12" r="8" fill="currentColor"/>
-        <circle cx="86" cy="12" r="8" fill="currentColor"/>
-      </svg>
-      <svg class="brick-4" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
-        <circle cx="14" cy="12" r="8" fill="currentColor"/>
-        <circle cx="38" cy="12" r="8" fill="currentColor"/>
-        <circle cx="62" cy="12" r="8" fill="currentColor"/>
-        <circle cx="86" cy="12" r="8" fill="currentColor"/>
-      </svg>
-      <svg class="brick-5" viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="12" width="96" height="46" rx="3" fill="currentColor"/>
-        <circle cx="14" cy="12" r="8" fill="currentColor"/>
-        <circle cx="38" cy="12" r="8" fill="currentColor"/>
-        <circle cx="62" cy="12" r="8" fill="currentColor"/>
-        <circle cx="86" cy="12" r="8" fill="currentColor"/>
-      </svg>
-    </div>
     <div class="hero-content">
       <span class="hero-badge">Now on BrickLink</span>
       <!-- Welcome pill. Text swapped by script.js: "Welcome to Piece Pavilion"
