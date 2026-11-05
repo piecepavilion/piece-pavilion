@@ -293,6 +293,23 @@ tickerState.hardcodedAnnouncement = readHardcodedAnnouncement();
 tickerState.justAdded = readJustAdded();
 renderTicker();
 
+// Welcome-back greeting pill. Fires on the homepage only. First visit
+// says "Welcome to Piece Pavilion"; every return visit says "Welcome
+// back, friend". The flag is stored in localStorage so it survives
+// across sessions (not just tabs). Set BEFORE revealBanner so the pill
+// fades in roughly in sync with the drop-down banner.
+(function welcomeGreeting() {
+  const pill = document.getElementById('hero-welcome');
+  if (!pill) return;
+  let returning = false;
+  try { returning = !!localStorage.getItem('pp-visited'); } catch (_) { /* private mode */ }
+  pill.textContent = returning
+    ? (pill.dataset.return || 'Welcome back!')
+    : (pill.dataset.first  || 'Welcome');
+  try { localStorage.setItem('pp-visited', '1'); } catch (_) {}
+  requestAnimationFrame(() => pill.classList.add('is-ready'));
+})();
+
 // Reveal the banner IMMEDIATELY on first render so it appears in sync
 // with the welcome confetti + fireworks instead of trailing them by ~2s
 // after the blog/sheet fetches settle. The in-place innerHTML swap in
@@ -799,22 +816,28 @@ if (usMap) {
     // background and whatever hero image Dad swaps in later. A brief
     // white flash at burst time punches the shell's arrival.
     const t0 = performance.now();
+    // Confetti stays on for 5 s; fireworks run the first 3.5 s so they
+    // feel like a quick celebration rather than a sustained show.
     const DURATION = 5000;
+    const FIREWORKS_WINDOW = 3500;
     const sparks = [];
     const flashes = [];
     const shells = [];
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 11; i++) {
       shells.push({
-        at: t0 + 100 + i * (DURATION / 16) + (Math.random() - 0.5) * 180,
+        at: t0 + 80 + i * (FIREWORKS_WINDOW / 13) + (Math.random() - 0.5) * 160,
         cx: (0.08 + Math.random() * 0.84) * cv.width,
         cy: (0.15 + Math.random() * 0.38) * cv.height,
         color: COLORS[(Math.random() * COLORS.length) | 0],
         fired: false,
       });
     }
+    // Thinner + shorter per Dad's 2026-11-04 feedback: spark size shrank
+    // (2.6+rand*2.4 -> 1.4+rand*1.0), glow radius shrank (3.5x -> 2.2x),
+    // and decay sped up so each spark fades in ~70 frames instead of ~110.
     const burstShell = (sh) => {
-      flashes.push({ x: sh.cx, y: sh.cy, life: 1, decay: 0.08, color: sh.color });
-      const N = 90;
+      flashes.push({ x: sh.cx, y: sh.cy, life: 1, decay: 0.12, color: sh.color });
+      const N = 80;
       for (let i = 0; i < N; i++) {
         const angle = (i / N) * Math.PI * 2 + Math.random() * 0.08;
         const speed = (4 + Math.random() * 6) * dpr;
@@ -824,9 +847,9 @@ if (usMap) {
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           life: 1,
-          decay: 0.009 + Math.random() * 0.010,
+          decay: 0.018 + Math.random() * 0.012,
           color: sh.color,
-          size: (2.6 + Math.random() * 2.4) * dpr,
+          size: (1.4 + Math.random() * 1.0) * dpr,
         });
       }
     };
@@ -851,16 +874,16 @@ if (usMap) {
       for (const f of flashes) {
         f.life -= f.decay;
         if (f.life <= 0) continue;
-        const r = (80 + (1 - f.life) * 160) * dpr;
+        const r = (45 + (1 - f.life) * 100) * dpr;
         const rgb = hexToRgb(f.color);
         const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-        g.addColorStop(0, "rgba(255,255,255," + (0.65 * f.life * fade).toFixed(3) + ")");
-        g.addColorStop(0.4, "rgba(" + rgb + "," + (0.35 * f.life * fade).toFixed(3) + ")");
+        g.addColorStop(0, "rgba(255,255,255," + (0.55 * f.life * fade).toFixed(3) + ")");
+        g.addColorStop(0.4, "rgba(" + rgb + "," + (0.28 * f.life * fade).toFixed(3) + ")");
         g.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = g;
         ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
       }
-      // --- Draw fireworks sparks: outer colored glow + bright white core. ---
+      // --- Draw fireworks sparks: thinner halo + small white core. ---
       for (const s of sparks) {
         s.x += s.vx;  s.y += s.vy;
         s.vy += 0.08 * dpr;         // gravity, a touch stronger than confetti
@@ -869,17 +892,18 @@ if (usMap) {
         if (s.life <= 0) continue;
         const alpha = Math.max(0, s.life) * fade;
         const r = s.size * Math.max(0.3, s.life);
-        // Outer colored glow (additive-blended).
-        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r * 3.5);
+        // Outer colored glow (additive-blended). Tighter radius (2.2x) so
+        // sparks read as pinpricks with a halo, not fat dots.
+        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r * 2.2);
         g.addColorStop(0, s.color);
         g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.globalAlpha = alpha * 0.9;
+        ctx.globalAlpha = alpha * 0.85;
         ctx.fillStyle = g;
-        ctx.fillRect(s.x - r * 3.5, s.y - r * 3.5, r * 7, r * 7);
-        // Bright white core.
+        ctx.fillRect(s.x - r * 2.2, s.y - r * 2.2, r * 4.4, r * 4.4);
+        // Bright white core, smaller than before so the pinprick is crisp.
         ctx.globalAlpha = alpha;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, r * 0.8, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, r * 0.55, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
       }
