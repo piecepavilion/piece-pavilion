@@ -334,19 +334,13 @@ let bannerPopPromise = Promise.resolve();
   msg.textContent = 'Piece Pavilion welcomes you';
   banner.insertBefore(msg, banner.firstChild);
   banner.classList.add('welcome-mode');
-  // CSS keyframe timings (fractions of 4200ms):
-  //   64% = 2688 ms  -> pop happens, fireworks should fire here
-  //   86% = 3612 ms  -> banner starts reforming, swap content back now
-  //  100% = 4200 ms  -> sequence ends, clean up
-  bannerPopPromise = new Promise((resolve) => setTimeout(resolve, 2688));
-  setTimeout(() => {
-    // Remove the welcome message and un-hide the original ticker
-    // children in time for the reform phase.
-    msg.remove();
-  }, 3612);
-  setTimeout(() => {
-    banner.classList.remove('welcome-mode');
-  }, 4200);
+  // CSS keyframe timings (fractions of 5000ms):
+  //   77% = 3850 ms  -> pop happens, fireworks fire here
+  //   88% = 4400 ms  -> banner starts reforming, swap content back now
+  //  100% = 5000 ms  -> sequence ends, clean up the welcome-mode class
+  bannerPopPromise = new Promise((resolve) => setTimeout(resolve, 3850));
+  setTimeout(() => { msg.remove(); }, 4400);
+  setTimeout(() => { banner.classList.remove('welcome-mode'); }, 5000);
   window.bannerPopPromise = bannerPopPromise;
 })();
 

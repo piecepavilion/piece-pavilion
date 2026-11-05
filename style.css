@@ -670,11 +670,11 @@ img { display: block; max-width: 100%; }
 
 /* Welcome-mode class: swaps the banner content to the giant welcome
    message with inflate + pop animation. Added by script.js on page
-   load for the homepage. The sequence is driven by a single long
-   keyframe below. */
+   load for the homepage. */
 .announcement-banner.welcome-mode {
   visibility: visible;
-  animation: bannerWelcomeShow 4200ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
+  transform-origin: center center;
+  animation: bannerWelcomeShow 5000ms ease-in-out both;
 }
 .announcement-banner.welcome-mode .welcome-message {
   display: flex;
@@ -693,30 +693,30 @@ img { display: block; max-width: 100%; }
   display: none;
 }
 
-/* Sequence (4200ms):
-   0-14%    drop in from above with a settle bounce (banner lands)
-   14-32%   hold at rest -- welcome text is readable here
-   32-55%   INFLATE like a balloon (scale up, text zooms)
-   55-62%   grows HUGE
-   62-66%   POP -- scale up past huge AND opacity to 0 instantly
-   66-78%   INVISIBLE gap (fireworks burst in this window)
-   78-100%  slowly REFORMS -- scale/opacity ease back to normal, the
-            welcome text is swapped to the real ticker by script.js
-            at the moment the banner becomes visible again. */
+/* SIMPLE sequence (5000ms). No wobble, no overshoot, no horizontal
+   stretching. Every transform uses uniform scale() so there's no
+   vertical vs horizontal mismatch that could read as "moving up and
+   down". Dad's 2026-11-04 third pass -- "just slowly grow bigger,
+   pop, come back with the ticker":
+     0-8%    slide in from above (no bounce)
+     8-25%   HOLD at rest -- welcome message is readable
+     25-74%  SLOWLY grow -- scale 1 -> 2.3 over ~2.5 seconds
+     74-77%  POP -- scale up past the growth peak + fade to 0
+     77-88%  gap -- banner invisible while fireworks burst
+     88-100% reform -- scale 0 -> 1, opacity 0 -> 1 (ticker content
+             swapped in by script.js during this phase) */
 @keyframes bannerWelcomeShow {
-  0%   { transform: translateY(-110%) scaleY(0.75) scaleX(1);   opacity: 1; }
-  8%   { transform: translateY(8%)    scaleY(1.10) scaleX(1);   opacity: 1; }    /* overshoot land */
-  14%  { transform: translateY(0)     scale(1);                 opacity: 1; }    /* rest */
-  32%  { transform: translateY(0)     scale(1);                 opacity: 1; }    /* hold */
-  42%  { transform: translateY(0)     scale(1.08, 1.3);         opacity: 1; }    /* inflate start */
-  52%  { transform: translateY(0)     scale(1.15, 1.6);         opacity: 1; }    /* bigger */
-  60%  { transform: translateY(0)     scale(1.20, 1.95);        opacity: 1; }    /* HUGE */
-  64%  { transform: translateY(0)     scale(1.35, 2.3);         opacity: 0; }    /* POP */
-  66%  { transform: translateY(0)     scale(0.1,  0.1);         opacity: 0; }    /* gone */
-  78%  { transform: translateY(0)     scale(0.1,  0.1);         opacity: 0; }    /* hold invisible */
-  86%  { transform: translateY(0)     scale(0.7,  0.7);         opacity: 0.6; }  /* reform starts */
-  94%  { transform: translateY(0)     scale(1.04, 1.04);        opacity: 1; }    /* tiny overshoot */
-  100% { transform: translateY(0)     scale(1);                 opacity: 1; }    /* settled */
+  0%   { transform: translateY(-100%) scale(1); opacity: 0; }
+  8%   { transform: translateY(0)     scale(1); opacity: 1; }
+  25%  { transform: translateY(0)     scale(1); opacity: 1; }
+  40%  { transform: translateY(0)     scale(1.3); opacity: 1; }
+  55%  { transform: translateY(0)     scale(1.7); opacity: 1; }
+  70%  { transform: translateY(0)     scale(2.1); opacity: 1; }
+  74%  { transform: translateY(0)     scale(2.3); opacity: 1; }
+  77%  { transform: translateY(0)     scale(2.7); opacity: 0; }
+  79%  { transform: translateY(0)     scale(0);   opacity: 0; }
+  88%  { transform: translateY(0)     scale(0);   opacity: 0; }
+  100% { transform: translateY(0)     scale(1);   opacity: 1; }
 }
 
 /* Simpler fallback for non-welcome pages or after sequence completes. */
