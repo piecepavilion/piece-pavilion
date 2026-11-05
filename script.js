@@ -310,52 +310,15 @@ renderTicker();
   requestAnimationFrame(() => pill.classList.add('is-ready'));
 })();
 
-// Welcome sequence on the yellow banner itself. The banner:
-//   1. Drops in with a giant "Piece Pavilion welcomes you" message.
-//   2. Holds briefly so Dad/visitor can read it.
-//   3. INFLATES like a balloon.
-//   4. POPS -- disappears and the confetti + fireworks burst happens.
-//   5. Slowly reforms with the normal ticker content.
-// Keyed off the .welcome-mode class on .announcement-banner. The CSS
-// keyframes are 4200ms total; this script arranges the DOM swaps at the
-// right offsets and exposes a Promise so the confetti IIFE knows when
-// to fire.
-let bannerPopPromise = Promise.resolve();
-(function playBannerWelcome() {
-  if (!document.getElementById('hero')) return;        // homepage only
-  const banner = document.querySelector('.announcement-banner');
-  if (!banner) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  // Inject the oversized welcome message. Stash the original children
-  // so we can put them back after the pop.
-  const originals = Array.from(banner.childNodes);
-  const msg = document.createElement('div');
-  msg.className = 'welcome-message';
-  msg.textContent = 'Piece Pavilion welcomes you';
-  banner.insertBefore(msg, banner.firstChild);
-  banner.classList.add('welcome-mode');
-  // CSS keyframe timings (fractions of 5000ms):
-  //   77% = 3850 ms  -> pop happens, fireworks fire here
-  //   88% = 4400 ms  -> banner starts reforming, swap content back now
-  //  100% = 5000 ms  -> sequence ends, clean up the welcome-mode class
-  bannerPopPromise = new Promise((resolve) => setTimeout(resolve, 3850));
-  setTimeout(() => { msg.remove(); }, 4400);
-  setTimeout(() => { banner.classList.remove('welcome-mode'); }, 5000);
-  window.bannerPopPromise = bannerPopPromise;
-})();
-
-// Reveal the banner. On the homepage, the welcome-mode animation runs
-// the show -- revealBanner becomes a no-op because the banner is
-// already visible in welcome-mode. On other pages, revealBanner falls
-// back to the clean drop-in via .is-ready.
+// Reveal the banner immediately on first render. Simple drop-in via
+// the .is-ready class -- no welcome sequence, no pop, no spin. Dad
+// reverted to the earlier simple banner behaviour on 2026-11-04.
 let bannerRevealed = false;
 const revealBanner = () => {
   if (bannerRevealed) return;
   bannerRevealed = true;
   const b = tickerBanner();
   if (!b || b.classList.contains('hidden')) return;
-  // Already playing the welcome sequence -- let it finish on its own.
-  if (b.classList.contains('welcome-mode')) return;
   requestAnimationFrame(() => b.classList.add('is-ready'));
 };
 const loadLatestBlog = () => fetch('/blog/?_=' + Date.now())
@@ -819,13 +782,11 @@ if (usMap) {
   cv.height = window.innerHeight * dpr;
 
   // Delay confetti + fireworks until the banner pops, so the paper +
-  // sparks explode out of the banner's position (reads as the banner
-  // bursting into confetti + fireworks). On pages without the welcome
-  // sequence this fires immediately.
-  (window.bannerPopPromise || Promise.resolve()).then(() => {
+  // Fire confetti + fireworks immediately on page load.
+  {
     if (halloween) runBats(ctx, cv, dpr);
     else           runConfettiAndFireworks(ctx, cv, dpr);
-  });
+  }
 
   function runConfettiAndFireworks(ctx, cv, dpr) {
     // Halloween colors (orange + black + purple) inside the Halloween window
