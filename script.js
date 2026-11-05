@@ -310,44 +310,59 @@ renderTicker();
   requestAnimationFrame(() => pill.classList.add('is-ready'));
 })();
 
-// Welcome balloon. Pops in at centre of the viewport, inflates to huge,
-// explodes. Timed so the banner drops AFTER the balloon pops -- the pop
-// reveals the rest of the welcome (banner + ticker + brick wallpaper).
-// If the page doesn't have a balloon element, this is a no-op and the
-// banner reveals immediately.
-let balloonDonePromise = Promise.resolve();
-(function playWelcomeBalloon() {
-  const bal = document.getElementById('welcome-balloon');
-  if (!bal) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    bal.remove();
-    return;
-  }
-  balloonDonePromise = new Promise((resolve) => {
-    bal.addEventListener('animationend', () => {
-      bal.classList.add('popped');
-      resolve();
-    }, { once: true });
-    // Safety net in case animationend never fires.
-    setTimeout(() => { bal.classList.add('popped'); resolve(); }, 2800);
-  });
-  // Expose for the confetti/fireworks IIFE which needs to wait on the pop.
-  window.balloonDonePromise = balloonDonePromise;
+// Welcome sequence on the yellow banner itself. The banner:
+//   1. Drops in with a giant "Piece Pavilion welcomes you" message.
+//   2. Holds briefly so Dad/visitor can read it.
+//   3. INFLATES like a balloon.
+//   4. POPS -- disappears and the confetti + fireworks burst happens.
+//   5. Slowly reforms with the normal ticker content.
+// Keyed off the .welcome-mode class on .announcement-banner. The CSS
+// keyframes are 4200ms total; this script arranges the DOM swaps at the
+// right offsets and exposes a Promise so the confetti IIFE knows when
+// to fire.
+let bannerPopPromise = Promise.resolve();
+(function playBannerWelcome() {
+  if (!document.getElementById('hero')) return;        // homepage only
+  const banner = document.querySelector('.announcement-banner');
+  if (!banner) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // Inject the oversized welcome message. Stash the original children
+  // so we can put them back after the pop.
+  const originals = Array.from(banner.childNodes);
+  const msg = document.createElement('div');
+  msg.className = 'welcome-message';
+  msg.textContent = 'Piece Pavilion welcomes you';
+  banner.insertBefore(msg, banner.firstChild);
+  banner.classList.add('welcome-mode');
+  // CSS keyframe timings (fractions of 4200ms):
+  //   64% = 2688 ms  -> pop happens, fireworks should fire here
+  //   86% = 3612 ms  -> banner starts reforming, swap content back now
+  //  100% = 4200 ms  -> sequence ends, clean up
+  bannerPopPromise = new Promise((resolve) => setTimeout(resolve, 2688));
+  setTimeout(() => {
+    // Remove the welcome message and un-hide the original ticker
+    // children in time for the reform phase.
+    msg.remove();
+  }, 3612);
+  setTimeout(() => {
+    banner.classList.remove('welcome-mode');
+  }, 4200);
+  window.bannerPopPromise = bannerPopPromise;
 })();
 
-// Reveal the banner AFTER the balloon pops. On pages without a balloon
-// (non-homepage), the Promise is already resolved and this fires on
-// first render as before.
+// Reveal the banner. On the homepage, the welcome-mode animation runs
+// the show -- revealBanner becomes a no-op because the banner is
+// already visible in welcome-mode. On other pages, revealBanner falls
+// back to the clean drop-in via .is-ready.
 let bannerRevealed = false;
 const revealBanner = () => {
   if (bannerRevealed) return;
   bannerRevealed = true;
-  balloonDonePromise.then(() => {
-    const b = tickerBanner();
-    if (b && !b.classList.contains('hidden')) {
-      requestAnimationFrame(() => b.classList.add('is-ready'));
-    }
-  });
+  const b = tickerBanner();
+  if (!b || b.classList.contains('hidden')) return;
+  // Already playing the welcome sequence -- let it finish on its own.
+  if (b.classList.contains('welcome-mode')) return;
+  requestAnimationFrame(() => b.classList.add('is-ready'));
 };
 const loadLatestBlog = () => fetch('/blog/?_=' + Date.now())
   .then((r) => { if (!r.ok) throw new Error('blog index'); return r.text(); })
@@ -809,11 +824,11 @@ if (usMap) {
   cv.width  = window.innerWidth  * dpr;
   cv.height = window.innerHeight * dpr;
 
-  // Delay the confetti + fireworks until the welcome balloon pops --
-  // then they fly out of the burst as if the balloon exploded into
-  // paper + sparks. On pages without a balloon, balloonDonePromise is
-  // already resolved and this fires right away.
-  (window.balloonDonePromise || Promise.resolve()).then(() => {
+  // Delay confetti + fireworks until the banner pops, so the paper +
+  // sparks explode out of the banner's position (reads as the banner
+  // bursting into confetti + fireworks). On pages without the welcome
+  // sequence this fires immediately.
+  (window.bannerPopPromise || Promise.resolve()).then(() => {
     if (halloween) runBats(ctx, cv, dpr);
     else           runConfettiAndFireworks(ctx, cv, dpr);
   });

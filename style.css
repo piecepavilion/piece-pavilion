@@ -659,14 +659,67 @@ img { display: block; max-width: 100%; }
      during the arrival so it reads as "SLAM" + spring-back rather
      than a soft slide. visibility stays hidden until .is-ready
      avoids a flash of yellow during page load. */
-  /* The yellow announcement band stays hidden while the welcome balloon
-     plays its routine. Script.js reveals it (with .is-ready) once the
-     balloon finishes. It then does a clean drop-in. */
+  /* Hidden until script.js kicks the sequence. Transform-origin "top
+     center" so the drop-in and the balloon inflate both pivot from the
+     top edge of the band. */
   visibility: hidden;
   transform-origin: top center;
   transform: translateY(-110%) scaleY(0.75);
   transition: visibility 0s linear 0s;
 }
+
+/* Welcome-mode class: swaps the banner content to the giant welcome
+   message with inflate + pop animation. Added by script.js on page
+   load for the homepage. The sequence is driven by a single long
+   keyframe below. */
+.announcement-banner.welcome-mode {
+  visibility: visible;
+  animation: bannerWelcomeShow 4200ms cubic-bezier(0.34, 1.28, 0.64, 1) both;
+}
+.announcement-banner.welcome-mode .welcome-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.05rem, 2.4vw, 1.7rem);
+  letter-spacing: 0.02em;
+  color: #15151f;
+  text-align: center;
+}
+/* Hide the regular ticker content while the welcome message is playing. */
+.announcement-banner.welcome-mode > :not(.welcome-message) {
+  display: none;
+}
+
+/* Sequence (4200ms):
+   0-14%    drop in from above with a settle bounce (banner lands)
+   14-32%   hold at rest -- welcome text is readable here
+   32-55%   INFLATE like a balloon (scale up, text zooms)
+   55-62%   grows HUGE
+   62-66%   POP -- scale up past huge AND opacity to 0 instantly
+   66-78%   INVISIBLE gap (fireworks burst in this window)
+   78-100%  slowly REFORMS -- scale/opacity ease back to normal, the
+            welcome text is swapped to the real ticker by script.js
+            at the moment the banner becomes visible again. */
+@keyframes bannerWelcomeShow {
+  0%   { transform: translateY(-110%) scaleY(0.75) scaleX(1);   opacity: 1; }
+  8%   { transform: translateY(8%)    scaleY(1.10) scaleX(1);   opacity: 1; }    /* overshoot land */
+  14%  { transform: translateY(0)     scale(1);                 opacity: 1; }    /* rest */
+  32%  { transform: translateY(0)     scale(1);                 opacity: 1; }    /* hold */
+  42%  { transform: translateY(0)     scale(1.08, 1.3);         opacity: 1; }    /* inflate start */
+  52%  { transform: translateY(0)     scale(1.15, 1.6);         opacity: 1; }    /* bigger */
+  60%  { transform: translateY(0)     scale(1.20, 1.95);        opacity: 1; }    /* HUGE */
+  64%  { transform: translateY(0)     scale(1.35, 2.3);         opacity: 0; }    /* POP */
+  66%  { transform: translateY(0)     scale(0.1,  0.1);         opacity: 0; }    /* gone */
+  78%  { transform: translateY(0)     scale(0.1,  0.1);         opacity: 0; }    /* hold invisible */
+  86%  { transform: translateY(0)     scale(0.7,  0.7);         opacity: 0.6; }  /* reform starts */
+  94%  { transform: translateY(0)     scale(1.04, 1.04);        opacity: 1; }    /* tiny overshoot */
+  100% { transform: translateY(0)     scale(1);                 opacity: 1; }    /* settled */
+}
+
+/* Simpler fallback for non-welcome pages or after sequence completes. */
 .announcement-banner.is-ready {
   visibility: visible;
   animation: bannerDrop 850ms cubic-bezier(0.22, 1.5, 0.3, 0.98) both;
@@ -677,72 +730,6 @@ img { display: block; max-width: 100%; }
   75%  { transform: translateY(-3%)   scaleY(0.96); }
   90%  { transform: translateY(2%)    scaleY(1.02); }
   100% { transform: translateY(0)     scaleY(1); }
-}
-
-/* ===== WELCOME BALLOON =====
-   Fires on homepage load. Pops in at viewport centre, grows, GROWS
-   REALLY BIG, then pops/explodes. Script.js removes it after the
-   animation ends. */
-.welcome-balloon {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 2000;        /* above everything incl. header */
-  width: 240px;
-  height: 240px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0 28px;
-  /* Round yellow balloon with a red outline + highlight. box-shadow
-     stacks a dark underneath for depth and an inset white highlight on
-     the top-left to read as a glossy balloon surface. */
-  background: radial-gradient(circle at 30% 25%, #fff6c4 0%, #ffce00 42%, #e8b800 100%);
-  border-radius: 50%;
-  border: 4px solid #e3000b;
-  box-shadow:
-    0 24px 40px -14px rgba(20, 22, 29, 0.35),
-    inset 18px 22px 40px -10px rgba(255,255,255,0.75);
-  color: #15151f;
-  font-family: 'Fredoka', 'Nunito', sans-serif;
-  font-size: 1.6rem;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: 0.01em;
-  pointer-events: none;
-  transform: translate(-50%, -50%) scale(0);
-  opacity: 0;
-  animation: welcomeBalloon 2400ms cubic-bezier(0.34, 1.26, 0.64, 1) forwards;
-}
-/* Little "tail" at the bottom of the balloon (the tied-off bit). */
-.welcome-balloon::after {
-  content: "";
-  position: absolute;
-  bottom: -14px;
-  left: 50%;
-  width: 16px;
-  height: 20px;
-  background: #e3000b;
-  border-radius: 0 0 50% 50%;
-  transform: translateX(-50%);
-}
-.welcome-balloon.popped { display: none; }
-/* Balloon sequence. Pops in, grows, grows HUGE, pops (quick snap to a
-   bigger-than-huge frame + fade to nothing). */
-@keyframes welcomeBalloon {
-  0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0; }
-  10%  { transform: translate(-50%, -50%) scale(0.4);  opacity: 1; }    /* pops into view */
-  28%  { transform: translate(-50%, -50%) scale(1);    opacity: 1; }    /* normal size */
-  42%  { transform: translate(-50%, -50%) scale(1.3);  opacity: 1; }    /* bigger */
-  58%  { transform: translate(-50%, -50%) scale(1.75); opacity: 1; }    /* really big */
-  72%  { transform: translate(-50%, -50%) scale(2.1);  opacity: 1; }    /* HUGE */
-  80%  { transform: translate(-50%, -50%) scale(2.3);  opacity: 1; }    /* about to go */
-  83%  { transform: translate(-50%, -50%) scale(2.6);  opacity: 0; }    /* POP + fade */
-  100% { transform: translate(-50%, -50%) scale(0);    opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .welcome-balloon { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .announcement-banner {
