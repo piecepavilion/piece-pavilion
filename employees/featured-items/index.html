@@ -40,6 +40,20 @@
   .intro h2 { font-size:1.2rem; margin-bottom:4px; }
   .intro p { color:var(--mid); font-size:.9rem; }
 
+  .live-strip { background:linear-gradient(180deg,#eaffef,#fff); border:2px solid var(--green);
+    border-radius:12px; padding:14px 16px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
+  .live-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:12px; flex-wrap:wrap; }
+  .live-head strong { font-size:.95rem; color:#0d6b2a; }
+  .btn-view { background:var(--green); color:#fff; text-decoration:none; padding:7px 14px;
+    border-radius:50px; font-weight:800; font-size:.82rem; }
+  .btn-view:hover { background:#108d3f; }
+  .live-items { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; }
+  .live-card { flex-shrink:0; width:120px; text-align:center;
+    background:#fff; border:1px solid #c3f0cd; border-radius:8px; padding:6px; font-size:11px; }
+  .live-card img { width:100%; height:66px; object-fit:contain; margin-bottom:3px; }
+  .live-card .lc-tag { background:var(--red); color:#fff; font-weight:800; padding:1px 7px; border-radius:50px; font-size:9px; }
+  .live-card .lc-name { font-weight:700; margin-top:2px; line-height:1.1; height:26px; overflow:hidden; }
+  .live-empty { color:var(--mid); font-size:.85rem; font-style:italic; }
   .homemap { background:#fff; border:1px solid var(--line); border-radius:12px;
     padding:14px 16px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
   .hm-head { font-weight:800; font-size:.86rem; color:var(--mid); margin-bottom:8px; }
@@ -147,6 +161,14 @@
   <div class="intro">
     <h2>Pick what shows on the homepage</h2>
     <p>Type a BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sim024</code> &middot; parts: <code>3024</code>). Type is auto-detected from inventory. Each preview card below shows exactly what the homepage card will look like. Click <strong>Save</strong>, then open <a href="https://piecepavilion.com/" target="_blank">the live homepage</a> to see it (hard-refresh with Ctrl+Shift+R).</p>
+  </div>
+
+  <div id="live-strip" class="live-strip" style="display:none;">
+    <div class="live-head">
+      <strong>&#128250; Currently live on the homepage</strong>
+      <a id="live-open" href="https://piecepavilion.com/" target="_blank" class="btn-view">View homepage &nearr;</a>
+    </div>
+    <div id="live-items" class="live-items">Loading…</div>
   </div>
 
   <div class="homemap" id="homemap">
@@ -316,7 +338,8 @@
         showToast('Save ack\'d but verification failed: ' + ve.message, true);
         return;
       }
-      showToast('Saved to server — homepage will update on the next refresh');
+      showToast('Saved — hard-refresh the homepage to see it live');
+      renderLiveStrip();
     } catch (e) {
       saveBtn.disabled = false;
       statusEl.textContent = 'Save failed — try again';
@@ -440,7 +463,55 @@
     if (JSON.stringify(serializeState()) !== savedState) { e.preventDefault(); e.returnValue = ''; }
   });
 
-  loadFromServer();
+  async function renderLiveStrip() {
+    const strip = document.getElementById('live-strip');
+    const items = document.getElementById('live-items');
+    try {
+      await invReady;
+      const r = await fetch('/featured/overrides.json?v=' + Date.now(), { cache:'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      const live = await r.json();
+      const all = [];
+      for (const k of ['hero','newest','featured']) {
+        for (const e of (live[k] || [])) {
+          const no = typeof e === 'string' ? e : e.no;
+          const type = typeof e === 'string' ? '' : (e.type || '');
+          const hit = lookup(no, type) || lookup(no, '');
+          all.push({ section: k, no, type, hit });
+        }
+      }
+      if (!all.length) {
+        strip.style.display = 'block';
+        items.innerHTML = '<div class="live-empty">Nothing hand-picked yet — homepage is on automatic daily picks. Add items below and click Save to override.</div>';
+        return;
+      }
+      strip.style.display = 'block';
+      const SECLBL = { hero:'Hero', newest:'Just Added', featured:'Featured' };
+      items.innerHTML = all.map(x => {
+        if (!x.hit) {
+          return `<div class="live-card">
+            <div style="height:66px;display:flex;align-items:center;justify-content:center;color:#c62222;font-size:9px;background:#ffe4e4;border-radius:4px;margin-bottom:3px;">Not in<br>inventory</div>
+            <span class="lc-tag" style="background:#c62222">${SECLBL[x.section]}</span>
+            <div class="lc-name">${x.no}</div>
+          </div>`;
+        }
+        const name = (x.hit.name || x.hit.no || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || x.hit.no;
+        const url = `https://img.bricklink.com/ItemImage/${({PART:'P',SET:'S',MINIFIG:'M',GEAR:'G'}[x.hit.type]||'P')}N/${(x.hit.type==='PART'&&x.hit.color_id)?x.hit.color_id:'0'}/${encodeURIComponent(x.hit.no)}.png`;
+        return `<div class="live-card">
+          <img src="${url}" alt="" onerror="this.src=''">
+          <span class="lc-tag">${SECLBL[x.section]}</span>
+          <div class="lc-name" title="${name.replace(/"/g,'&quot;')}">${name.slice(0,22)}</div>
+          <div style="color:var(--green);font-weight:800;margin-top:1px;">$${Number(x.hit.price||0).toFixed(2)}</div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      strip.style.display = 'block';
+      items.innerHTML = '<div class="live-empty">Could not load live state — try Reload.</div>';
+    }
+  }
+
+  // Refresh live strip on first load.
+  loadFromServer().then(renderLiveStrip);
 </script>
 </body>
 </html>
