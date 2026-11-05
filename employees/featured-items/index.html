@@ -40,6 +40,22 @@
   .intro h2 { font-size:1.2rem; margin-bottom:4px; }
   .intro p { color:var(--mid); font-size:.9rem; }
 
+  .homemap { background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; margin-bottom:14px; box-shadow:var(--shadow-sm); }
+  .hm-head { font-weight:800; font-size:.86rem; color:var(--mid); margin-bottom:8px; }
+  .hm-screen { border:2px dashed var(--line); border-radius:10px; padding:10px;
+    background:#fafbfd; display:flex; flex-direction:column; gap:6px; }
+  .hm-row { padding:8px 12px; border-radius:6px; font-size:.82rem; font-weight:700;
+    display:flex; align-items:center; gap:8px; cursor:pointer; transition:background .15s; }
+  .hm-row:hover { filter:brightness(.97); }
+  .hm-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .hm-hero     { background:#fff8e7; } .hm-hero     .hm-dot { background:var(--yellow); }
+  .hm-newest   { background:#ffe5c2; } .hm-newest   .hm-dot { background:#ff9a2e; }
+  .hm-featured { background:#dceefc; } .hm-featured .hm-dot { background:var(--blue); }
+  .fe-block[data-key="hero"]     { border-left:5px solid var(--yellow); }
+  .fe-block[data-key="newest"]   { border-left:5px solid #ff9a2e; }
+  .fe-block[data-key="featured"] { border-left:5px solid var(--blue); }
+
   .fe-block { border:1px solid var(--line); border-radius:12px; padding:14px 16px;
     margin-bottom:12px; background:#fff; box-shadow:var(--shadow-sm); }
   .fe-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
@@ -130,7 +146,16 @@
 <main class="wrap">
   <div class="intro">
     <h2>Pick what shows on the homepage</h2>
-    <p>Type a BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sim024</code> &middot; parts: <code>3024</code>), pick the type, see the live preview card (what the homepage will look like). When you're done, click <strong>Save</strong>. Empty sections fall back to the automatic daily picks.</p>
+    <p>Type a BrickLink <strong>item number</strong> (sets: <code>10262-1</code> &middot; minifigs: <code>sim024</code> &middot; parts: <code>3024</code>). Type is auto-detected from inventory. Each preview card below shows exactly what the homepage card will look like. Click <strong>Save</strong>, then open <a href="https://piecepavilion.com/" target="_blank">the live homepage</a> to see it (hard-refresh with Ctrl+Shift+R).</p>
+  </div>
+
+  <div class="homemap" id="homemap">
+    <div class="hm-head">Where each section lands on the homepage &rarr;</div>
+    <div class="hm-screen">
+      <div class="hm-row hm-hero" data-key="hero"><span class="hm-dot"></span> Hero carousel &mdash; top of page, right of the headline</div>
+      <div class="hm-row hm-newest" data-key="newest"><span class="hm-dot"></span> Just Added &mdash; amber row below the hero</div>
+      <div class="hm-row hm-featured" data-key="featured"><span class="hm-dot"></span> Featured From Our Store &mdash; middle of page with filter tabs</div>
+    </div>
   </div>
 
   <div id="fe-sections"></div>
@@ -159,6 +184,38 @@
   let feState = { hero:[], featured:[], newest:[] };
   let savedState = JSON.stringify(feState);
   let loading = true;
+  // Inventory index: item # -> array of lots. Loaded in parallel with the saved
+  // overrides so the editor can show REAL names + prices + a lot link for
+  // every pick (same shape the live homepage uses).
+  let inv = null;
+  let invByNo = new Map();
+  const invReady = fetch('/finder-data.json', { cache:'default' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => {
+      inv = j;
+      if (!j || !Array.isArray(j.items)) return;
+      for (const it of j.items) {
+        if (!it.no) continue;
+        const key = String(it.no).toUpperCase();
+        if (!invByNo.has(key)) invByNo.set(key, []);
+        invByNo.get(key).push(it);
+      }
+    }).catch(() => {});
+
+  const lookup = (no, type) => {
+    const key = String(no || '').toUpperCase();
+    const lots = invByNo.get(key);
+    if (!lots || !lots.length) return null;
+    const t = String(type || '').toUpperCase();
+    return (t && lots.find(l => l.type === t)) || lots[0];
+  };
+  // Click-to-scroll from the homepage map.
+  document.addEventListener('click', e => {
+    const row = e.target.closest('.hm-row');
+    if (!row) return;
+    const block = document.getElementById('block-' + row.dataset.key);
+    if (block) block.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
 
   const statusEl = document.getElementById('save-status');
   const saveBtn = document.getElementById('save-btn');
@@ -197,9 +254,10 @@
 
   async function loadFromServer() {
     loading = true;
-    statusEl.textContent = 'Loading…'; statusEl.className = 'status';
+    statusEl.textContent = 'Loading inventory + saved picks…'; statusEl.className = 'status';
     saveBtn.disabled = true;
     try {
+      await invReady; // wait for /finder-data.json so first render has real names
       const r = await fetch('/employees/api/featured/get?v=' + Date.now());
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
@@ -271,23 +329,30 @@
     const wrap = document.getElementById('fe-sections');
     wrap.innerHTML = FE_SECTIONS.map(sec => {
       const rows = feState[sec.key].map((e,i) => {
-        const url = imgURL(e.no, e.type);
-        const type = TYPES.find(t => t.v === e.type);
-        const previewFilled = e.no && e.type;
+        // Auto-detect type from inventory when Dad didn't pick one yet.
+        const invHit = lookup(e.no, e.type) || lookup(e.no, '');
+        const effectiveType = e.type || (invHit ? invHit.type : '');
+        const url = imgURL(e.no, effectiveType);
+        const typeObj = TYPES.find(t => t.v === effectiveType);
+        const previewFilled = e.no && (effectiveType || invHit);
+        const name = invHit ? ((invHit.name || invHit.no || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || invHit.no) : (e.no || '');
+        const price = invHit ? '$' + Number(invHit.price || 0).toFixed(2) : '';
+        const lotNote = invHit ? `Lot #${invHit.lot}` : (e.no ? 'Not in live inventory' : '');
         const prevHTML = previewFilled
           ? `<div class="preview-card">
-               <img src="${url}" alt="" onerror="this.src=''">
-               <span class="pv-tag">${type ? type.label : ''}</span>
-               <div class="pv-name">${e.no}</div>
-               <div class="pv-price">Homepage preview</div>
+               <img src="${invHit ? `https://img.bricklink.com/ItemImage/${({PART:'P',SET:'S',MINIFIG:'M',GEAR:'G'}[invHit.type]||'P')}N/${(invHit.type==='PART'&&invHit.color_id)?invHit.color_id:'0'}/${encodeURIComponent(invHit.no)}.png` : url}" alt="" onerror="this.src=''">
+               <span class="pv-tag">${typeObj ? typeObj.label : effectiveType}</span>
+               <div class="pv-name" title="${name.replace(/"/g,'&quot;')}">${name.slice(0,36)}</div>
+               <div class="pv-price">${price || 'Homepage preview'}</div>
+               <div style="font-size:9px;color:var(--mid);margin-top:2px;">${lotNote}</div>
              </div>`
-          : `<div class="preview-card empty">Fill in # &amp; type<br>to preview</div>`;
+          : `<div class="preview-card empty">Fill in #<br>to preview</div>`;
         return `
           <div class="fe-row" data-sec="${sec.key}" data-i="${i}">
             <img class="fe-thumb" src="${url}" alt="" onerror="this.style.visibility='hidden'">
             <input class="fe-no" type="text" placeholder="Item No" value="${e.no}" />
-            <select class="fe-type">
-              <option value="">type…</option>
+            <select class="fe-type" title="Auto-detected from live inventory if empty">
+              <option value="">auto</option>
               ${TYPES.map(t => `<option value="${t.v}"${t.v===e.type?' selected':''}>${t.label}</option>`).join('')}
             </select>
             <button class="fe-up"   title="Move up">&uarr;</button>
@@ -297,7 +362,7 @@
           </div>`;
       }).join('');
       return `
-        <div class="fe-block">
+        <div class="fe-block" id="block-${sec.key}" data-key="${sec.key}">
           <div class="fe-head">
             <strong>${sec.label}</strong>
             <span style="color:var(--mid);font-size:.82rem;">${feState[sec.key].length}/${sec.max}</span>
@@ -317,21 +382,30 @@
       const typeIn = row.querySelector('.fe-type');
       const thumbEl = row.querySelector('.fe-thumb');
       const refresh = () => {
-        thumbEl.src = imgURL(feState[sec][i].no, feState[sec][i].type);
+        const no = feState[sec][i].no, type = feState[sec][i].type;
+        const invHit = lookup(no, type) || lookup(no, '');
+        const effType = type || (invHit ? invHit.type : '');
+        thumbEl.src = imgURL(no, effType);
         thumbEl.style.visibility = '';
         const prev = row.querySelector('.preview-card');
-        const no = feState[sec][i].no, type = feState[sec][i].type;
-        const t = TYPES.find(x => x.v === type);
-        if (no && type) {
+        const t = TYPES.find(x => x.v === effType);
+        if (no && (effType || invHit)) {
+          const name = invHit ? ((invHit.name || invHit.no || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || invHit.no) : no;
+          const price = invHit ? '$' + Number(invHit.price || 0).toFixed(2) : '';
+          const lotNote = invHit ? `Lot #${invHit.lot}` : 'Not in live inventory';
+          const realImg = invHit
+            ? `https://img.bricklink.com/ItemImage/${({PART:'P',SET:'S',MINIFIG:'M',GEAR:'G'}[invHit.type]||'P')}N/${(invHit.type==='PART'&&invHit.color_id)?invHit.color_id:'0'}/${encodeURIComponent(invHit.no)}.png`
+            : imgURL(no, effType);
           prev.className = 'preview-card';
           prev.innerHTML = `
-            <img src="${imgURL(no, type)}" alt="" onerror="this.src=''">
-            <span class="pv-tag">${t ? t.label : ''}</span>
-            <div class="pv-name">${no}</div>
-            <div class="pv-price">Homepage preview</div>`;
+            <img src="${realImg}" alt="" onerror="this.src=''">
+            <span class="pv-tag">${t ? t.label : effType}</span>
+            <div class="pv-name" title="${name.replace(/"/g,'&quot;')}">${name.slice(0,36)}</div>
+            <div class="pv-price">${price || 'Homepage preview'}</div>
+            <div style="font-size:9px;color:var(--mid);margin-top:2px;">${lotNote}</div>`;
         } else {
           prev.className = 'preview-card empty';
-          prev.innerHTML = 'Fill in # &amp; type<br>to preview';
+          prev.innerHTML = 'Fill in #<br>to preview';
         }
         markDirty();
       };

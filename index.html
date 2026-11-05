@@ -1101,5 +1101,126 @@
 
   <script async src="https://f.convertkit.com/ckjs/ck.5.js" integrity="sha384-jrPr3cryOobCciVpnyICbK0gXiRQxFQMYLwmA1ncyFPJg3m6jwTkIPWwOgJo2lPj" crossorigin="anonymous"></script>
   <script src="script.js?v=20261104k"></script>
+  <!--
+    Client-side override for homepage featured items. Reads Dad's staff-editor
+    picks from /featured/overrides.json (served by the pp-partout worker from
+    KV), resolves them against live inventory in /finder-data.json, and swaps
+    the HERO / NEWEST / FEATURED sections in place. Picks appear on the live
+    site the moment he saves; no daily rebuild wait. Falls back silently if
+    overrides are empty or fetches fail — baked homepage HTML keeps showing.
+  -->
+  <script>
+  (async () => {
+    try {
+      const [ovRes, invRes] = await Promise.all([
+        fetch('/featured/overrides.json', { cache: 'no-store' }),
+        fetch('/finder-data.json', { cache: 'default' }),
+      ]);
+      if (!ovRes.ok || !invRes.ok) return;
+      const ov = await ovRes.json();
+      const inv = await invRes.json();
+      const hasAny = (ov.hero && ov.hero.length) || (ov.featured && ov.featured.length) || (ov.newest && ov.newest.length);
+      if (!hasAny) return;
+
+      // Index inventory by item # (uppercase). Keep all lots so we can match type.
+      const byNo = new Map();
+      for (const it of (inv.items || [])) {
+        if (!it.no || !it.qty) continue;
+        const key = String(it.no).toUpperCase();
+        if (!byNo.has(key)) byNo.set(key, []);
+        byNo.get(key).push(it);
+      }
+      const resolve = (entry) => {
+        const no = (typeof entry === 'string' ? entry : entry.no || '').toUpperCase();
+        const type = (typeof entry === 'object' ? (entry.type || '') : '').toUpperCase();
+        const lots = byNo.get(no); if (!lots || !lots.length) return null;
+        return (type && lots.find(l => l.type === type)) || lots[0];
+      };
+
+      const CATS = {
+        SET:     { attr:'set',       label:'Set' },
+        MINIFIG: { attr:'minifigure',label:'Minifigure' },
+        GEAR:    { attr:'keychain',  label:'Keychain' },
+        PART:    { attr:'part',      label:'Part' },
+      };
+      const esc = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const imgURL = it => {
+        const pre = { PART:'P', SET:'S', MINIFIG:'M', GEAR:'G' }[it.type] || 'P';
+        const color = (it.type === 'PART' && it.color_id) ? it.color_id : '0';
+        return `https://img.bricklink.com/ItemImage/${pre}N/${color}/${encodeURIComponent(it.no)}.png`;
+      };
+      const price = it => '$' + Number(it.price || 0).toFixed(2);
+      const niceName = it => (it.name || it.no || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || it.no;
+
+      const heroCard = it => {
+        const c = CATS[it.type] || CATS.PART;
+        return `<a class="hero-card" href="https://store.bricklink.com/PiecePavilion?itemID=${esc(it.lot)}" target="_blank" rel="noopener">
+          <img src="${imgURL(it)}" alt="${esc(niceName(it))}" loading="lazy" />
+          <span class="hero-card-tag">${c.label}</span>
+          <span class="hero-card-name">${esc(niceName(it)).slice(0,30)}</span>
+          <span class="hero-card-price">${price(it)}</span>
+        </a>`;
+      };
+      const gridCard = it => {
+        const c = CATS[it.type] || CATS.PART;
+        return `<a href="https://store.bricklink.com/PiecePavilion?itemID=${esc(it.lot)}" target="_blank" rel="noopener" class="featured-item" data-category="${c.attr}">
+          <div class="featured-img-wrap">
+            <img src="${imgURL(it)}" alt="${esc(niceName(it))}" loading="lazy" />
+          </div>
+          <div class="featured-info">
+            <span class="featured-category">${c.label}</span>
+            <h4>${esc(niceName(it))}</h4>
+            <p class="featured-id">${esc(it.no)}</p>
+            <p class="featured-price">${price(it)}</p>
+          </div>
+          <div class="featured-actions">
+            <span class="featured-cta">View on BrickLink &rarr;</span>
+            <button type="button" class="add-cart-btn" data-lot="${esc(it.lot)}" data-no="${esc(it.no)}" data-name="${esc(niceName(it))}" data-price="${esc(it.price)}" data-img="${imgURL(it)}">+ Cart</button>
+          </div>
+        </a>`;
+      };
+
+      // Replace the content between <!--MARKER--> and <!--/MARKER--> in the
+      // given container, preserving everything outside the markers.
+      const swapSection = (containerSelector, marker, cards) => {
+        const el = document.querySelector(containerSelector);
+        if (!el) return;
+        const re = new RegExp(`<!--${marker}-->[\\s\\S]*?<!--/${marker}-->`);
+        el.innerHTML = el.innerHTML.replace(re, `<!--${marker}-->\n${cards}\n<!--/${marker}-->`);
+      };
+
+      // Hero carousel: 1-5 items.
+      if (ov.hero && ov.hero.length) {
+        const items = ov.hero.map(resolve).filter(Boolean);
+        if (items.length) {
+          swapSection('#hero-track', 'HERO', items.map(heroCard).join('\n'));
+          const dotsEl = document.querySelector('.hero-dots');
+          if (dotsEl) {
+            dotsEl.innerHTML = '<!--HERODOTS-->' + items.map((_, i) =>
+              `<button class="dot${i === 0 ? ' active' : ''}" aria-label="Product ${i+1}"></button>`
+            ).join('') + '<!--/HERODOTS-->';
+          }
+          // Re-init the carousel JS (script.js wires it on DOMContentLoaded;
+          // emit the event again so it picks up the new cards + dots).
+          if (typeof window.__heroReinit === 'function') window.__heroReinit();
+        }
+      }
+      // Just Added row.
+      if (ov.newest && ov.newest.length) {
+        const items = ov.newest.map(resolve).filter(Boolean);
+        if (items.length) swapSection('#newest .featured-grid', 'NEWEST', items.map(gridCard).join('\n'));
+      }
+      // Featured From Our Store grid.
+      if (ov.featured && ov.featured.length) {
+        const items = ov.featured.map(resolve).filter(Boolean);
+        if (items.length) swapSection('#featured-grid', 'FEATURED', items.map(gridCard).join('\n'));
+      }
+    } catch (e) {
+      // Any failure (CORS, worker down, inventory not published yet) silently
+      // leaves the baked-in cards in place — the homepage never looks broken.
+      console.warn('featured overrides:', e);
+    }
+  })();
+  </script>
 </body>
 </html>
