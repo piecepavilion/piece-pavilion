@@ -761,7 +761,11 @@
       const words = (title + ' ' + summary).trim().split(/\s+/).length;
       // Full-article estimate: assume summary is ~8% of article length
       const estWords = Math.max(words * 12, 400);
-      const minutes = Math.max(2, Math.round(estWords / 220));
+      // Prefer an explicit article reading time when supplied; preserve the
+      // existing fallback for every other card.
+      const articleMinutes = Number(card.getAttribute('data-reading-time'));
+      const minutes = Number.isInteger(articleMinutes) && articleMinutes >= 1 && articleMinutes <= 60
+        ? articleMinutes : Math.max(2, Math.round(estWords / 220));
 
       // 3. Category inferred from title + summary
       const text = title + ' ' + summary;
