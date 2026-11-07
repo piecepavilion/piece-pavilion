@@ -197,7 +197,7 @@ def generate_thumb_png(title, slug, out_path):
     draw.text(((W - lw) // 2, 180), label, font=label_font, fill=label_ink)
 
     # Big phrase in Fredoka Bold, centered horizontally.
-    phrase = thumb_phrase(title)
+    phrase = thumb_phrase(title, slug)
     font = _fit_font(draw, phrase, FONT_BOLD, W - 120, 180, min_size=72)
     bbox = draw.textbbox((0, 0), phrase, font=font)
     text_w = bbox[2] - bbox[0]
@@ -213,10 +213,19 @@ def generate_thumb_png(title, slug, out_path):
     img.save(out_path, "PNG", optimize=True)
 
 
-def thumb_phrase(title):
+# Explicitly approved thumbnail wording. Full article titles stay unchanged.
+THUMB_PHRASE_OVERRIDES = {
+    "bricklink-sos-part-2-november-2026": "Bricklink Sos",
+    "bricklink-sos-november-2026-outage": "Bricklink Sos",
+}
+
+
+def thumb_phrase(title, slug=None):
     """Pick a 1-3 word punchy phrase in Title Case for the SVG placeholder.
     Models the hand-made thumbs ('Advent 2026', 'Halloween Guide',
     'Minifig Values')."""
+    if slug in THUMB_PHRASE_OVERRIDES:
+        return THUMB_PHRASE_OVERRIDES[slug]
     if not title:
         return "New Post"
     words = re.sub(r"[:,.\!\?]", " ", title).split()
@@ -430,7 +439,8 @@ def render_cards(posts):
     lines = ["\n"]
     for p in posts:
         href = "/blog/%s/" % p["slug"]
-        thumb = '<img src="/thumb/%s.png" alt="" loading="lazy" />' % p["slug"]
+        thumb_version = "?v=20261107-labels" if p["slug"] in THUMB_PHRASE_OVERRIDES else ""
+        thumb = '<img src="/thumb/%s.png%s" alt="" loading="lazy" />' % (p["slug"], thumb_version)
         slug_attr = html.escape(p["slug"], quote=True)
         badge = '<span class="view-badge" data-slug="%s" aria-label="0 views">0</span>' % slug_attr
         card = (
@@ -645,3 +655,4 @@ def write_latest_json(slug):
 
 if __name__ == "__main__":
     main()
+

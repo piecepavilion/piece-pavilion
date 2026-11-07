@@ -470,7 +470,7 @@ const loadBannerConfig = () => {
 // the first render. If it misses, renderTicker() leaves the already-
 // visible banner alone (see the is-ready guard in renderTicker).
 // Fire the fetches, but reveal the banner right away so the first
-// visible frame is in sync with the confetti + fireworks. The fetches
+// visible frame is in sync with the confetti. The fetches
 // will enrich the ticker in place when they land.
 loadLatestBlog();
 loadBannerConfig();
@@ -783,7 +783,7 @@ if (usMap) {
 }
 
 // ===== HOMEPAGE WELCOME EFFECT =====
-// Normally fires once per browser session as a confetti burst.
+// Fires on each homepage load as a confetti burst.
 // Switches to flying bats during Halloween week — rules:
 //   - 2026 only:  Oct 29 through Nov 1 at 00:00 local
 //   - 2027+:      Oct 20 through Nov 1 at 06:00 local
@@ -793,9 +793,7 @@ if (usMap) {
   const forced     = /[?&](confetti|bats)/.test(location.search);
   const forceBats  = /[?&]bats/.test(location.search);
   const forceConfetti = /[?&]confetti/.test(location.search) && !forceBats;
-  // Fire on EVERY homepage load (Dad's 2026-11-04 ask): the confetti +
-  // fireworks should play again when he refreshes the page, not stay
-  // suppressed for the rest of the session. Only honour the OS-level
+  // Keep confetti on every homepage load, respecting the OS-level
   // "reduced motion" accessibility preference.
   if (!forced && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -822,14 +820,13 @@ if (usMap) {
   cv.width  = window.innerWidth  * dpr;
   cv.height = window.innerHeight * dpr;
 
-  // Delay confetti + fireworks until the banner pops, so the paper +
-  // Fire confetti + fireworks immediately on page load.
+  // Fire confetti immediately on page load.
   {
     if (halloween) runBats(ctx, cv, dpr);
-    else           runConfettiAndFireworks(ctx, cv, dpr);
+    else           runConfetti(ctx, cv, dpr);
   }
 
-  function runConfettiAndFireworks(ctx, cv, dpr) {
+  function runConfetti(ctx, cv, dpr) {
     // Halloween colors (orange + black + purple) inside the Halloween window
     // so even if the bats fail for some reason, the fallback still feels festive.
     const insideHalloween = halloween || isHalloweenWindow(new Date());
@@ -851,107 +848,16 @@ if (usMap) {
         color: COLORS[(Math.random() * COLORS.length) | 0],
       });
     }
-    // --- Fireworks. Each shell is a (cx, cy, when) spawn that bursts into
-    // ~90 radial sparks with gravity + per-spark fade. 14 shells scheduled
-    // across the 5s window. Sparks render as a glow stack (soft outer
-    // halo + bright white core) so they pop against both the light hero
-    // background and whatever hero image Dad swaps in later. A brief
-    // white flash at burst time punches the shell's arrival.
     const t0 = performance.now();
-    // Confetti stays on for 5 s; fireworks run the first 3.5 s so they
-    // feel like a quick celebration rather than a sustained show.
     const DURATION = 5000;
-    const FIREWORKS_WINDOW = 3500;
-    const sparks = [];
-    const flashes = [];
-    const shells = [];
-    for (let i = 0; i < 11; i++) {
-      shells.push({
-        at: t0 + 80 + i * (FIREWORKS_WINDOW / 13) + (Math.random() - 0.5) * 160,
-        cx: (0.08 + Math.random() * 0.84) * cv.width,
-        cy: (0.15 + Math.random() * 0.38) * cv.height,
-        color: COLORS[(Math.random() * COLORS.length) | 0],
-        fired: false,
-      });
-    }
-    // Thinner + shorter per Dad's 2026-11-04 feedback: spark size shrank
-    // (2.6+rand*2.4 -> 1.4+rand*1.0), glow radius shrank (3.5x -> 2.2x),
-    // and decay sped up so each spark fades in ~70 frames instead of ~110.
-    const burstShell = (sh) => {
-      flashes.push({ x: sh.cx, y: sh.cy, life: 1, decay: 0.12, color: sh.color });
-      const N = 80;
-      for (let i = 0; i < N; i++) {
-        const angle = (i / N) * Math.PI * 2 + Math.random() * 0.08;
-        const speed = (4 + Math.random() * 6) * dpr;
-        sparks.push({
-          x: sh.cx,
-          y: sh.cy,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 1,
-          decay: 0.018 + Math.random() * 0.012,
-          color: sh.color,
-          size: (1.4 + Math.random() * 1.0) * dpr,
-        });
-      }
-    };
     (function frame(t) {
       const now = t || performance.now();
       const elapsed = now - t0;
       ctx.clearRect(0, 0, cv.width, cv.height);
       const fade = elapsed > DURATION - 800 ? Math.max(0, (DURATION - elapsed) / 800) : 1;
-      // Fire any shells whose scheduled time has passed.
-      for (const sh of shells) {
-        if (!sh.fired && now >= sh.at) { sh.fired = true; burstShell(sh); }
-      }
-      // --- Draw burst flashes (behind sparks). ---
-      const hexToRgb = (h) => {
-        const m = h.replace("#", "");
-        const v = m.length === 3
-          ? m.split("").map((c) => parseInt(c + c, 16))
-          : [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
-        return v[0] + "," + v[1] + "," + v[2];
-      };
-      ctx.globalCompositeOperation = "lighter";  // additive -- glows read on light or dark
-      for (const f of flashes) {
-        f.life -= f.decay;
-        if (f.life <= 0) continue;
-        const r = (45 + (1 - f.life) * 100) * dpr;
-        const rgb = hexToRgb(f.color);
-        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-        g.addColorStop(0, "rgba(255,255,255," + (0.55 * f.life * fade).toFixed(3) + ")");
-        g.addColorStop(0.4, "rgba(" + rgb + "," + (0.28 * f.life * fade).toFixed(3) + ")");
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
-        ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
-      }
-      // --- Draw fireworks sparks: thinner halo + small white core. ---
-      for (const s of sparks) {
-        s.x += s.vx;  s.y += s.vy;
-        s.vy += 0.08 * dpr;         // gravity, a touch stronger than confetti
-        s.vx *= 0.985;
-        s.life -= s.decay;
-        if (s.life <= 0) continue;
-        const alpha = Math.max(0, s.life) * fade;
-        const r = s.size * Math.max(0.3, s.life);
-        // Outer colored glow (additive-blended). Tighter radius (2.2x) so
-        // sparks read as pinpricks with a halo, not fat dots.
-        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r * 2.2);
-        g.addColorStop(0, s.color);
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.fillStyle = g;
-        ctx.fillRect(s.x - r * 2.2, s.y - r * 2.2, r * 4.4, r * 4.4);
-        // Bright white core, smaller than before so the pinprick is crisp.
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, r * 0.55, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-      }
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = fade;
-      // --- Draw confetti rectangles on top. ---
+      // --- Draw confetti rectangles. ---
       ctx.globalAlpha = fade;
       for (const p of parts) {
         p.x += p.vx;  p.y += p.vy;
@@ -1213,3 +1119,4 @@ if (navDropdown) {
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 })();
+
