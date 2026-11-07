@@ -81,6 +81,14 @@
   }
   .row textarea { resize:vertical; min-height:60px; }
   .row input:focus, .row textarea:focus { outline:none; border-color:var(--red); }
+  .speed-controls { display:flex; align-items:center; gap:14px; min-width:0; }
+  .speed-controls input[type=range] { flex:1; min-width:80px; accent-color:var(--red); }
+  .speed-controls output { min-width:4em; font-weight:800; text-align:right; }
+  .speed-scale { display:flex; justify-content:space-between; gap:12px; }
+  @media(max-width:540px) {
+    .speed-row { grid-template-columns:1fr; gap:8px; }
+    .speed-row .hint { grid-column:1; }
+  }
 
   /* Toggle */
   .toggle { display:inline-flex; align-items:center; gap:10px; cursor:pointer; }
@@ -119,6 +127,14 @@
     font-weight:700; opacity:0; pointer-events:none; transition:opacity .2s; z-index:50; }
   .toast.show { opacity:1; }
   .toast.err { background:#9b0008; }
+  @media(max-width:540px) {
+    .savebar { flex-wrap:wrap; gap:8px; padding:10px 12px; }
+    .savebar .status { flex-basis:100%; }
+    .savebar .spacer { display:none; }
+    .savebar button, .savebar a { font-size:.78rem; padding:8px 12px; }
+    .savebar .btn-view { flex:1; }
+    .wrap { padding-bottom:70px; }
+  }
 </style>
 </head>
 <body>
@@ -147,6 +163,19 @@
       <label class="toggle"><input type="checkbox" id="enabled" checked><span class="track"></span></label>
     </div>
     <div class="row"><div></div><div class="hint">Turn OFF to hide the banner site-wide (homepage, blog, everywhere).</div></div>
+  </div>
+
+  <div class="section">
+    <h3><span class="dot"></span> Banner speed</h3>
+    <div class="row speed-row">
+      <label for="scroll_speed">Scrolling speed</label>
+      <div class="speed-controls">
+        <input type="range" id="scroll_speed" min="25" max="200" step="5" value="100" aria-describedby="speed-help" disabled>
+        <output id="speed-value" for="scroll_speed">100%</output>
+      </div>
+      <div class="hint speed-scale"><span>25% · Slower</span><span>200% · Faster</span></div>
+      <p class="hint" id="speed-help">100% is the original speed. Move left to slow down or right to speed up, then click Save. Applies site-wide on the next page load.</p>
+    </div>
   </div>
 
   <div class="section">
@@ -189,6 +218,7 @@
 <script>
   const state = {
     enabled: true,
+    scroll_speed: 100,
     announcements: [
       { message:'', link:'', link_text:'' },
       { message:'', link:'', link_text:'' },
@@ -203,6 +233,12 @@
     order: ['a0', 'a1', 'a2', 'blog', 'added'],
   };
   let savedState = JSON.stringify(state);
+  let loaded = false;
+  let busy = false;
+  const cleanSpeed = value => {
+    const n = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN;
+    return Number.isFinite(n) && n >= 25 && n <= 200 ? n : 100;
+  };
   const $ = id => document.getElementById(id);
   const toast = $('toast');
   const showToast = (m, err) => {
@@ -308,6 +344,12 @@
   }
 
   function markDirty() {
+    if (busy) return;
+    if (!loaded) {
+      $('save-btn').disabled = true;
+      $('save-status').textContent = 'Load current settings before saving — click Reload';
+      return;
+    }
     const dirty = JSON.stringify(state) !== savedState;
     const s = $('save-status');
     s.textContent = dirty ? 'Unsaved changes — click Save' : 'All changes saved';
@@ -316,12 +358,18 @@
   }
 
   async function loadFromServer() {
+    if (busy) return;
+    busy = true; loaded = false;
+    $('save-btn').disabled = true;
+    $('refresh-btn').disabled = true;
+    $('scroll_speed').disabled = true;
     $('save-status').textContent = 'Loading…'; $('save-status').className = 'status';
     try {
       const r = await fetch('/employees/api/banner/get?v=' + Date.now(), { cache:'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       state.enabled = d.enabled !== false;
+      state.scroll_speed = cleanSpeed(d.scroll_speed);
       state.announcements = (d.announcements || state.announcements).map(a => ({
         message: a.message || '', link: a.link || '', link_text: a.link_text || ''
       }));
@@ -335,11 +383,17 @@
       applyToForm();
       renderAnnouncements();
       refreshPreview();
+      loaded = true;
+      busy = false;
       markDirty();
     } catch (e) {
       showToast('Load failed: ' + e.message, true);
       $('save-status').textContent = 'Load failed — try Reload';
       $('save-status').className = 'status dirty';
+    } finally {
+      busy = false;
+      $('refresh-btn').disabled = false;
+      $('scroll_speed').disabled = !loaded;
     }
   }
 
@@ -348,9 +402,18 @@
     $('show_latest_blog').checked = state.show_latest_blog;
     $('show_just_added').checked = state.show_just_added;
     $('just_added_count').value = state.just_added_count;
+    $('scroll_speed').value = state.scroll_speed;
+    $('speed-value').textContent = state.scroll_speed + '%';
+    $('scroll_speed').setAttribute('aria-valuetext', state.scroll_speed + '% of original speed');
   }
 
   function wireForm() {
+    $('scroll_speed').addEventListener('input', e => {
+      state.scroll_speed = cleanSpeed(e.target.value);
+      $('speed-value').textContent = state.scroll_speed + '%';
+      e.target.setAttribute('aria-valuetext', state.scroll_speed + '% of original speed');
+      markDirty();
+    });
     $('enabled').addEventListener('change', e => { state.enabled = e.target.checked; refreshPreview(); markDirty(); });
     $('show_latest_blog').addEventListener('change', e => { state.show_latest_blog = e.target.checked; refreshPreview(); markDirty(); });
     $('show_just_added').addEventListener('change', e => { state.show_just_added = e.target.checked; refreshPreview(); markDirty(); });
@@ -358,29 +421,40 @@
   }
 
   async function save() {
+    if (!loaded || busy) return;
+    busy = true;
+    const submitted = JSON.parse(JSON.stringify(state));
+    $('refresh-btn').disabled = true;
     $('save-btn').disabled = true;
     $('save-status').textContent = 'Saving…'; $('save-status').className = 'status';
     try {
       const r = await fetch('/employees/api/banner/save', {
         method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(state),
+        body: JSON.stringify(submitted),
       });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       if (!d.ok) throw new Error('rejected');
+      if (cleanSpeed(d.saved && d.saved.scroll_speed) !== submitted.scroll_speed) throw new Error('speed was not saved');
       // Verify round-trip from public endpoint.
       const v = await fetch('/banner/config.json?v=' + Date.now(), { cache:'no-store' });
+      if (!v.ok) throw new Error('verification HTTP ' + v.status);
       const live = await v.json();
       const liveMsgs = (live.announcements || []).map(a => a.message).join('|');
-      const expectedMsgs = state.announcements.map(a => a.message).join('|');
+      const expectedMsgs = submitted.announcements.map(a => a.message).join('|');
       if (liveMsgs !== expectedMsgs) throw new Error('round-trip mismatch');
-      savedState = JSON.stringify(state);
+      if (cleanSpeed(live.scroll_speed) !== submitted.scroll_speed) throw new Error('speed verification mismatch — reload to check');
+      savedState = JSON.stringify(submitted);
+      busy = false;
       markDirty();
       showToast('Saved — hard-refresh homepage to see it live');
     } catch (e) {
       $('save-btn').disabled = false;
       $('save-status').textContent = 'Save failed'; $('save-status').className = 'status dirty';
       showToast('Save failed: ' + e.message, true);
+    } finally {
+      busy = false;
+      $('refresh-btn').disabled = false;
     }
   }
 
