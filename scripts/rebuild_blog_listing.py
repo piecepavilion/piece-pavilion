@@ -198,25 +198,43 @@ def generate_thumb_png(title, slug, out_path):
 
     # Big phrase in Fredoka Bold, centered horizontally.
     phrase = thumb_phrase(title, slug)
-    font = _fit_font(draw, phrase, FONT_BOLD, W - 120, 180, min_size=72)
-    bbox = draw.textbbox((0, 0), phrase, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
-    x = (W - text_w) // 2
-    y = (H - text_h) // 2 + 20
-    # Soft drop shadow for depth. On gold the dark text already pops;
-    # the shadow still softens the edge.
-    shadow = (0, 0, 0, 120) if ink == (255, 255, 255) else (255, 255, 255, 90)
-    draw.text((x + 3, y + 4), phrase, font=font, fill=shadow)
-    draw.text((x, y), phrase, font=font, fill=ink)
-
+    if "\n" in phrase:
+        # Two-line series covers: center each visible line and the complete
+        # title block below the brand label. Keep other thumbnails unchanged.
+        lines = phrase.split("\n")
+        fonts = [_fit_font(draw, line, FONT_BOLD, W - 120,
+                           152 if i == 0 else 80, min_size=60)
+                 for i, line in enumerate(lines)]
+        boxes = [draw.textbbox((0, 0), line, font=font)
+                 for line, font in zip(lines, fonts)]
+        gap = 24
+        total_height = sum(box[3] - box[1] for box in boxes) + gap * (len(lines) - 1)
+        top = 245 + (280 - total_height) / 2
+        for line, font, box in zip(lines, fonts, boxes):
+            x = (W - (box[2] - box[0])) / 2 - box[0]
+            y = top - box[1]
+            draw.text((x + 3, y + 4), line, font=font, fill=(0, 0, 0, 120))
+            draw.text((x, y), line, font=font, fill=ink)
+            top += box[3] - box[1] + gap
+    else:
+        font = _fit_font(draw, phrase, FONT_BOLD, W - 120, 180, min_size=72)
+        bbox = draw.textbbox((0, 0), phrase, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        x = (W - text_w) // 2
+        y = (H - text_h) // 2 + 20
+        # Soft drop shadow for depth. On gold the dark text already pops;
+        # the shadow still softens the edge.
+        shadow = (0, 0, 0, 120) if ink == (255, 255, 255) else (255, 255, 255, 90)
+        draw.text((x + 3, y + 4), phrase, font=font, fill=shadow)
+        draw.text((x, y), phrase, font=font, fill=ink)
     img.save(out_path, "PNG", optimize=True)
 
 
 # Explicitly approved thumbnail wording. Full article titles stay unchanged.
 THUMB_PHRASE_OVERRIDES = {
-    "bricklink-sos-part-2-november-2026": "Bricklink Sos",
-    "bricklink-sos-november-2026-outage": "Bricklink Sos",
+    "bricklink-sos-part-2-november-2026": "BrickLink SOS\nPart 2",
+    "bricklink-sos-november-2026-outage": "BrickLink SOS\nPart 1",
 }
 
 
@@ -439,7 +457,7 @@ def render_cards(posts):
     lines = ["\n"]
     for p in posts:
         href = "/blog/%s/" % p["slug"]
-        thumb_version = "?v=20261107-labels" if p["slug"] in THUMB_PHRASE_OVERRIDES else ""
+        thumb_version = "?v=20261107-sos-parts" if p["slug"] in THUMB_PHRASE_OVERRIDES else ""
         thumb = '<img src="/thumb/%s.png%s" alt="" loading="lazy" />' % (p["slug"], thumb_version)
         slug_attr = html.escape(p["slug"], quote=True)
         badge = '<span class="view-badge" data-slug="%s" aria-label="0 views">0</span>' % slug_attr
@@ -655,4 +673,5 @@ def write_latest_json(slug):
 
 if __name__ == "__main__":
     main()
+
 
