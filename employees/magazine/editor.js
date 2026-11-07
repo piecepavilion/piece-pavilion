@@ -7,9 +7,26 @@
   const comparable = a => JSON.stringify({...a, updatedAt:''});
   const dirty = () => comparable(draft) !== comparable(saved);
   function status(message, kind) { $('status').textContent = message; $('status').className = kind || ''; }
-  function controls() { $('save').disabled = !loaded || busy || !dirty(); $('undo').disabled = !loaded || busy || !history.length; fields.disabled = !loaded || busy; }
+  function controls() { $('save').disabled = !loaded || busy || !dirty(); $('undo').disabled = !loaded || busy || !history.length; fields.disabled = !loaded || busy; if (window.PPMagazineInline) PPMagazineInline.setDisabled($('preview'), !loaded || busy); }
   function snapshot() { history.push(clone(draft)); if (history.length > 80) history.shift(); }
-  function update() { PPMagazine.render($('preview'),draft,true); controls(); }
+  function update() {
+    PPMagazine.render($('preview'),draft,true);
+    if (window.PPMagazineInline) PPMagazineInline.mount($('preview'), draft, (key, value, index, first) => {
+      if (!loaded || busy) return;
+      // Inputs in the sidebar are single-line for these fields, including paste.
+      if (['edition','title','byline','caption'].includes(key)) value = value.replace(/[\r\n]+/g, ' ');
+      if (first) snapshot();
+      if (index === undefined) { draft[key] = value; form.elements[key].value = value; }
+      else {
+        draft.photos[index][key] = value;
+        const input = $('photos').querySelector('[data-photo-index="'+index+'"][data-photo-key="'+key+'"]');
+        if (input) input.value = value;
+      }
+      status('Unsaved changes. Save to publish.');
+      controls();
+    });
+    controls();
+  }
   function fill() { keys.forEach(k => { form.elements[k].value = draft[k] || ''; }); photos(); update(); }
   function edited() { status('Unsaved changes. Save to publish.'); update(); }
   async function api(path, options = {}) {
@@ -32,7 +49,7 @@
       const img = document.createElement('img'); img.src = PPMagazine.safeImage(p.url); img.alt = p.alt || ''; box.append(img);
       [['alt','Image description',300],['caption','Caption',500]].forEach(([key,label,max]) => {
         const wrap = document.createElement('label'); wrap.textContent = label;
-        const input = document.createElement('input'); input.value = p[key] || ''; input.maxLength = max;
+        const input = document.createElement('input'); input.value = p[key] || ''; input.maxLength = max; input.dataset.photoIndex = i; input.dataset.photoKey = key;
         let started = false; input.addEventListener('focus',()=>{started=false;});
         input.addEventListener('input',()=>{if(!started){snapshot();started=true;} draft.photos[i][key]=input.value; edited();});
         wrap.append(input);box.append(wrap);
@@ -78,3 +95,4 @@
   api('').then(result=>{draft={...clone(PPMagazine.empty),...result};if(!Array.isArray(draft.photos))draft.photos=[];saved=clone(draft);loaded=true;fill();status(draft.title?'Published article loaded. Edit, then save to publish.':'Ready for your first article. Nothing publishes until you save.');}).catch(error=>{status(error.message+' Reload this page to retry.','error');update();});
   update();
 })();
+

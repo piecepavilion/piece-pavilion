@@ -3,3 +3,18 @@
 
 /* Manual writing prompts: guidance only, never changes article content. */
 .creative-guide{margin:18px 0 22px;border:1px solid #e2d1c3;border-radius:8px;background:#fffaf2;overflow:hidden}.creative-guide summary{padding:13px 14px;cursor:pointer;font-size:13px;font-weight:700;line-height:1.5}.creative-guide summary:focus-visible{outline:2px solid #c12938;outline-offset:-3px}.guide-kicker{display:block;margin-bottom:3px;color:#a12432;font-size:9px;letter-spacing:.13em}.guide-content{padding:0 14px 14px;font-size:12px;line-height:1.65;color:#4e4942}.guide-content p{margin:0 0 10px}.guide-content ul{margin:0 0 12px;padding-left:17px}.guide-content li{margin:0 0 9px}.guide-content .guide-note{margin:0;padding-top:10px;border-top:1px solid #e8dacc;color:#766b5f;font-size:11px}.field-tip{display:block;margin-top:7px;font-size:11px;font-weight:400;line-height:1.55;color:#71695f}.photo-guide{background:#f7f8f9;border-color:#dcdee2}.photo-guide .guide-note{border-color:#dcdee2}
+
+/* Plain-text editing belongs only to the staff preview, never public pages. */
+.preview-help{font-size:12px;line-height:1.6;color:#625d55;margin:0 0 16px}
+.is-inline-editor .pp-inline-input{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;margin:0;padding:3px 4px;border:1px dashed transparent;border-radius:3px;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.is-inline-editor .pp-inline-input:hover:not(:disabled){border-color:#b7aaa1;background:#ffffff80}
+.is-inline-editor .pp-inline-input:focus{border-color:#c12938;background:#fff;outline:2px solid #c12938;outline-offset:2px}
+.is-inline-editor .pp-inline-input:disabled{opacity:.7;cursor:wait;-webkit-text-fill-color:currentColor}
+.is-inline-editor .pp-inline-input::placeholder{color:#827970;opacity:1}
+.is-inline-editor .pp-magazine-masthead > span:last-child{flex:1 1 180px;max-width:50%}
+.is-inline-editor .pp-magazine-meta{align-items:flex-start}
+.is-inline-editor .pp-inline-byline{flex:1 1 140px;min-width:0}
+.is-inline-editor .pp-inline-date{flex:0 1 145px;min-width:0;color:#77736b}
+.is-inline-editor .pp-magazine-copy .pp-inline-input{min-height:5.4em}
+@media(max-width:760px){.is-inline-editor .pp-magazine-masthead > span:last-child{max-width:100%}.is-inline-editor .pp-magazine-meta .pp-inline-input,.is-inline-editor figcaption .pp-inline-input{font-size:16px}.is-inline-editor .pp-magazine-masthead .pp-inline-input{font-size:16px}.preview-help{font-size:13px}}
+
