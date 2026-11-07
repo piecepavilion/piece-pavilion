@@ -29,7 +29,7 @@
   .topbar .back:hover { background:rgba(255,255,255,.14); }
 
   .tabs { background:#fff; border-bottom:1px solid var(--line); padding:0 24px;
-    display:flex; gap:2px; flex-shrink:0; }
+    display:flex; gap:2px; flex-shrink:0; overflow-x:auto; }
   .tab { font:inherit; background:transparent; border:0; cursor:pointer;
     padding:14px 22px 12px; font-weight:800; color:var(--mid);
     border-bottom:3px solid transparent; transition:color .15s, border-color .15s;
@@ -51,6 +51,7 @@
   <a class="back" href="/employees/">&larr; Staff home</a>
 </header>
 <div class="tabs" role="tablist">
+  <button class="tab" role="tab" data-pane="magazine" aria-selected="false"><span class="ico">&#128240;</span> Magazine</button>
   <button class="tab active" role="tab" data-pane="featured" aria-selected="true">
     <span class="ico">&#11088;</span> Featured items
   </button>
@@ -59,6 +60,7 @@
   </button>
 </div>
 <div class="panes">
+  <section class="pane" id="pane-magazine" role="tabpanel"><iframe src="/employees/magazine/?embed=1" title="Magazine editor"></iframe></section>
   <section class="pane active" id="pane-featured" role="tabpanel">
     <iframe src="/employees/featured-items/?embed=1" title="Featured items editor"></iframe>
   </section>
@@ -69,7 +71,7 @@
 <script>
   // Start on whichever tab the URL hash names (#featured / #spotlight).
   const want = (location.hash || '').replace('#', '');
-  if (want === 'spotlight' || want === 'featured') {
+  if (want === 'spotlight' || want === 'featured' || want === 'magazine') {
     document.querySelectorAll('.tab').forEach(t => {
       const on = t.dataset.pane === want;
       t.classList.toggle('active', on); t.setAttribute('aria-selected', on);
@@ -90,4 +92,5 @@
 </script>
 </body>
 </html>
+
 
