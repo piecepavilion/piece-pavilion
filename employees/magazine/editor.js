@@ -4,10 +4,53 @@
   const keys = ['edition','title','dek','body','byline','date','imageAlt','caption'];
   const clone = a => JSON.parse(JSON.stringify(a));
   let draft = clone(PPMagazine.empty), saved = clone(draft), history = [], busy = false, loaded = false, sessionUndo = false;
-  const comparable = a => JSON.stringify({...a, updatedAt:''});
+  let pageId = 'front', pagesEnabled = false;
+  const pages = new Map();
+  function rememberPage() { if (pages.has(pageId)) Object.assign(pages.get(pageId), {draft, saved, history}); }
+  function anyUnsaved() { rememberPage(); return dirty() || [...pages.values()].some(p => !p.published || comparable(p.draft) !== comparable(p.saved)); }
+  function pageControls() {
+    const ids = [...pages.keys()], index = ids.indexOf(pageId);
+    for (const [id, disabled] of [['new-page',!pagesEnabled],['page-prev',index <= 0],['page-next',index >= ids.length-1],['page-select',ids.length < 2]]) {
+      if ($(id)) {
+        if(id==='page-prev'||id==='page-next') { $(id).disabled=false;$(id).setAttribute('aria-disabled',String(!loaded||busy||disabled)); }
+        else $(id).disabled = !loaded || busy || disabled;
+      }
+    }
+    if ($('page-count')) $('page-count').textContent = 'Page ' + Math.max(1,index+1) + ' of ' + Math.max(1,ids.length);
+    const select = $('page-select');
+    if (!select) return;
+    rememberPage();
+    const labels = ids.map((id,i) => {
+      const p=pages.get(id), changed=!p.published || comparable(p.draft)!==comparable(p.saved);
+      return (i+1)+'. '+(p.draft.title || 'Blank page')+(changed?' · unsaved':'');
+    });
+    const signature=JSON.stringify(labels);
+    if (select.dataset.pages !== signature) {
+      select.replaceChildren();
+      ids.forEach((id,i)=>{const option=document.createElement('option');option.value=id;option.textContent=labels[i];select.append(option);});
+      select.dataset.pages=signature;
+    }
+    select.value=pageId;
+  }
+  function switchPage(id) {
+    if (!loaded || busy || !pages.has(id) || id===pageId) return;
+    rememberPage();pageId=id;
+    ({draft,saved,history}=pages.get(id));sessionUndo=false;fill();
+    status(dirty()?'This page has unsaved changes. Save to publish.':'Page loaded. Other pages and their unsaved edits are kept in this tab.');
+  }
+  function newPage() {
+    if (!loaded || busy || !pagesEnabled) return;
+    rememberPage();
+    const id=window.crypto.randomUUID(), blank=clone(PPMagazine.empty);
+    pages.set(id,{draft:blank,saved:clone(blank),history:[],published:false});
+    switchPage(id);
+    status('New blank page. Your other pages are kept. Add your writing, then Save & publish this page.');
+    form.elements.title.focus?.();
+  }
+  const comparable = a => { const {updatedAt,id,createdAt,...content}=a; return JSON.stringify(content); };
   const dirty = () => comparable(draft) !== comparable(saved);
   function status(message, kind) { $('status').textContent = message; $('status').className = kind || ''; }
-  function controls() { $('save').disabled = !loaded || busy || !dirty(); $('undo').disabled = !loaded || busy || !history.length; fields.disabled = !loaded || busy; if (window.PPMagazineInline) PPMagazineInline.setDisabled($('preview'), !loaded || busy); }
+  function controls() { pageControls(); $('save').disabled = !loaded || busy || !dirty(); $('undo').disabled = !loaded || busy || !history.length; fields.disabled = !loaded || busy; if (window.PPMagazineInline) PPMagazineInline.setDisabled($('preview'), !loaded || busy); }
   function snapshot() { history.push(clone(draft)); if (history.length > 80) history.shift(); }
   function update() {
     PPMagazine.render($('preview'),draft,true);
@@ -84,15 +127,33 @@
     if (!draft.title.trim()) {status('Please enter a headline.','error');return;}
     busy=true;controls();status('Saving your article…');
     try {
-      const result=await api('/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});
-      draft={...clone(PPMagazine.empty),...result};saved=clone(draft);fill();
+      const result=await api(pageId==='front'?'/save':'/pages/'+encodeURIComponent(pageId)+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});
+      draft={...clone(PPMagazine.empty),...result};saved=clone(draft);if(pages.has(pageId))pages.get(pageId).published=true;fill();
       status('Saved and published. Public pages may take a moment to refresh.','success');
     } catch(error) {status(error.message,'error');}
     finally {busy=false;controls();}
   }
   $('save').addEventListener('click',save);form.addEventListener('submit',e=>{e.preventDefault();save();});
-  window.addEventListener('beforeunload',e=>{if(dirty()||busy){e.preventDefault();e.returnValue='';}});
-  api('').then(result=>{draft={...clone(PPMagazine.empty),...result};if(!Array.isArray(draft.photos))draft.photos=[];saved=clone(draft);loaded=true;fill();status(draft.title?'Published article loaded. Edit, then save to publish.':'Ready for your first article. Nothing publishes until you save.');}).catch(error=>{status(error.message+' Reload this page to retry.','error');update();});
+  $('new-page')?.addEventListener('click',newPage);
+  $('page-prev')?.addEventListener('click',()=>{const ids=[...pages.keys()];switchPage(ids[ids.indexOf(pageId)-1]);});
+  $('page-next')?.addEventListener('click',()=>{const ids=[...pages.keys()];switchPage(ids[ids.indexOf(pageId)+1]);});
+  $('page-select')?.addEventListener('change',e=>switchPage(e.target.value));
+  window.addEventListener('beforeunload',e=>{if(anyUnsaved()||busy){e.preventDefault();e.returnValue='';}});
+  api('/pages').then(result=>{
+    // Only allow new pages after a successful collection response from the backend.
+    pagesEnabled=Array.isArray(result.pages);
+    const articles=pagesEnabled?result.pages:[result];
+    if(!articles.length)throw new Error('No saved Newsroom pages were returned.');
+    articles.forEach((article,index)=>{
+      const id=article.id || (index===0?'front':null);
+      if(!id || pages.has(id))throw new Error('The Newsroom page list could not be loaded safely.');
+      const value={...clone(PPMagazine.empty),...article};if(!Array.isArray(value.photos))value.photos=[];
+      pages.set(id,{draft:value,saved:clone(value),history:[],published:true});
+    });
+    pageId=pages.has('front')?'front':pages.keys().next().value;
+    ({draft,saved,history}=pages.get(pageId));loaded=true;fill();
+    status(draft.title?'Published pages loaded. Edit or add a page, then save to publish.':'Ready for your first article. Nothing publishes until you save.');
+  }).catch(error=>{status(error.message+' Reload this page to retry.','error');update();});
   update();
 })();
 
