@@ -109,6 +109,7 @@ const tickerState = {
     showLatestBlog: true,
     showJustAdded: true,
     justAddedCount: 3,
+    scrollSpeed: 100,
   },
 };
 
@@ -266,6 +267,8 @@ function renderTicker(force) {
     banner.innerHTML = newInner;
   }
   banner.classList.add('ticker');
+  const track = banner.querySelector('.ticker-track');
+  if (track) track.style.animationDuration = (55 * 100 / tickerState.cfg.scrollSpeed) + 's';
   banner.classList.remove('hidden');
   // DO NOT reveal here. The boot sequence below reveals the banner only
   // after the latest-blog fetch has settled, so visitors never see the
@@ -368,6 +371,7 @@ const loadBannerConfig = () => {
     if (data.show_latest_blog === false) cfg.show_latest_blog = 'NO';
     if (data.show_just_added === false)  cfg.show_just_added  = 'NO';
     if (data.just_added_count) cfg.just_added_count = String(data.just_added_count);
+    cfg.scroll_speed = data.scroll_speed;
     // Carry Dad's custom item order from KV through to apply().
     if (Array.isArray(data.order) && data.order.length) cfg.__order = data.order.slice();
     return cfg;
@@ -436,6 +440,9 @@ const loadBannerConfig = () => {
     tickerState.cfg.showJustAdded = (cfg.show_just_added || '').trim().toUpperCase() !== 'NO';
     const n = parseInt(cfg.just_added_count, 10);
     tickerState.cfg.justAddedCount = (isFinite(n) && n > 0 && n <= 8) ? n : 3;
+    const speed = typeof cfg.scroll_speed === 'number' || typeof cfg.scroll_speed === 'string'
+      ? Number(cfg.scroll_speed) : NaN;
+    tickerState.cfg.scrollSpeed = Number.isFinite(speed) && speed >= 25 && speed <= 200 ? speed : 100;
 
     // Custom item order (KV-only). Sheet/banner.txt sources leave this
     // undefined, which renderTicker falls back to the historical layout.
