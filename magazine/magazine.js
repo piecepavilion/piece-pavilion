@@ -11,8 +11,8 @@
     const a = Object.assign({}, empty, data || {});
     if (!a.title.trim() && !preview) { root.hidden = true; root.replaceChildren(); return; }
     root.hidden = false;
-    root.innerHTML = '<article class="pp-magazine" aria-label="Piece Pavilion magazine">'+
-      '<div class="pp-magazine-masthead"><span>PIECE PAVILION <b>JOURNAL</b></span><span>'+esc(a.edition || (preview ? 'YOUR EDITION' : ''))+'</span></div>'+
+    root.innerHTML = '<article class="pp-magazine" aria-label="Piece Pavilion Newsroom">'+
+      '<div class="pp-magazine-masthead"><span>PIECE PAVILION <b>NEWSROOM</b></span><span>'+esc(a.edition || (preview ? 'YOUR EDITION' : ''))+'</span></div>'+
       '<div class="pp-magazine-lead'+(safeImage(a.image) ? ' has-image' : '')+'"><header class="pp-magazine-heading">'+
       '<div class="pp-magazine-kicker">FROM THE PAVILION</div><h2>'+esc(a.title || 'Your next story starts here.')+'</h2>'+
       (a.dek ? '<p class="pp-magazine-dek">'+esc(a.dek)+'</p>' : '')+
@@ -31,3 +31,4 @@
   global.PPMagazine = {empty,esc,safeImage,render,mount};
   if (typeof document !== 'undefined') document.querySelectorAll('[data-pp-magazine]').forEach(mount);
 })(typeof window !== 'undefined' ? window : globalThis);
+
