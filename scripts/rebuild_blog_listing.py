@@ -95,6 +95,7 @@ def parse_post(slug_dir):
         "date_iso": date_iso,
         "date_display": format_date(date_iso),
         "has_thumb": has_thumb,
+        "reading_time_min": extract_reading_time(html_txt),
     })
 
 
@@ -462,8 +463,13 @@ def render_cards(posts):
         thumb = '<img src="/thumb/%s.png%s" alt="" loading="lazy" />' % (p["slug"], thumb_version)
         slug_attr = html.escape(p["slug"], quote=True)
         badge = '<span class="view-badge" data-slug="%s" aria-label="0 views">0</span>' % slug_attr
+        # Keep the approved Part 3 card in sync with its article byline.
+        # Other cards retain their existing display behavior.
+        read_attr = ''
+        if p["slug"] == "bricklink-sos-part-3-monday-outage" and p.get("reading_time_min"):
+            read_attr = ' data-reading-time="%d"' % p["reading_time_min"]
         card = (
-            '      <a href="{href}" class="blog-card">\n'
+            '      <a href="{href}" class="blog-card"{read_attr}>\n'
             '        <div class="blog-card-thumb">{thumb}</div>\n'
             '        <div class="blog-card-body">\n'
             '          <span class="blog-card-date">{date}</span>\n'
@@ -475,6 +481,7 @@ def render_cards(posts):
             '      </a>\n\n'
         ).format(
             href=href,
+            read_attr=read_attr,
             thumb=thumb,
             badge=badge,
             date=html.escape(p["date_display"]),
