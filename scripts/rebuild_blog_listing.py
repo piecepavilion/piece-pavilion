@@ -233,6 +233,7 @@ def generate_thumb_png(title, slug, out_path):
 
 # Explicitly approved thumbnail wording. Full article titles stay unchanged.
 THUMB_PHRASE_OVERRIDES = {
+    "bricklink-sos-part-4-possible-causes": "BrickLink SOS\nPart 4",
     "bricklink-sos-part-3-monday-outage": "BrickLink SOS\nPart 3",
     "bricklink-sos-part-2-november-2026": "BrickLink SOS\nPart 2",
     "bricklink-sos-november-2026-outage": "BrickLink SOS\nPart 1",
