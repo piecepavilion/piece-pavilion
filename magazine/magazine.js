@@ -14,10 +14,11 @@
     // Homepage shows only the cover spread; editor and Newsroom keep the full article.
     const coverOnly = root.getAttribute?.('data-pp-magazine') === 'preview';
     const headline = esc(a.title || 'Your next story starts here.');
+    const storyLink = '/spotlight/' + (a.id ? '?newsroom-page=' + encodeURIComponent(a.id) : '');
     root.innerHTML = '<article class="pp-magazine" aria-label="Piece Pavilion Newsroom">'+
       '<div class="pp-magazine-masthead"><span>PIECE PAVILION <b>NEWSROOM</b></span><span>'+esc(a.edition || (preview ? 'YOUR EDITION' : ''))+'</span></div>'+
       '<div class="pp-magazine-lead'+(safeImage(a.image) ? ' has-image' : '')+'"><header class="pp-magazine-heading">'+
-      '<div class="pp-magazine-kicker">FROM THE PAVILION</div><h2>'+(coverOnly ? '<a href="/spotlight/">'+headline+'</a>' : headline)+'</h2>'+
+      '<div class="pp-magazine-kicker">FROM THE PAVILION</div><h2>'+(coverOnly ? '<a href="'+esc(storyLink)+'">'+headline+'</a>' : headline)+'</h2>'+
       (a.dek ? '<p class="pp-magazine-dek">'+esc(a.dek)+'</p>' : '')+
       '<div class="pp-magazine-meta">'+(a.byline ? '<span>By '+esc(a.byline)+'</span>' : '')+(a.date ? '<time datetime="'+esc(a.date)+'">'+esc(a.date)+'</time>' : '')+'</div></header>'+
       figure(a.image,a.imageAlt,a.caption,false)+'</div>'+
@@ -70,17 +71,21 @@
   async function mount(root) {
     const coverOnly=root.getAttribute?.('data-pp-magazine')==='preview';
     try {
-      // The homepage remains the original cover. The full Newsroom gains page turns.
-      const r=await fetch(coverOnly?'/magazine/data.json':'/magazine/pages.json',{cache:'no-store',credentials:'omit'});
+      // Both surfaces use the same published order and stable story IDs.
+      const r=await fetch('/magazine/pages.json',{cache:'no-store',credentials:'omit'});
       if(!r.ok)throw new Error('Newsroom unavailable');
       const data=await r.json();
-      if(coverOnly)render(root,data,false);
+      if(coverOnly){
+        if(!Array.isArray(data.pages))throw new Error('Newsroom page list unavailable');
+        const featured=data.pages.find(a=>a.id===data.layout?.homepageId) || data.pages.find(a=>a.id==='front') || data.pages[0];
+        render(root,featured || empty,false);
+      }
       else if(Array.isArray(data.pages))renderPages(root,data.pages);
       else throw new Error('Newsroom page list unavailable');
     } catch (_) {
       // A cached frontend or staged backend deployment still shows the original story.
       try {
-        const r=await fetch('/magazine/data.json',{cache:'no-store',credentials:'omit'});if(!r.ok)throw new Error();render(root,await r.json(),false);
+        const r=await fetch('/magazine/data.json',{cache:'no-store',credentials:'omit'});if(!r.ok)throw new Error();render(root,{...await r.json(),id:'front'},false);
         if(!coverOnly){const notice=document.createElement('p');notice.className='pp-magazine-page-error';notice.setAttribute('role','status');notice.textContent='Additional Newsroom pages could not be loaded. Please refresh to try again.';root.prepend(notice);root.hidden=false;}
       }
       catch (_) {root.hidden=true;}
