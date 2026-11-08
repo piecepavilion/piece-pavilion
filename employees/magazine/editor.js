@@ -6,10 +6,89 @@
   let draft = clone(PPMagazine.empty), saved = clone(draft), history = [], busy = false, loaded = false, sessionUndo = false;
   let pageId = 'front', pagesEnabled = false;
   const pages = new Map();
+  const orderedPageIds = () => [...new Set([...(layout?.order || []).filter(id=>pages.has(id)),...pages.keys()])];
+  let layout = null, savedLayout = null, layoutEnabled = false;
+  const layoutValue = value => JSON.stringify(value && {order:value.order,homepageId:value.homepageId});
+  const layoutDirty = () => layoutValue(layout) !== layoutValue(savedLayout);
+  function layoutStatus(message, kind) { if ($('publication-status')) { $('publication-status').textContent=message; $('publication-status').className=kind || ''; } }
+  function layoutControls() {
+    if (!$('publication-list')) return;
+    const blocked=!loaded || busy || !layoutEnabled;
+    $('publication-fields').disabled=blocked;
+    $('publication-save').disabled=blocked || !layout?.order.length || !layoutDirty();
+    $('publication-reset').disabled=blocked || !layoutDirty();
+    $('publication-reload').disabled=!loaded || busy;
+    const signature=JSON.stringify([layout?.order,layout?.homepageId,layout?.order.map(id=>pages.get(id)?.saved.title)]);
+    if ($('publication-list').dataset.layout===signature) return;
+    $('publication-list').dataset.layout=signature;
+    $('publication-list').replaceChildren();
+    (layout?.order || []).forEach((id,index)=>{
+      const title=pages.get(id)?.saved.title || 'Published story';
+      const row=document.createElement('li');row.className='publication-row';
+      const story=document.createElement('strong');story.className='publication-story';story.textContent=(index+1)+'. '+title;row.append(story);
+      const moves=document.createElement('div');moves.className='publication-move';
+      for(const [direction,label] of [[-1,'Move up'],[1,'Move down']]){
+        const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.move=id+':'+direction;
+        button.setAttribute('aria-label',label+': '+title);button.disabled=index+direction<0 || index+direction>=layout.order.length;
+        button.addEventListener('click',()=>{
+          if(busy || !layoutEnabled)return;
+          const target=index+direction;if(target<0 || target>=layout.order.length)return;
+          [layout.order[index],layout.order[target]]=[layout.order[target],layout.order[index]];
+          controls();layoutStatus('Order changed. Save & publish order and homepage to make it live.');
+          const candidates=[...$('publication-list').querySelectorAll('button')];
+          const moved=candidates.find(el=>el.dataset.move===id+':'+direction);
+          (moved?.disabled?candidates.find(el=>el.dataset.move===id+':'+(-direction)):moved)?.focus();
+        });moves.append(button);
+      }
+      row.append(moves);
+      const label=document.createElement('label');label.className='publication-home';
+      const radio=document.createElement('input');radio.type='radio';radio.name='homepage-story';radio.value=id;radio.checked=layout.homepageId===id;radio.setAttribute('aria-label','Show on homepage: '+title);
+      radio.addEventListener('change',()=>{if(busy || !layoutEnabled)return;layout.homepageId=id;layoutControls();layoutStatus('Homepage story selected. Save & publish order and homepage to make it live.');[...$('publication-list').querySelectorAll('input')].find(el=>el.value===id)?.focus();});
+      label.append(radio,document.createTextNode('Homepage'));row.append(label);$('publication-list').append(row);
+    });
+  }
+  function acceptLayout(result) {
+    layoutEnabled=Array.isArray(result?.layout?.order);
+    if(layoutEnabled){layout=clone(result.layout);savedLayout=clone(layout);layoutStatus(layout.order.length?'The saved reading order and homepage story are shown below.':'Publish a story first to choose its order and homepage placement.');}
+    else layoutStatus('Order and homepage controls will be available when the site update finishes. Article editing still works.');
+    layoutControls();
+  }
+  function addPublishedToLayout() {
+    if(!layoutEnabled)return;
+    const eligible=[...pages.entries()].filter(([,p])=>p.published && p.saved.title?.trim() && p.saved.body?.trim()).map(([id])=>id);
+    for(const value of [layout,savedLayout]){
+      for(const id of eligible)if(!value.order.includes(id))value.order.push(id);
+      if(!value.homepageId)value.homepageId=eligible.includes('front')?'front':eligible[0] || null;
+    }
+  }
+  async function publishLayout() {
+    if(busy || !loaded || !layoutEnabled || !layoutDirty())return;
+    busy=true;controls();layoutStatus('Publishing order and homepage…');
+    try {const result=await api('/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(layout)});if(!Array.isArray(result.layout?.order))throw new Error('The settings response could not be verified. Reload settings before trying again.');layout=clone(result.layout);savedLayout=clone(layout);layoutStatus('Order and homepage published. Public pages may take a moment to refresh.','success');}
+    catch(error){layoutStatus(error.message,'error');}
+    finally{busy=false;controls();}
+  }
+  async function reloadLayout() {
+    if(busy || !loaded)return;
+    if(layoutDirty() && !window.confirm('Replace your unsaved order and homepage choices with the latest saved settings? Your article edits will stay here.'))return;
+    busy=true;controls();layoutStatus('Loading saved settings…');
+    try{
+      const result=await api('/pages');if(!Array.isArray(result.pages) || !Array.isArray(result.layout?.order))throw new Error('The saved settings are not available yet.');
+      rememberPage();
+      for(const article of result.pages){
+        if(!pages.has(article.id)){const value={...clone(PPMagazine.empty),...article};pages.set(article.id,{draft:value,saved:clone(value),history:[],published:true});}
+      }
+      acceptLayout(result);layoutStatus('Latest settings loaded. Your article edits are unchanged.');
+    }catch(error){layoutStatus(error.message,'error');}
+    finally{busy=false;controls();}
+  }
+  $('publication-save')?.addEventListener('click',publishLayout);
+  $('publication-reset')?.addEventListener('click',()=>{if(busy || !layoutEnabled)return;layout=clone(savedLayout);controls();layoutStatus('Back to the saved order and homepage.');});
+  $('publication-reload')?.addEventListener('click',reloadLayout);
   function rememberPage() { if (pages.has(pageId)) Object.assign(pages.get(pageId), {draft, saved, history}); }
-  function anyUnsaved() { rememberPage(); return dirty() || [...pages.values()].some(p => !p.published || comparable(p.draft) !== comparable(p.saved)); }
+  function anyUnsaved() { rememberPage(); return layoutDirty() || dirty() || [...pages.values()].some(p => !p.published || comparable(p.draft) !== comparable(p.saved)); }
   function pageControls() {
-    const ids = [...pages.keys()], index = ids.indexOf(pageId);
+    const ids = orderedPageIds(), index = ids.indexOf(pageId);
     for (const [id, disabled] of [['new-page',!pagesEnabled],['page-prev',index <= 0],['page-next',index >= ids.length-1],['page-select',ids.length < 2]]) {
       if ($(id)) {
         if(id==='page-prev'||id==='page-next') { $(id).disabled=false;$(id).setAttribute('aria-disabled',String(!loaded||busy||disabled)); }
@@ -24,7 +103,7 @@
       const p=pages.get(id), changed=!p.published || comparable(p.draft)!==comparable(p.saved);
       return (i+1)+'. '+(p.draft.title || 'Blank page')+(changed?' · unsaved':'');
     });
-    const signature=JSON.stringify(labels);
+    const signature=JSON.stringify(ids.map((id,i)=>[id,labels[i]]));
     if (select.dataset.pages !== signature) {
       select.replaceChildren();
       ids.forEach((id,i)=>{const option=document.createElement('option');option.value=id;option.textContent=labels[i];select.append(option);});
@@ -50,7 +129,7 @@
   const comparable = a => { const {updatedAt,id,createdAt,...content}=a; return JSON.stringify(content); };
   const dirty = () => comparable(draft) !== comparable(saved);
   function status(message, kind) { $('status').textContent = message; $('status').className = kind || ''; }
-  function controls() { pageControls(); $('save').disabled = !loaded || busy || !dirty(); $('undo').disabled = !loaded || busy || !history.length; fields.disabled = !loaded || busy; if (window.PPMagazineInline) PPMagazineInline.setDisabled($('preview'), !loaded || busy); }
+  function controls() { pageControls(); layoutControls(); $('save').disabled = !loaded || busy || !dirty(); $('undo').disabled = !loaded || busy || !history.length; fields.disabled = !loaded || busy; if (window.PPMagazineInline) PPMagazineInline.setDisabled($('preview'), !loaded || busy); }
   function snapshot() { history.push(clone(draft)); if (history.length > 80) history.shift(); }
   function update() {
     PPMagazine.render($('preview'),draft,true);
@@ -128,15 +207,15 @@
     busy=true;controls();status('Saving your article…');
     try {
       const result=await api(pageId==='front'?'/save':'/pages/'+encodeURIComponent(pageId)+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});
-      draft={...clone(PPMagazine.empty),...result};saved=clone(draft);if(pages.has(pageId))pages.get(pageId).published=true;fill();
+      draft={...clone(PPMagazine.empty),...result};saved=clone(draft);if(pages.has(pageId))pages.get(pageId).published=true;rememberPage();addPublishedToLayout();fill();
       status('Saved and published. Public pages may take a moment to refresh.','success');
     } catch(error) {status(error.message,'error');}
     finally {busy=false;controls();}
   }
   $('save').addEventListener('click',save);form.addEventListener('submit',e=>{e.preventDefault();save();});
   $('new-page')?.addEventListener('click',newPage);
-  $('page-prev')?.addEventListener('click',()=>{const ids=[...pages.keys()];switchPage(ids[ids.indexOf(pageId)-1]);});
-  $('page-next')?.addEventListener('click',()=>{const ids=[...pages.keys()];switchPage(ids[ids.indexOf(pageId)+1]);});
+  $('page-prev')?.addEventListener('click',()=>{const ids=orderedPageIds();switchPage(ids[ids.indexOf(pageId)-1]);});
+  $('page-next')?.addEventListener('click',()=>{const ids=orderedPageIds();switchPage(ids[ids.indexOf(pageId)+1]);});
   $('page-select')?.addEventListener('change',e=>switchPage(e.target.value));
   window.addEventListener('beforeunload',e=>{if(anyUnsaved()||busy){e.preventDefault();e.returnValue='';}});
   api('/pages').then(result=>{
@@ -151,7 +230,7 @@
       pages.set(id,{draft:value,saved:clone(value),history:[],published:true});
     });
     pageId=pages.has('front')?'front':pages.keys().next().value;
-    ({draft,saved,history}=pages.get(pageId));loaded=true;fill();
+    ({draft,saved,history}=pages.get(pageId));loaded=true;acceptLayout(result);fill();
     status(draft.title?'Published pages loaded. Edit or add a page, then save to publish.':'Ready for your first article. Nothing publishes until you save.');
   }).catch(error=>{status(error.message+' Reload this page to retry.','error');update();});
   update();
