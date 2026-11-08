@@ -22,34 +22,41 @@
     if ($('publication-list').dataset.layout===signature) return;
     $('publication-list').dataset.layout=signature;
     $('publication-list').replaceChildren();
+    $('publication-home-list').replaceChildren();
     (layout?.order || []).forEach((id,index)=>{
       const title=pages.get(id)?.saved.title || 'Published story';
       const row=document.createElement('li');row.className='publication-row';
-      const story=document.createElement('strong');story.className='publication-story';story.textContent=(index+1)+'. '+title;row.append(story);
+      const story=document.createElement('strong');story.className='publication-story';story.textContent=title;
+      const position=document.createElement('span');position.className='publication-position';position.textContent='Page '+(index+1);
+      row.append(position,story);
       const moves=document.createElement('div');moves.className='publication-move';
-      for(const [direction,label] of [[-1,'Move up'],[1,'Move down']]){
+      for(const [direction,label] of [[-1,'Move earlier'],[1,'Move later']]){
         const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.move=id+':'+direction;
         button.setAttribute('aria-label',label+': '+title);button.disabled=index+direction<0 || index+direction>=layout.order.length;
         button.addEventListener('click',()=>{
           if(busy || !layoutEnabled)return;
           const target=index+direction;if(target<0 || target>=layout.order.length)return;
           [layout.order[index],layout.order[target]]=[layout.order[target],layout.order[index]];
-          controls();layoutStatus('Order changed. Save & publish order and homepage to make it live.');
+          controls();layoutStatus('Order changed. Choose Publish order & homepage below to make it live.');
           const candidates=[...$('publication-list').querySelectorAll('button')];
           const moved=candidates.find(el=>el.dataset.move===id+':'+direction);
           (moved?.disabled?candidates.find(el=>el.dataset.move===id+':'+(-direction)):moved)?.focus();
         });moves.append(button);
       }
       row.append(moves);
-      const label=document.createElement('label');label.className='publication-home';
+      const label=document.createElement('label');label.className='publication-home'+(layout.homepageId===id?' is-selected':'');
       const radio=document.createElement('input');radio.type='radio';radio.name='homepage-story';radio.value=id;radio.checked=layout.homepageId===id;radio.setAttribute('aria-label','Show on homepage: '+title);
-      radio.addEventListener('change',()=>{if(busy || !layoutEnabled)return;layout.homepageId=id;layoutControls();layoutStatus('Homepage story selected. Save & publish order and homepage to make it live.');[...$('publication-list').querySelectorAll('input')].find(el=>el.value===id)?.focus();});
-      label.append(radio,document.createTextNode('Homepage'));row.append(label);$('publication-list').append(row);
+      radio.addEventListener('change',()=>{if(busy || !layoutEnabled)return;layout.homepageId=id;layoutControls();layoutStatus('Homepage story selected. Choose Publish order & homepage below to make it live.');[...$('publication-home-list').querySelectorAll('input')].find(el=>el.value===id)?.focus();});
+      const optionText=document.createElement('span');optionText.className='publication-home-title';optionText.textContent=title;
+      const pageLabel=document.createElement('small');pageLabel.textContent='Newsroom Page '+(index+1)+(layout.homepageId===id?' · Selected for homepage':'');optionText.append(pageLabel);
+      label.append(radio,optionText);$('publication-home-list').append(label);$('publication-list').append(row);
     });
+    const selectedTitle=pages.get(layout?.homepageId)?.saved.title;
+    $('publication-home-summary').textContent=selectedTitle?'Homepage preview: '+selectedTitle:'Publish an article first to choose a homepage story.';
   }
   function acceptLayout(result) {
     layoutEnabled=Array.isArray(result?.layout?.order);
-    if(layoutEnabled){layout=clone(result.layout);savedLayout=clone(layout);layoutStatus(layout.order.length?'The saved reading order and homepage story are shown below.':'Publish a story first to choose its order and homepage placement.');}
+    if(layoutEnabled){layout=clone(result.layout);savedLayout=clone(layout);layoutStatus(layout.order.length?'Published settings loaded. No unpublished settings changes.':'Publish a story first to choose its order and homepage placement.');}
     else layoutStatus('Order and homepage controls will be available when the site update finishes. Article editing still works.');
     layoutControls();
   }
@@ -83,7 +90,7 @@
     finally{busy=false;controls();}
   }
   $('publication-save')?.addEventListener('click',publishLayout);
-  $('publication-reset')?.addEventListener('click',()=>{if(busy || !layoutEnabled)return;layout=clone(savedLayout);controls();layoutStatus('Back to the saved order and homepage.');});
+  $('publication-reset')?.addEventListener('click',()=>{if(busy || !layoutEnabled)return;layout=clone(savedLayout);controls();layoutStatus('Unpublished settings discarded. Your article edits are unchanged.');});
   $('publication-reload')?.addEventListener('click',reloadLayout);
   function rememberPage() { if (pages.has(pageId)) Object.assign(pages.get(pageId), {draft, saved, history}); }
   function anyUnsaved() { rememberPage(); return layoutDirty() || dirty() || [...pages.values()].some(p => !p.published || comparable(p.draft) !== comparable(p.saved)); }
