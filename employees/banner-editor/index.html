@@ -100,7 +100,13 @@
   .toggle input:checked + .track::after { transform:translateX(18px); }
 
   .announcement-slot { border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin-top:10px; background:#fafbfd; }
-  .announcement-slot h4 { font-size:.85rem; font-weight:800; color:var(--mid); margin-bottom:10px; }
+  .announcement-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .visibility-button { font:inherit; font-weight:800; font-size:.85rem; padding:8px 12px; border:1px solid currentColor; border-radius:8px; cursor:pointer; color:var(--blue); background:#eef6ff; }
+  .visibility-button[aria-pressed="false"] { color:var(--red-dark); background:#fff1f2; }
+  .visibility-button:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+  .visibility-button:disabled { opacity:.5; cursor:wait; }
+  .visibility-help { font-size:.85rem; color:var(--mid); }
+  .announcement-slot h4 { font-size:.85rem; font-weight:800; color:var(--mid); }
 
   /* Sticky save bar */
   .savebar { position:fixed; bottom:0; left:0; right:0; z-index:40;
@@ -180,6 +186,7 @@
 
   <div class="section">
     <h3><span class="dot"></span> Announcements (up to 3 scrolling items)</h3>
+    <p class="visibility-help" id="visibility-help">Hide an announcement without deleting its text or link. Click Save to apply changes.</p>
     <div id="announcements"></div>
   </div>
 
@@ -220,9 +227,9 @@
     enabled: true,
     scroll_speed: 100,
     announcements: [
-      { message:'', link:'', link_text:'' },
-      { message:'', link:'', link_text:'' },
-      { message:'', link:'', link_text:'' },
+      { message:'', link:'', link_text:'', visible:true },
+      { message:'', link:'', link_text:'', visible:true },
+      { message:'', link:'', link_text:'', visible:true },
     ],
     show_latest_blog: true,
     show_just_added: true,
@@ -252,7 +259,10 @@
     const wrap = $('announcements');
     wrap.innerHTML = state.announcements.map((a, i) => `
       <div class="announcement-slot">
-        <h4>Slot ${i+1}</h4>
+        <div class="announcement-heading">
+          <h4>Slot ${i+1}</h4>
+          <button type="button" class="visibility-button" data-visibility-idx="${i}" aria-label="Show announcement ${i+1}" aria-pressed="${a.visible !== false}" aria-describedby="visibility-help"></button>
+        </div>
         <div class="row">
           <label>Message</label>
           <textarea data-idx="${i}" data-k="message" placeholder="The main text visitors read (emoji welcome)">${esc(a.message)}</textarea>
@@ -267,6 +277,16 @@
         </div>
       </div>
     `).join('');
+    wrap.querySelectorAll('[data-visibility-idx]').forEach(button => {
+      updateVisibilityButton(button);
+      button.addEventListener('click', () => {
+        if (!loaded || busy) return;
+        const a = state.announcements[+button.dataset.visibilityIdx];
+        a.visible = a.visible === false;
+        updateVisibilityButton(button);
+        refreshPreview(); markDirty();
+      });
+    });
     wrap.querySelectorAll('textarea, input').forEach(el => {
       el.addEventListener('input', e => {
         const i = +e.target.dataset.idx, k = e.target.dataset.k;
@@ -274,6 +294,17 @@
         refreshPreview(); markDirty();
       });
     });
+  }
+
+  function updateVisibilityButton(button) {
+    const visible = state.announcements[+button.dataset.visibilityIdx].visible !== false;
+    button.setAttribute('aria-pressed', String(visible));
+    button.innerHTML = '<span aria-hidden="true">' + (visible ? '✓' : '✕') + '</span> ' + (visible ? 'Showing · Hide' : 'Hidden · Show');
+    button.disabled = !loaded || busy;
+  }
+
+  function refreshVisibilityButtons() {
+    $('announcements').querySelectorAll('[data-visibility-idx]').forEach(updateVisibilityButton);
   }
 
   function itemForKey(key) {
@@ -288,7 +319,7 @@
     if (/^a\d+$/.test(key)) {
       const i = +key.slice(1);
       const a = state.announcements[i];
-      if (!a || !a.message.trim()) return null;
+      if (!a || a.visible === false || !a.message.trim()) return null;
       const cta = a.link_text ? ` <span style="color:#aaa;font-weight:600;">${esc(a.link_text)}</span>` : '';
       const msg = esc(a.message).slice(0, 80) + (a.message.length > 80 ? '…' : '') + cta;
       return { key, pill:'News', pillClass:'', text: msg };
@@ -360,6 +391,7 @@
   async function loadFromServer() {
     if (busy) return;
     busy = true; loaded = false;
+    refreshVisibilityButtons();
     $('save-btn').disabled = true;
     $('refresh-btn').disabled = true;
     $('scroll_speed').disabled = true;
@@ -371,9 +403,9 @@
       state.enabled = d.enabled !== false;
       state.scroll_speed = cleanSpeed(d.scroll_speed);
       state.announcements = (d.announcements || state.announcements).map(a => ({
-        message: a.message || '', link: a.link || '', link_text: a.link_text || ''
+        message: a.message || '', link: a.link || '', link_text: a.link_text || '', visible: a.visible !== false
       }));
-      while (state.announcements.length < 3) state.announcements.push({ message:'', link:'', link_text:'' });
+      while (state.announcements.length < 3) state.announcements.push({ message:'', link:'', link_text:'', visible:true });
       state.show_latest_blog = d.show_latest_blog !== false;
       state.show_just_added = d.show_just_added !== false;
       state.just_added_count = d.just_added_count || 3;
@@ -394,6 +426,7 @@
       busy = false;
       $('refresh-btn').disabled = false;
       $('scroll_speed').disabled = !loaded;
+      refreshVisibilityButtons();
     }
   }
 
@@ -423,6 +456,7 @@
   async function save() {
     if (!loaded || busy) return;
     busy = true;
+    refreshVisibilityButtons();
     const submitted = JSON.parse(JSON.stringify(state));
     $('refresh-btn').disabled = true;
     $('save-btn').disabled = true;
@@ -436,13 +470,21 @@
       const d = await r.json();
       if (!d.ok) throw new Error('rejected');
       if (cleanSpeed(d.saved && d.saved.scroll_speed) !== submitted.scroll_speed) throw new Error('speed was not saved');
-      // Verify round-trip from public endpoint.
+      const savedAnnouncements = d.saved && d.saved.announcements;
+      if (!Array.isArray(savedAnnouncements) || submitted.announcements.some((a, i) => {
+        const saved = savedAnnouncements[i];
+        return !saved || (saved.visible !== false) !== (a.visible !== false) ||
+          saved.message !== a.message || saved.link !== a.link || saved.link_text !== a.link_text;
+      })) throw new Error('announcement was not saved');
+      // The public endpoint blanks hidden content; staff storage keeps it.
+      // Verify the public state without treating intentional hiding as data loss.
       const v = await fetch('/banner/config.json?v=' + Date.now(), { cache:'no-store' });
       if (!v.ok) throw new Error('verification HTTP ' + v.status);
       const live = await v.json();
       const liveMsgs = (live.announcements || []).map(a => a.message).join('|');
-      const expectedMsgs = submitted.announcements.map(a => a.message).join('|');
+      const expectedMsgs = submitted.announcements.map(a => a.visible === false ? '' : a.message).join('|');
       if (liveMsgs !== expectedMsgs) throw new Error('round-trip mismatch');
+      if (submitted.announcements.some((a, i) => (live.announcements[i].visible !== false) !== (a.visible !== false))) throw new Error('visibility verification mismatch');
       if (cleanSpeed(live.scroll_speed) !== submitted.scroll_speed) throw new Error('speed verification mismatch — reload to check');
       savedState = JSON.stringify(submitted);
       busy = false;
@@ -455,6 +497,7 @@
     } finally {
       busy = false;
       $('refresh-btn').disabled = false;
+      refreshVisibilityButtons();
     }
   }
 
@@ -472,3 +515,4 @@
 </script>
 </body>
 </html>
+
