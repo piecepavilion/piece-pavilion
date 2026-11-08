@@ -25,13 +25,13 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:'Nunito',system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
   a{color:var(--red);text-decoration:none}a:hover{text-decoration:underline}
-  .bar{display:flex;align-items:center;gap:14px;padding:13px 22px;background:rgba(255,255,255,.96);
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:13px 22px;background:rgba(255,255,255,.96);
     border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;backdrop-filter:saturate(160%) blur(8px)}
   .brand{display:flex;align-items:center;gap:11px;flex-shrink:0}
   .brand img{height:40px;width:auto;border-radius:8px;display:block}
   .brand .word{font-weight:900;font-size:1.4rem;color:var(--ink);letter-spacing:-.02em;line-height:1}
   .brand:hover{text-decoration:none}
-  .bar nav{margin-left:auto;display:flex;gap:18px;font-weight:800;align-items:center}
+  .bar nav{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px 18px;font-weight:800;align-items:center}
   .bar nav a{color:var(--ink)}.bar nav a:hover{color:var(--red);text-decoration:none}
   .crumb{background:#fff;border-bottom:1px solid var(--line)}
   .crumb a{display:inline-block;max-width:1040px;margin:0 auto;padding:11px 22px;font-weight:800;font-size:14px;color:var(--red)}
@@ -94,7 +94,8 @@
     <img src="/logo-white.png" alt="Piece Pavilion logo" />
     <span class="word">Piece&#8203;Pavilion</span>
   </a>
-  <nav>
+  <nav aria-label="Site navigation">
+    <a href="/spotlight/">Newsroom</a>
     <a href="/cart/" class="cartlink" id="cartlink" aria-label="View cart">&#128722; Cart <span class="cartn" id="cartn" style="display:none">0</span></a>
     <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener">Shop &#8599;</a>
   </nav>
