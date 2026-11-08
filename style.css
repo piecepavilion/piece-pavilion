@@ -190,7 +190,7 @@ img { display: block; max-width: 100%; }
 @media (max-width: 600px) { .brand-word { font-size: 1.18rem; } }
 @media (max-width: 360px) { .brand-word { display: none; } }
 
-.header-nav { display: flex; align-items: center; gap: 28px; margin-left: 8px; }
+.header-nav { display: flex; align-items: center; gap: 16px; margin-left: 8px; }
 
 /* Shop link: SVG brick icon sits inline with the word, properly baseline-aligned.
    No arrow — the brick is the only decoration, and clicking either icon or
@@ -438,7 +438,11 @@ img { display: block; max-width: 100%; }
   .header-shop { display: none; }
 }
 
-@media (max-width: 980px) {
+/* Keep the complete navigation, including Newsroom, clear of the actions. */
+@media (max-width: 1360px) {
+  .header-rating { display: none; }
+}
+@media (max-width: 1080px) {
   .header-nav { display: none; }
   .header-rating { display: none; }
   .header-burger { display: block; }

@@ -1,3 +1,31 @@
+// ===== SHARED NEWSROOM NAVIGATION =====
+// Public pages share this script even when their static header is older.
+// Keep the desktop navigation and mobile drawer aligned with the homepage.
+function syncNewsroomNavigation() {
+  document.querySelectorAll('.header-nav, .sidebar-links').forEach(nav => {
+    const existing = nav.querySelector('a[href="/spotlight/"]');
+    if (existing) {
+      existing.textContent = 'Newsroom';
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = '/spotlight/';
+    link.textContent = 'Newsroom';
+    const isList = nav.classList.contains('sidebar-links');
+    const item = isList ? document.createElement('li') : link;
+    if (isList) item.appendChild(link);
+    const previous = nav.querySelector('a[href="#sell"], a[href="/#sell"]') ||
+      nav.querySelector('a[href="/blog/"]');
+    const previousItem = previous && (isList ? previous.closest('li') : previous);
+    if (previousItem && previousItem.parentNode === nav) {
+      nav.insertBefore(item, previousItem.nextSibling);
+    } else {
+      nav.appendChild(item);
+    }
+  });
+}
+syncNewsroomNavigation();
+
 // ===== SIDEBAR / DRAWER TOGGLE =====
 const headerBurger   = document.getElementById('header-burger');   // header hamburger
 const sidebar        = document.getElementById('sidebar');
