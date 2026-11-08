@@ -30,3 +30,6 @@
 
 /* Publication timestamps describe saved stories, never unsaved article dates. */
 .publication-dates{display:block;margin-top:4px;color:#625d55;font-size:12px;font-weight:400;line-height:1.55}.publication-dates>span{display:block}.publication-dates time{white-space:normal}
+
+/* Visibility is explicit in color, text and accessible button state. */
+.publication-visibility{flex:0 0 auto;min-width:116px}.publication-visibility.is-visible{color:#1457ad;border-color:#9abce8;background:#eff6ff}.publication-visibility.is-hidden{color:#b4232d;border-color:#e7a4a9;background:#fff2f3}.publication-row.is-hidden .publication-position{color:#b4232d;background:#fff2f3}.publication-visibility:focus-visible{outline:3px solid #2159a1;outline-offset:3px}.publication-home:has(input:disabled){border-style:dashed;cursor:default}@media(max-width:760px){.publication-visibility{margin-left:auto}}

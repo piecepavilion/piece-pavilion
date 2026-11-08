@@ -8,7 +8,8 @@
   const pages = new Map();
   const orderedPageIds = () => [...new Set([...(layout?.order || []).filter(id=>pages.has(id)),...pages.keys()])];
   let layout = null, savedLayout = null, layoutEnabled = false;
-  const layoutValue = value => JSON.stringify(value && {order:value.order,homepageId:value.homepageId});
+  const normalizeLayout = value => ({...clone(value),hiddenIds:Array.isArray(value.hiddenIds)?[...new Set(value.hiddenIds)].filter(id=>value.order.includes(id)):[]});
+  const layoutValue = value => JSON.stringify(value && {order:value.order,homepageId:value.homepageId,hiddenIds:[...(value.hiddenIds || [])].sort()});
   const layoutDirty = () => layoutValue(layout) !== layoutValue(savedLayout);
   // The article's editable date is not a publication timestamp. The server
   // records updatedAt on every publish, and createdAt on newer pages' first publish.
@@ -38,17 +39,18 @@
     $('publication-save').disabled=blocked || !layout?.order.length || !layoutDirty();
     $('publication-reset').disabled=blocked || !layoutDirty();
     $('publication-reload').disabled=!loaded || busy;
-    const signature=JSON.stringify([layout?.order,layout?.homepageId,layout?.order.map(id=>publicationRecord(publicationFor(id)))]);
+    const signature=JSON.stringify([layout?.order,layout?.homepageId,layout?.hiddenIds,layout?.order.map(id=>publicationRecord(publicationFor(id)))]);
     if ($('publication-list').dataset.layout===signature) return;
     $('publication-list').dataset.layout=signature;
     $('publication-list').replaceChildren();
     $('publication-home-list').replaceChildren();
+    const hiddenIds=new Set(layout?.hiddenIds || []),visibleIds=(layout?.order || []).filter(id=>!hiddenIds.has(id));
     (layout?.order || []).forEach((id,index)=>{
       const article=publicationFor(id),title=article.title || 'Published story';
-      const row=document.createElement('li');row.className='publication-row';
+      const row=document.createElement('li');row.className='publication-row'+(hiddenIds.has(id)?' is-hidden':'');
       const story=document.createElement('div');story.className='publication-story';
       const headline=document.createElement('strong');headline.textContent=title;story.append(headline,publicationDates(article));
-      const position=document.createElement('span');position.className='publication-position';position.textContent='Page '+(index+1);
+      const position=document.createElement('span');position.className='publication-position';position.textContent=hiddenIds.has(id)?'Hidden':'Page '+(visibleIds.indexOf(id)+1);
       row.append(position,story);
       const moves=document.createElement('div');moves.className='publication-move';
       for(const [direction,label] of [[-1,'Move earlier'],[1,'Move later']]){
@@ -58,27 +60,41 @@
           if(busy || !layoutEnabled)return;
           const target=index+direction;if(target<0 || target>=layout.order.length)return;
           [layout.order[index],layout.order[target]]=[layout.order[target],layout.order[index]];
-          controls();layoutStatus('Order changed. Choose Publish order & homepage below to make it live.');
+          controls();layoutStatus('Order changed. Choose Publish display settings below to make it live.');
           const candidates=[...$('publication-list').querySelectorAll('button')];
           const moved=candidates.find(el=>el.dataset.move===id+':'+direction);
           (moved?.disabled?candidates.find(el=>el.dataset.move===id+':'+(-direction)):moved)?.focus();
         });moves.append(button);
       }
       row.append(moves);
+      const visible=!hiddenIds.has(id),visibility=document.createElement('button');
+      visibility.type='button';visibility.className='publication-visibility '+(visible?'is-visible':'is-hidden');visibility.dataset.visibility=id;
+      visibility.textContent=visible?'✓ Showing':'× Hidden';
+      visibility.setAttribute('aria-pressed',String(visible));visibility.setAttribute('aria-label',(visible?'Hide article: ':'Show article: ')+title);
+      visibility.title=visible?'Hide this article from the public site':'Show this article on the public site';
+      visibility.addEventListener('click',()=>{
+        if(busy || !layoutEnabled)return;
+        layout.hiddenIds=visible?[...layout.hiddenIds,id]:layout.hiddenIds.filter(value=>value!==id);
+        controls();layoutStatus('Visibility changed. Choose Publish display settings below to make it live. Your article is kept.');
+        [...$('publication-list').querySelectorAll('button')].find(el=>el.dataset.visibility===id)?.focus();
+      });row.append(visibility);
       const label=document.createElement('label');label.className='publication-home'+(layout.homepageId===id?' is-selected':'');
-      const radio=document.createElement('input');radio.type='radio';radio.name='homepage-story';radio.value=id;radio.checked=layout.homepageId===id;radio.setAttribute('aria-label','Show on homepage: '+title);
-      radio.addEventListener('change',()=>{if(busy || !layoutEnabled)return;layout.homepageId=id;layoutControls();layoutStatus('Homepage story selected. Choose Publish order & homepage below to make it live.');[...$('publication-home-list').querySelectorAll('input')].find(el=>el.value===id)?.focus();});
+      const radio=document.createElement('input');radio.type='radio';radio.name='homepage-story';radio.value=id;radio.checked=layout.homepageId===id;radio.disabled=!visible;radio.setAttribute('aria-label','Show on homepage: '+title);
+      radio.addEventListener('change',()=>{if(busy || !layoutEnabled || layout.hiddenIds.includes(id))return;layout.homepageId=id;layoutControls();layoutStatus('Homepage story selected. Choose Publish display settings below to make it live.');[...$('publication-home-list').querySelectorAll('input')].find(el=>el.value===id)?.focus();});
       const optionText=document.createElement('span');optionText.className='publication-home-title';optionText.textContent=title;
-      const pageLabel=document.createElement('small');pageLabel.textContent='Newsroom Page '+(index+1)+(layout.homepageId===id?' · Selected for homepage':'');optionText.append(pageLabel);
+      const pageLabel=document.createElement('small');pageLabel.textContent=(visible?'Newsroom Page '+(visibleIds.indexOf(id)+1):'Hidden from public site')+(layout.homepageId===id?(visible?' · Selected for homepage':' · Saved homepage choice (not shown)'):'');optionText.append(pageLabel);
       optionText.append(publicationDates(article));
       label.append(radio,optionText);$('publication-home-list').append(label);$('publication-list').append(row);
     });
-    const selectedTitle=publicationFor(layout?.homepageId).title;
-    $('publication-home-summary').textContent=selectedTitle?'Homepage preview: '+selectedTitle:'Publish an article first to choose a homepage story.';
+    const effectiveId=visibleIds.includes(layout?.homepageId)?layout.homepageId:visibleIds[0];
+    const effectiveTitle=publicationFor(effectiveId).title;
+    $('publication-home-summary').textContent=effectiveTitle
+      ?'Homepage preview after publishing settings: '+effectiveTitle+(hiddenIds.has(layout?.homepageId)?'. Your saved homepage choice is hidden, so the first visible story is featured. Showing it again restores that choice.':'')
+      :layout?.order.length?'All stories are hidden. No Newsroom article or homepage preview will be shown after publishing settings.':'Publish an article first to choose a homepage story.';
   }
   function acceptLayout(result) {
     layoutEnabled=Array.isArray(result?.layout?.order);
-    if(layoutEnabled){layout=clone(result.layout);savedLayout=clone(layout);layoutStatus(layout.order.length?'Published settings loaded. No unpublished settings changes.':'Publish a story first to choose its order and homepage placement.');}
+    if(layoutEnabled){layout=normalizeLayout(result.layout);savedLayout=clone(layout);layoutStatus(layout.order.length?'Published settings loaded. No unpublished settings changes.':'Publish a story first to choose its order and homepage placement.');}
     else layoutStatus('Order and homepage controls will be available when the site update finishes. Article editing still works.');
     layoutControls();
   }
@@ -92,14 +108,14 @@
   }
   async function publishLayout() {
     if(busy || !loaded || !layoutEnabled || !layoutDirty())return;
-    busy=true;controls();layoutStatus('Publishing order and homepage…');
-    try {const result=await api('/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(layout)});if(!Array.isArray(result.layout?.order))throw new Error('The settings response could not be verified. Reload settings before trying again.');layout=clone(result.layout);savedLayout=clone(layout);layoutStatus('Order and homepage published. Public pages may take a moment to refresh.','success');}
+    busy=true;controls();layoutStatus('Publishing display settings…');
+    try {const result=await api('/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(layout)});if(!Array.isArray(result.layout?.order) || !Array.isArray(result.layout?.hiddenIds) || JSON.stringify([...result.layout.hiddenIds].sort())!==JSON.stringify([...layout.hiddenIds].sort()))throw new Error('The settings response could not be verified. Reload settings before trying again.');layout=normalizeLayout(result.layout);savedLayout=clone(layout);layoutStatus('Display settings published. Public pages may take a moment to refresh.','success');}
     catch(error){layoutStatus(error.message,'error');}
     finally{busy=false;controls();}
   }
   async function reloadLayout() {
     if(busy || !loaded)return;
-    if(layoutDirty() && !window.confirm('Replace your unsaved order and homepage choices with the latest saved settings? Your article edits will stay here.'))return;
+    if(layoutDirty() && !window.confirm('Replace your unsaved visibility, order and homepage choices with the latest saved settings? Your article edits will stay here.'))return;
     busy=true;controls();layoutStatus('Loading saved settings…');
     try{
       const result=await api('/pages');if(!Array.isArray(result.pages) || !Array.isArray(result.layout?.order))throw new Error('The saved settings are not available yet.');
@@ -239,7 +255,7 @@
     try {
       const result=await api(pageId==='front'?'/save':'/pages/'+encodeURIComponent(pageId)+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});
       draft={...clone(PPMagazine.empty),...result};saved=clone(draft);if(pages.has(pageId))Object.assign(pages.get(pageId),{published:true,publication:publicationRecord(saved)});rememberPage();addPublishedToLayout();fill();
-      status('Saved and published. Public pages may take a moment to refresh.','success');
+      status(savedLayout?.hiddenIds?.includes(pageId)?'Article saved. It stays hidden from the public site until you show it and publish display settings.':'Saved and published. Public pages may take a moment to refresh.','success');
     } catch(error) {status(error.message,'error');}
     finally {busy=false;controls();}
   }
