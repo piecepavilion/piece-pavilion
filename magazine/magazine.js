@@ -75,13 +75,14 @@
       const r=await fetch('/magazine/pages.json',{cache:'no-store',credentials:'omit'});
       if(!r.ok)throw new Error('Newsroom unavailable');
       const data=await r.json();
+      if(!Array.isArray(data.pages))throw new Error('Newsroom page list unavailable');
+      const hiddenIds=new Set(Array.isArray(data.layout?.hiddenIds)?data.layout.hiddenIds:[]);
+      const visiblePages=data.pages.filter(a=>a && !hiddenIds.has(a.id));
       if(coverOnly){
-        if(!Array.isArray(data.pages))throw new Error('Newsroom page list unavailable');
-        const featured=data.pages.find(a=>a.id===data.layout?.homepageId) || data.pages.find(a=>a.id==='front') || data.pages[0];
+        const featured=visiblePages.find(a=>a.id===data.layout?.homepageId) || visiblePages[0];
         render(root,featured || empty,false);
       }
-      else if(Array.isArray(data.pages))renderPages(root,data.pages);
-      else throw new Error('Newsroom page list unavailable');
+      else renderPages(root,visiblePages);
     } catch (_) {
       // A cached frontend or staged backend deployment still shows the original story.
       try {
