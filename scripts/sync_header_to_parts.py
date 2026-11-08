@@ -41,7 +41,7 @@ NAV_HTML = '''<nav class="header-nav">
           <span class="nav-blog-new">New</span><span>&nbsp;Blog</span>
         </a>
         <a href="/#sell">Sell</a>
-        <a href="/spotlight/">Spotlight</a>
+        <a href="/spotlight/">Newsroom</a>
         <a href="/employees/" class="nav-staff">Staff</a>
       </nav>'''
 

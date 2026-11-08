@@ -185,6 +185,7 @@ PAGE_TMPL = """<!DOCTYPE html>
       <li><a href="/parts/">Parts Database</a></li>
       <li><a href="/lego-minifigures/">LEGO Minifigures</a></li>
       <li><a href="/blog/">Blog</a></li>
+      <li><a href="/spotlight/">Newsroom</a></li>
       <li><a href="/#contact">Get in Touch</a></li>
     </ul>
   </nav>
@@ -210,6 +211,7 @@ PAGE_TMPL = """<!DOCTYPE html>
         <a href="/parts/">Parts</a>
         <a href="/#featured">Featured</a>
         <a href="/blog/">Blog</a>
+        <a href="/spotlight/">Newsroom</a>
       </nav>
       <div class="header-actions">
         <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop"
@@ -487,6 +489,7 @@ INDEX_TMPL = """<!DOCTYPE html>
       <li><a href="/parts/">Parts Database</a></li>
       <li><a href="/lego-minifigures/">LEGO Minifigures</a></li>
       <li><a href="/blog/">Blog</a></li>
+      <li><a href="/spotlight/">Newsroom</a></li>
     </ul>
   </nav>
 
@@ -506,6 +509,7 @@ INDEX_TMPL = """<!DOCTYPE html>
         <a href="/#shop">Shop</a>
         <a href="/parts/">Parts</a>
         <a href="/blog/">Blog</a>
+        <a href="/spotlight/">Newsroom</a>
       </nav>
       <div class="header-actions">
         <a href="https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop" target="_blank" rel="noopener" class="btn-primary header-shop">Shop Now &rarr;</a>
