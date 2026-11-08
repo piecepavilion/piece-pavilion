@@ -133,7 +133,8 @@ const tickerState = {
   justAdded: [],                   // {name, price, img, href}[]
   cfg: {
     enabled: true,
-    announcements: [],             // [{message, href, cta}]
+    announcements: [],             // [{message, href, cta, visible}]
+    hasSavedConfig: false,
     showLatestBlog: true,
     showJustAdded: true,
     justAddedCount: 3,
@@ -216,13 +217,13 @@ function renderTicker(force) {
   // added = Just Added products. If tickerState.cfg.order isn't set
   // (older sheet/banner.txt source), we fall back to the historical
   // announcements -> latest blog -> just added order.
-  const cfgAnnouncements = tickerState.cfg.announcements.length
+  const cfgAnnouncements = tickerState.cfg.hasSavedConfig || tickerState.cfg.announcements.some(Boolean)
     ? tickerState.cfg.announcements
     : (tickerState.hardcodedAnnouncement ? [tickerState.hardcodedAnnouncement] : []);
   const htmlFor = (key) => {
     if (/^a\d+$/.test(key)) {
       const a = cfgAnnouncements[+key.slice(1)];
-      if (!a || !a.message) return '';
+      if (!a || a.visible === false || !a.message) return '';
       const cta = a.cta ? ' <span style="color:rgba(255,255,255,0.7);font-weight:600;">' + a.cta + '</span>' : '';
       return '<a class="ticker-item" href="' + esc(a.href) + '">' +
         '<span class="ticker-pill hot">News</span>' +
@@ -391,11 +392,12 @@ const loadBannerConfig = () => {
   const parseKv = (data) => {
     const cfg = {};
     if (typeof data !== 'object' || !data) return cfg;
+    cfg.__kv = true;
     if (data.enabled === false) cfg.enabled = 'NO';
     const a = Array.isArray(data.announcements) ? data.announcements : [];
-    if (a[0]) { cfg.message = a[0].message || ''; cfg.link = a[0].link || ''; cfg.link_text = a[0].link_text || ''; }
-    if (a[1]) { cfg.message_2 = a[1].message || ''; cfg.link_2 = a[1].link || ''; cfg.link_text_2 = a[1].link_text || ''; }
-    if (a[2]) { cfg.message_3 = a[2].message || ''; cfg.link_3 = a[2].link || ''; cfg.link_text_3 = a[2].link_text || ''; }
+    if (a[0]) { cfg.message = a[0].message || ''; cfg.link = a[0].link || ''; cfg.link_text = a[0].link_text || ''; cfg.visible = a[0].visible !== false; }
+    if (a[1]) { cfg.message_2 = a[1].message || ''; cfg.link_2 = a[1].link || ''; cfg.link_text_2 = a[1].link_text || ''; cfg.visible_2 = a[1].visible !== false; }
+    if (a[2]) { cfg.message_3 = a[2].message || ''; cfg.link_3 = a[2].link || ''; cfg.link_text_3 = a[2].link_text || ''; cfg.visible_3 = a[2].visible !== false; }
     if (data.show_latest_blog === false) cfg.show_latest_blog = 'NO';
     if (data.show_just_added === false)  cfg.show_just_added  = 'NO';
     if (data.just_added_count) cfg.just_added_count = String(data.just_added_count);
@@ -447,21 +449,19 @@ const loadBannerConfig = () => {
     tickerState.cfg.enabled = (cfg.enabled || '').trim().toUpperCase() !== 'NO';
 
     // Up to 3 announcement rows: message / message_2 / message_3
-    const announcements = [];
     const rows = [
-      { msg: cfg.message, link: cfg.link, cta: cfg.link_text },
-      { msg: cfg.message_2, link: cfg.link_2, cta: cfg.link_text_2 },
-      { msg: cfg.message_3, link: cfg.link_3, cta: cfg.link_text_3 },
+      { msg: cfg.message, link: cfg.link, cta: cfg.link_text, visible: cfg.visible !== false },
+      { msg: cfg.message_2, link: cfg.link_2, cta: cfg.link_text_2, visible: cfg.visible_2 !== false },
+      { msg: cfg.message_3, link: cfg.link_3, cta: cfg.link_text_3, visible: cfg.visible_3 !== false },
     ];
-    rows.forEach(r => {
-      if (!r.msg) return;
-      announcements.push({
-        message: esc(r.msg),
-        href: resolveLink(r.link),
-        cta: r.cta ? esc(r.cta) : '',
-      });
-    });
-    tickerState.cfg.announcements = announcements;
+    // Keep slot indexes stable when an earlier announcement is empty or hidden.
+    tickerState.cfg.announcements = rows.map(r => r.msg ? {
+      message: esc(r.msg),
+      href: resolveLink(r.link),
+      cta: r.cta ? esc(r.cta) : '',
+      visible: r.visible,
+    } : null);
+    tickerState.cfg.hasSavedConfig = cfg.__kv === true;
 
     // Section toggles — default YES unless explicit NO.
     tickerState.cfg.showLatestBlog = (cfg.show_latest_blog || '').trim().toUpperCase() !== 'NO';
@@ -1154,4 +1154,5 @@ if (navDropdown) {
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 })();
+
 
