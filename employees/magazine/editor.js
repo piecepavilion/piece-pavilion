@@ -10,6 +10,26 @@
   let layout = null, savedLayout = null, layoutEnabled = false;
   const layoutValue = value => JSON.stringify(value && {order:value.order,homepageId:value.homepageId});
   const layoutDirty = () => layoutValue(layout) !== layoutValue(savedLayout);
+  // The article's editable date is not a publication timestamp. The server
+  // records updatedAt on every publish, and createdAt on newer pages' first publish.
+  const publicationRecord = article => ({title:article.title,createdAt:article.createdAt,updatedAt:article.updatedAt});
+  const publicationFor = id => pages.get(id)?.publication || pages.get(id)?.saved || {};
+  const publicationDateFormat = new Intl.DateTimeFormat(undefined, {year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+  function publicationTime(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return null;
+    const date = new Date(value);
+    return Number.isFinite(date.valueOf()) && date.toISOString() === value ? date : null;
+  }
+  function publicationDates(article) {
+    const dates=document.createElement('small');dates.className='publication-dates';
+    for (const [key,label] of [['createdAt','First published'],['updatedAt','Last published']]) {
+      const line=document.createElement('span'),date=publicationTime(article[key]);
+      line.textContent=label+(date?': ':' date unavailable');
+      if(date){const time=document.createElement('time');time.dateTime=article[key];time.title=article[key];time.textContent=publicationDateFormat.format(date);line.append(time);}
+      dates.append(line);
+    }
+    return dates;
+  }
   function layoutStatus(message, kind) { if ($('publication-status')) { $('publication-status').textContent=message; $('publication-status').className=kind || ''; } }
   function layoutControls() {
     if (!$('publication-list')) return;
@@ -18,15 +38,16 @@
     $('publication-save').disabled=blocked || !layout?.order.length || !layoutDirty();
     $('publication-reset').disabled=blocked || !layoutDirty();
     $('publication-reload').disabled=!loaded || busy;
-    const signature=JSON.stringify([layout?.order,layout?.homepageId,layout?.order.map(id=>pages.get(id)?.saved.title)]);
+    const signature=JSON.stringify([layout?.order,layout?.homepageId,layout?.order.map(id=>publicationRecord(publicationFor(id)))]);
     if ($('publication-list').dataset.layout===signature) return;
     $('publication-list').dataset.layout=signature;
     $('publication-list').replaceChildren();
     $('publication-home-list').replaceChildren();
     (layout?.order || []).forEach((id,index)=>{
-      const title=pages.get(id)?.saved.title || 'Published story';
+      const article=publicationFor(id),title=article.title || 'Published story';
       const row=document.createElement('li');row.className='publication-row';
-      const story=document.createElement('strong');story.className='publication-story';story.textContent=title;
+      const story=document.createElement('div');story.className='publication-story';
+      const headline=document.createElement('strong');headline.textContent=title;story.append(headline,publicationDates(article));
       const position=document.createElement('span');position.className='publication-position';position.textContent='Page '+(index+1);
       row.append(position,story);
       const moves=document.createElement('div');moves.className='publication-move';
@@ -49,9 +70,10 @@
       radio.addEventListener('change',()=>{if(busy || !layoutEnabled)return;layout.homepageId=id;layoutControls();layoutStatus('Homepage story selected. Choose Publish order & homepage below to make it live.');[...$('publication-home-list').querySelectorAll('input')].find(el=>el.value===id)?.focus();});
       const optionText=document.createElement('span');optionText.className='publication-home-title';optionText.textContent=title;
       const pageLabel=document.createElement('small');pageLabel.textContent='Newsroom Page '+(index+1)+(layout.homepageId===id?' · Selected for homepage':'');optionText.append(pageLabel);
+      optionText.append(publicationDates(article));
       label.append(radio,optionText);$('publication-home-list').append(label);$('publication-list').append(row);
     });
-    const selectedTitle=pages.get(layout?.homepageId)?.saved.title;
+    const selectedTitle=publicationFor(layout?.homepageId).title;
     $('publication-home-summary').textContent=selectedTitle?'Homepage preview: '+selectedTitle:'Publish an article first to choose a homepage story.';
   }
   function acceptLayout(result) {
@@ -84,6 +106,8 @@
       rememberPage();
       for(const article of result.pages){
         if(!pages.has(article.id)){const value={...clone(PPMagazine.empty),...article};pages.set(article.id,{draft:value,saved:clone(value),history:[],published:true});}
+        // Refresh published labels without replacing drafts or their stale-save tokens.
+        pages.get(article.id).publication=publicationRecord(article);
       }
       acceptLayout(result);layoutStatus('Latest settings loaded. Your article edits are unchanged.');
     }catch(error){layoutStatus(error.message,'error');}
@@ -214,7 +238,7 @@
     busy=true;controls();status('Saving your article…');
     try {
       const result=await api(pageId==='front'?'/save':'/pages/'+encodeURIComponent(pageId)+'/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(draft)});
-      draft={...clone(PPMagazine.empty),...result};saved=clone(draft);if(pages.has(pageId))pages.get(pageId).published=true;rememberPage();addPublishedToLayout();fill();
+      draft={...clone(PPMagazine.empty),...result};saved=clone(draft);if(pages.has(pageId))Object.assign(pages.get(pageId),{published:true,publication:publicationRecord(saved)});rememberPage();addPublishedToLayout();fill();
       status('Saved and published. Public pages may take a moment to refresh.','success');
     } catch(error) {status(error.message,'error');}
     finally {busy=false;controls();}
