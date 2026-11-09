@@ -13,3 +13,12 @@
 @keyframes blog-heart-rise{0%{opacity:0;transform:translate(0,0) scale(.6)}8%{opacity:1}65%{opacity:.95}100%{opacity:0;transform:translate(var(--heart-drift),-230px) scale(1.2)}}
 @media(prefers-reduced-motion:reduce){.blog-floating-heart{display:none;animation:none}.blog-like svg{transition:none}}
 
+
+/* Each original linked card stays intact; controls live outside the link. */
+.blog-card-shell{display:flex;flex-direction:column;min-width:0}
+.blog-card-shell>.blog-card{flex:1;min-width:0}
+.blog-card-shell.is-filtered-out,.blog-card-shell:has(>.blog-card.is-filtered-out){display:none!important}
+.blog-card-reactions{margin:8px 0 0;padding:0 12px;gap:8px;min-width:0}
+.blog-card-reactions .blog-like-status{flex:1;min-width:0}
+.blog-reactions .blog-actions{min-width:0;max-width:100%}
+@media(max-width:600px){.blog-cards{grid-template-columns:minmax(0,1fr)}.blog-card-reactions{padding:0 8px}}

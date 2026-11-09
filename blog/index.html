@@ -724,7 +724,7 @@
   </div><!-- end .main-content -->
 
   <script async src="https://f.convertkit.com/ckjs/ck.5.js" integrity="sha384-jrPr3cryOobCciVpnyICbK0gXiRQxFQMYLwmA1ncyFPJg3m6jwTkIPWwOgJo2lPj" crossorigin="anonymous"></script>
-  <script src="/script.js?v=20261108-newsroom-nav"></script>
+  <script src="/script.js?v=20261109-card-hearts1"></script>
 
   <!-- ================================================================
        Pizzazz enhancements for the blog listing. All additive — doesn't
@@ -735,7 +735,7 @@
        ================================================================ -->
   <script>
   (function pizzazzBlogCards() {
-    const cards = Array.from(document.querySelectorAll('.blog-cards > .blog-card'));
+    const cards = Array.from(document.querySelectorAll('.blog-cards .blog-card'));
     if (!cards.length) return;
 
     const CATEGORIES = [
@@ -808,7 +808,7 @@
   (function blogSearch() {
     const input = document.getElementById('blog-search-input');
     const count = document.getElementById('blog-search-count');
-    const cards = Array.from(document.querySelectorAll('.blog-cards > .blog-card'));
+    const cards = Array.from(document.querySelectorAll('.blog-cards .blog-card'));
     if (!input || !cards.length) return;
 
     const norm = (s) => (s || '')
@@ -879,7 +879,7 @@
         });
 
         // Build Top 5 from the cards already on the page.
-        const cards = Array.from(document.querySelectorAll('.blog-cards > .blog-card'));
+        const cards = Array.from(document.querySelectorAll('.blog-cards .blog-card'));
         const posts = cards.map(function(a){
           const badge = a.querySelector('.view-badge[data-slug]');
           const h2 = a.querySelector('h2');
@@ -911,6 +911,7 @@
   </script>
 </body>
 </html>
+
 
 
 

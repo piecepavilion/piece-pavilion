@@ -1,16 +1,9 @@
-/* Shared per-article reactions. Browser identifiers are best effort, never fingerprints. */
+/* Shared per-article reactions on articles and listing cards. Never fingerprint visitors. */
 (function () {
   'use strict';
-  var match = location.pathname.match(/^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(?:index\.html)?$/);
-  var article = document.querySelector('.blog-article');
-  if (!match || !article || document.querySelector('.blog-reactions')) return;
-  var slug = match[1];
-  var box = document.createElement('section');
-  box.className = 'blog-reactions';
-  box.setAttribute('aria-label', 'Article likes');
-  box.hidden = true;
-  var anchor = article.querySelector('.blog-byline') || article.querySelector('h1');
-  if (anchor) anchor.after(box); else article.prepend(box);
+  var articlePath = location.pathname.match(/^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(?:index\.html)?$/);
+  var listing = /^\/blog\/(?:index\.html)?$/.test(location.pathname);
+  if ((!articlePath && !listing) || document.querySelector('.blog-reactions')) return;
   var key = 'pp_blog_like_device_v1';
   var validId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   function newId() {
@@ -31,12 +24,16 @@
     return null;
   }
   var device = null, enabled = false, configPending = false;
+  var widgets = [];
+  function mount(slug, box, host, subject) {
+    subject = subject || "this article";
+    var lastRefresh = 0;
   var liked = false, pending = false, initialized = false, version = 0, operation = null;
   var button = document.createElement('button');
   button.className = 'blog-like';
   button.type = 'button';
   button.setAttribute('aria-pressed', 'false');
-  button.setAttribute('aria-label', 'Like this article');
+  button.setAttribute('aria-label', 'Like ' + subject);
   button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><span class="blog-like-count">…</span>';
   var count = button.querySelector('.blog-like-count');
   var status = document.createElement('span');
@@ -56,7 +53,7 @@
     button.setAttribute('aria-busy', String(pending));
     button.setAttribute('aria-pressed', String(liked));
     button.classList.toggle('is-liked', liked);
-    var label = !device ? 'Enable browser storage to like' : !initialized ? 'Retry loading likes' : operation ? (operation.liked ? 'Retry adding your like' : 'Retry removing your like') : liked ? 'Unlike this article' : 'Like this article';
+    var label = !device ? 'Enable browser storage to like' : !initialized ? 'Retry loading likes' : operation ? (operation.liked ? 'Retry adding your like' : 'Retry removing your like') : liked ? 'Unlike ' + subject : 'Like ' + subject;
     button.setAttribute('aria-label', label + '. ' + count.textContent + ' total likes');
     button.title = label;
   }
@@ -88,6 +85,7 @@
       catch (_) { status.textContent = 'Could not save. Please try again.'; return; }
     }
     pending = true;
+    if (method === "GET") lastRefresh = Date.now();
     updateButton();
     var controller = new AbortController();
     var timeout = setTimeout(function () { controller.abort(); }, 10000);
@@ -97,7 +95,7 @@
         headers: method === 'POST' ? { 'Content-Type': 'application/json' } : {},
         body: method === 'POST' ? JSON.stringify(operation) : undefined
       });
-      if (response.status === 403 || response.status === 404) { enabled = false; box.hidden = true; return; }
+      if (response.status === 403 || response.status === 404) { box.hidden = true; return; }
       if (method === 'POST' && response.status === 409) {
         render(await response.json());
         operation = null;
@@ -119,7 +117,77 @@
       updateButton();
     }
   }
-  button.addEventListener('click', function () { request(initialized && device ? 'POST' : 'GET'); });
+  button.addEventListener('click', function (event) { if (event) { event.preventDefault(); event.stopPropagation(); } request(initialized && device ? 'POST' : 'GET'); });
+
+    return {
+      element: host || box,
+      apply: function () {
+        box.hidden = !enabled;
+        if (!enabled) box.querySelectorAll('.blog-floating-heart').forEach(function (heart) { heart.remove(); });
+        updateButton();
+      },
+      refresh: function (force) {
+        if ((!host || visible(host)) && (force || !initialized || Date.now() - lastRefresh > 25000)) request('GET');
+      }
+    };
+  }
+  function visible(host) {
+    if (host.classList.contains('is-filtered-out') || host.hidden) return false;
+    var bounds = host.getBoundingClientRect();
+    return bounds.bottom >= -160 && bounds.top <= (window.innerHeight || 800) + 160;
+  }
+  function makeBox() {
+    var box = document.createElement('section');
+    box.className = 'blog-reactions';
+    box.setAttribute('aria-label', 'Article likes');
+    box.hidden = true;
+    return box;
+  }
+  if (articlePath) {
+    var article = document.querySelector('.blog-article');
+    if (!article) return;
+    var box = makeBox();
+    var anchor = article.querySelector('.blog-byline') || article.querySelector('h1');
+    if (anchor) anchor.after(box); else article.prepend(box);
+    widgets.push(mount(articlePath[1], box, null));
+  } else {
+    document.querySelectorAll('.blog-cards .blog-card').forEach(function (card) {
+      var href;
+      try { href = new URL(card.getAttribute('href'), location.href); } catch (_) { return; }
+      var match = href.pathname.match(/^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(?:index\.html)?$/);
+      if (!match || href.origin !== location.origin || card.parentElement.classList.contains('blog-card-shell')) return;
+      // Keep the existing article link and its view badge intact. The heart is a
+      // sibling, so pressing it cannot follow the article or generate a view.
+      var shell = document.createElement('div');
+      shell.className = 'blog-card-shell';
+      card.before(shell); shell.appendChild(card);
+      var box = makeBox(); box.classList.add('blog-card-reactions');
+      shell.appendChild(box);
+      function syncFilter() { shell.classList.toggle('is-filtered-out', card.classList.contains('is-filtered-out')); }
+      syncFilter();
+      if ('MutationObserver' in window) new MutationObserver(syncFilter).observe(card, { attributes: true, attributeFilter: ['class'] });
+      var heading = card.querySelector('h2');
+      var subject = heading ? heading.textContent.trim() : 'this article';
+      box.setAttribute('aria-label', subject + ' likes');
+      widgets.push(mount(match[1], box, shell, subject));
+    });
+    if (!widgets.length) return;
+  }
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) widgets.forEach(function (widget) { if (widget.element === entry.target) widget.refresh(); });
+      });
+    }, {rootMargin: '160px'});
+    widgets.forEach(function (widget) { observer.observe(widget.element); });
+  } else if (listing) {
+    var scrolling = false;
+    window.addEventListener('scroll', function () {
+      if (scrolling) return;
+      scrolling = true;
+      setTimeout(function () { scrolling = false; if (enabled) widgets.forEach(function (widget) { widget.refresh(); }); }, 200);
+    }, {passive: true});
+  }
   async function refresh() {
     if (configPending) return;
     configPending = true;
@@ -131,20 +199,15 @@
       var config = await response.json();
       if (!config || typeof config.enabled !== 'boolean') throw new Error('Invalid configuration');
       enabled = config.enabled;
-      box.hidden = !enabled;
-      if (enabled) {
-        if (!device) { try { device = deviceId(); } catch (_) {} }
-        updateButton();
-        request('GET');
-      } else {
-        box.querySelectorAll('.blog-floating-heart').forEach(function (heart) { heart.remove(); });
-      }
+      if (enabled && !device) { try { device = deviceId(); } catch (_) {} }
+      widgets.forEach(function (widget) { widget.apply(); if (enabled) widget.refresh(true); });
     } catch (_) {
       enabled = false;
-      box.hidden = true;
+      widgets.forEach(function (widget) { widget.apply(); });
     } finally { clearTimeout(timeout); configPending = false; }
   }
   refresh();
   setInterval(function () { if (!document.hidden) refresh(); }, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+  window.addEventListener('pageshow', function () { if (!document.hidden) refresh(); });
 })();
