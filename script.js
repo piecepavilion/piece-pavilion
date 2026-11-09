@@ -1156,3 +1156,15 @@ if (navDropdown) {
 })();
 
 
+
+
+/* Reactions are loaded only on public article pages, never in staff previews. */
+(function loadBlogHearts() {
+  if (!/^\/blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:index\.html)?$/.test(location.pathname) || !document.querySelector('.blog-article') || document.querySelector('script[data-blog-hearts]')) return;
+  var style = document.createElement('link');
+  style.rel = 'stylesheet'; style.href = '/blog/hearts.css?v=20261109a';
+  document.head.appendChild(style);
+  var script = document.createElement('script');
+  script.src = '/blog/hearts.js?v=20261109a'; script.defer = true;
+  script.dataset.blogHearts = 'true'; document.head.appendChild(script);
+})();

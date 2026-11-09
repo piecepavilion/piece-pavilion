@@ -83,10 +83,11 @@
     }
   }
   function apply(config) {
+    box.dispatchEvent(new CustomEvent('countdown-hearts-change', {detail: !!config && config.enabled === true && config.heartsEnabled !== false && Number.isFinite(Date.parse(config.endsAt))}));
     if (!config || config.enabled!==true || !Number.isFinite(Date.parse(config.endsAt))) {
       active=null; updateLink(false); lastKey=''; box.hidden=true; carousel.hidden=false; clearCelebration(); return;
     }
-    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone,config.linkLabel,config.linkUrl,config.afterLinkLabel,config.afterLinkUrl]);
+    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone,config.linkLabel,config.linkUrl,config.afterLinkLabel,config.afterLinkUrl,config.heartsEnabled]);
     if (key===lastKey) { tick(); return; }
     clearCelebration(); lastKey=key; active=config;
     title.textContent=typeof config.title==='string'?config.title:'Countdown';
@@ -144,12 +145,12 @@
     } catch (_) {}
     return null;
   }
-  var device = null;
-  try { device = deviceId(); } catch (_) {}
+  var device = null, heartsVisible = false;
   var liked = false, pending = false, initialized = false, version = 0, operation = null;
   var button = document.createElement('button');
   button.className = 'countdown-like';
   button.type = 'button';
+  button.hidden = true;
   button.setAttribute('aria-pressed', 'false');
   button.setAttribute('aria-label', 'Like this countdown');
   button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><span class="countdown-like-count">…</span>';
@@ -158,7 +159,7 @@
   status.className = 'countdown-like-status';
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
-  box.classList.add('countdown-has-likes');
+  status.hidden = true;
   var actions = box.querySelector('.countdown-actions');
   if (!actions) {
     actions = document.createElement('div');
@@ -198,7 +199,7 @@
   }
   async function request(method) {
     // An uncertain write must be retried unchanged, never replaced by a new toggle.
-    if (pending || (method === 'GET' && operation) || (method === 'POST' && (!device || !initialized))) return;
+    if (!heartsVisible || pending || (method === 'GET' && operation) || (method === 'POST' && (!device || !initialized))) return;
     if (method === 'POST' && !operation) {
       try { operation = { device: device, liked: !liked, operationId: newId(), expectedVersion: version }; }
       catch (_) { status.textContent = 'Could not save. Please try again.'; return; }
@@ -225,7 +226,7 @@
       render(data);
       if (method === 'POST') operation = null;
       status.textContent = !device ? 'Enable browser storage to like.' : method === 'POST' ? (data.liked ? 'Thanks for the love!' : 'Like removed.') : '';
-      if (method === 'POST' && data.added) burst();
+      if (method === 'POST' && data.added && heartsVisible) burst();
     } catch (_) {
       status.textContent = method === 'POST' ? 'Could not confirm the change. Tap the heart to retry.' : 'Likes unavailable. Tap the heart to retry.';
     } finally {
@@ -235,7 +236,19 @@
     }
   }
   button.addEventListener('click', function () { request(initialized && device ? 'POST' : 'GET'); });
-  request('GET');
+  box.addEventListener('countdown-hearts-change', function (event) {
+    var wasVisible = heartsVisible;
+    heartsVisible = event.detail === true;
+    button.hidden = status.hidden = !heartsVisible;
+    box.classList.toggle('countdown-has-likes', heartsVisible);
+    if (!heartsVisible) box.querySelectorAll('.countdown-floating-heart').forEach(function (heart) { heart.remove(); });
+    if (heartsVisible && !wasVisible) {
+      if (!device) { try { device = deviceId(); } catch (_) {} }
+      updateButton();
+      request('GET');
+    }
+  });
   setInterval(function () { if (!document.hidden && !box.hidden) request('GET'); }, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !box.hidden) request('GET'); });
 })();
+

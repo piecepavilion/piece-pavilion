@@ -36,3 +36,7 @@
 .countdown-floating-heart{position:absolute;right:35px;bottom:26px;z-index:4;pointer-events:none;font-size:24px;line-height:1;opacity:0;animation:countdown-heart-rise 4.5s var(--heart-delay) ease-out both}
 @keyframes countdown-heart-rise{0%{opacity:0;transform:translate(0,0) scale(.6)}8%{opacity:1}65%{opacity:.95}100%{opacity:0;transform:translate(var(--heart-drift),-230px) scale(1.2)}}
 @media(prefers-reduced-motion:reduce){.countdown-floating-heart{display:none;animation:none}.countdown-like svg{transition:none}}
+
+
+/* Explicit author rule: flex styles must not override the staff heart switch. */
+.countdown-like[hidden],.countdown-like-status[hidden]{display:none!important}
