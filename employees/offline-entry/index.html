@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Piece Pavilion — Offline Inventory Entry</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#e3000b" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+:root{--red:#e3000b;--red-dark:#9b0008;--yellow:#ffce00;--ink:#15151f;--slate:#3a4150;--mid:#6b7280;--line:#e6e8ec;--bg:#f5f6f9;--surface:#fff;--radius:14px;--shadow-sm:0 2px 8px rgba(20,22,29,.05)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+h1,h2,h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:700}
+a{color:var(--red);text-decoration:none}
+.topbar{background:linear-gradient(135deg,#15151f,#4a0a10);box-shadow:inset 0 -2px 0 rgba(255,206,0,.55);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px}
+.topbar .sub{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow)}
+.topbar h1{font-size:1.45rem}
+.topbar .back{margin-left:auto;color:#fff;font-weight:800;font-size:.88rem;border:1.5px solid rgba(255,255,255,.4);border-radius:50px;padding:8px 16px}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 20px 60px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:20px}
+.banner{background:#fff8e1;border:1px solid #ffe08a;border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;color:var(--slate)}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{border:1.5px solid var(--line);background:#fff;border-radius:50px;padding:9px 18px;font:800 .95rem Nunito;cursor:pointer}
+.tab.on{background:var(--red);border-color:var(--red);color:#fff}
+.btn{background:var(--red);color:#fff;border:none;padding:10px 18px;border-radius:50px;font:800 .92rem Nunito;cursor:pointer;display:inline-block}
+.btn.alt{background:#fff;color:var(--red);border:1.5px solid var(--red)}
+.btn:hover{opacity:.9}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.bar .stat{margin-left:auto;color:var(--mid);font-weight:700;font-size:.9rem}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{background:#15151f;color:#fff;text-align:left;padding:8px;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0}
+td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+td input,td select{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 8px;font:600 .9rem Nunito;background:#fff}
+td input:focus,td select:focus{outline:none;border-color:var(--red)}
+td img{width:44px;height:44px;object-fit:contain;display:block}
+.desc{min-width:220px;color:var(--slate);font-weight:600}
+.warn{color:#b45309;font-weight:700}
+.x{background:none;border:none;color:var(--mid);cursor:pointer;font-size:1.1rem}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.dl .card{margin:0}
+.dl p{color:var(--slate);margin:6px 0 12px;font-size:.92rem}
+ol{padding-left:20px;color:var(--slate);line-height:1.7}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="topbar"><div><div class="sub">Staff tools</div><h1>Offline Inventory Entry</h1></div><a class="back" href="/employees/">&larr; Staff home</a></div>
+<div class="wrap">
+  <div class="banner"><strong>Use this while BrickLink is down.</strong> Enter inventory now, then upload it to BrickLink when it's back. Everything you type here is saved in <em>this browser</em> on this device only &mdash; export a file at the end of each session.</div>
+  <div class="tabs"><button class="tab on" data-t="entry">Enter inventory</button><button class="tab" data-t="sheet">Spreadsheet &amp; upload help</button></div>
+
+  <section id="entry">
+    <div class="card">
+      <div class="bar">
+        <button class="btn" id="add">+ Add row</button>
+        <button class="btn alt" id="csv">Export CSV</button>
+        <button class="btn alt" id="xml">Export BrickLink XML</button>
+        <button class="btn alt" id="clear">Clear all</button>
+        <span class="stat" id="stat">Loading catalog&hellip;</span>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Item No</th><th>Type</th><th>Color</th><th>Cond</th><th>Qty</th><th>Price</th><th>Bin / Remarks</th><th>Description</th><th>Image</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="sheet" class="hide">
+    <div class="dl">
+      <div class="card"><h3>Entry spreadsheet</h3><p>Excel/Google Sheets version with 42k-part lookup, color dropdowns and image previews (open in Google Sheets for pictures).</p><a class="btn" href="Piece_Pavilion_Offline_Entry.xlsx" download>Download .xlsx</a></div>
+      <div class="card"><h3>BrickLink XML converter</h3><p>Python script: turns the spreadsheet's Entry tab into a BrickLink Mass Upload XML file.</p><a class="btn alt" href="entry_to_bricklink_xml.py" download>Download script</a></div>
+    </div>
+    <div class="card" style="margin-top:20px"><h3>When BrickLink is back</h3>
+      <ol><li>Click <strong>Export BrickLink XML</strong> on the Enter inventory tab (or run the script on the spreadsheet).</li>
+      <li>BrickLink &rarr; Seller &rarr; Upload Items &rarr; paste the XML &rarr; review and submit.</li>
+      <li>Spot-check a few lots, then clear the list here.</li></ol>
+      <p style="margin-top:10px;color:var(--mid);font-size:.88rem">Catalog snapshot: Rebrickable + BrickLink color IDs, 2026-11-03. Newer parts won't be found; type a description by hand. Sets use numbers like 10262-1.</p></div>
+  </section>
+</div>
+<script>
+const KEY='pp-offline-entry-v1';
+let parts=new Map(), colors=[], rows=[];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function save(){try{localStorage.setItem(KEY,JSON.stringify(rows))}catch(e){}}
+function load(){try{rows=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){rows=[]}if(!rows.length)rows=[blank()]}
+function blank(){return{no:'',type:'PART',color:'',cond:'N',qty:'',price:'',bin:'',desc:''}}
+function colorId(n){const c=colors.find(c=>c.name===n);return c?c.id:''}
+function info(r){
+  const p=parts.get(r.no);
+  const name=r.desc||(p?p.name:(r.no?'NOT IN CATALOG — type description':''));
+  let img='';
+  if(r.no){
+    if(r.type==='SET')img=`https://img.bricklink.com/ItemImage/SN/0/${r.no}.png`;
+    else if(r.type==='MINIFIG')img=`https://img.bricklink.com/ItemImage/MN/0/${r.no}.png`;
+    else{const id=colorId(r.color);if(id!=='')img=`https://img.bricklink.com/ItemImage/PN/${id}/${r.no}.png`}
+  }
+  return{name,img,missing:r.no&&!p&&!r.desc&&r.type==='PART'};
+}
+function render(){
+  const opts=['<option value=""></option>'].concat(colors.map(c=>`<option>${esc(c.name)}</option>`)).join('');
+  $('#rows').innerHTML=rows.map((r,i)=>{
+    const f=info(r);
+    return `<tr data-i="${i}">
+<td><input data-k="no" value="${esc(r.no)}" style="width:110px"></td>
+<td><select data-k="type" style="width:100px">${['PART','SET','MINIFIG'].map(t=>`<option${t===r.type?' selected':''}>${t}</option>`).join('')}</select></td>
+<td><select data-k="color" style="width:160px">${opts.replace(`<option>${esc(r.color)}</option>`,`<option selected>${esc(r.color)}</option>`)}</select></td>
+<td><select data-k="cond" style="width:60px"><option${r.cond==='N'?' selected':''}>N</option><option${r.cond==='U'?' selected':''}>U</option></select></td>
+<td><input data-k="qty" type="number" min="0" value="${esc(r.qty)}" style="width:70px"></td>
+<td><input data-k="price" value="${esc(r.price)}" style="width:80px"></td>
+<td><input data-k="bin" value="${esc(r.bin)}" style="width:100px"></td>
+<td class="desc"><span class="${f.missing?'warn':''}">${esc(f.name)}</span>${(f.missing||r.type!=='PART')?`<input data-k="desc" placeholder="Description" value="${esc(r.desc)}" style="margin-top:4px">`:''}</td>
+<td>${f.img?`<img loading="lazy" src="${f.img}" alt="" onerror="this.style.opacity=.15">`:''}</td>
+<td><button class="x" data-del title="Remove">&#10005;</button></td></tr>`}).join('');
+  $('#stat').textContent=`${rows.filter(r=>r.no).length} lots · ${rows.reduce((a,r)=>a+(+r.qty||0),0)} pieces · catalog ${parts.size.toLocaleString()} parts`;
+}
+$('#rows').addEventListener('change',e=>{
+  const tr=e.target.closest('tr');if(!tr)return;const r=rows[+tr.dataset.i],k=e.target.dataset.k;if(!k)return;
+  r[k]=e.target.value.trim();save();render();
+  if(k==='price'||k==='bin'||k==='qty'){}
+});
+$('#rows').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.dataset.k==='price'){e.target.blur();const last=+e.target.closest('tr').dataset.i===rows.length-1;if(last){rows.push({...blank(),cond:rows.at(-1).cond,bin:rows.at(-1).bin,color:rows.at(-1).color});save();}render();const t=document.querySelectorAll('#rows tr');t[t.length?Math.min(+e.target.closest('tr').dataset.i+1,t.length-1):0].querySelector('input').focus()}
+});
+$('#rows').addEventListener('click',e=>{if(e.target.dataset.del!==undefined){rows.splice(+e.target.closest('tr').dataset.i,1);if(!rows.length)rows=[blank()];save();render()}});
+$('#add').onclick=()=>{rows.push(blank());save();render()};
+$('#clear').onclick=()=>{if(confirm('Clear ALL entered rows? Export first if you need them.')){rows=[blank()];save();render()}};
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+const stamp=()=>new Date().toISOString().slice(0,10);
+$('#csv').onclick=()=>{
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const head=['Item No','Type','Color','Color ID','Condition','Qty','Price','Remarks','Description','Image URL'];
+  const out=[head.map(q).join(',')].concat(rows.filter(r=>r.no).map(r=>{const f=info(r);return [r.no,r.type,r.color,colorId(r.color),r.cond,r.qty,r.price,r.bin,f.name,f.img].map(q).join(',')}));
+  dl(`offline-inventory-${stamp()}.csv`,out.join('\r\n'),'text/csv');
+};
+$('#xml').onclick=()=>{
+  const x=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const items=rows.filter(r=>r.no&&+r.qty>0).map(r=>{
+    const t={PART:'P',SET:'S',MINIFIG:'M'}[r.type];
+    return `<ITEM><ITEMTYPE>${t}</ITEMTYPE><ITEMID>${x(r.no)}</ITEMID>${t==='P'&&r.color?`<COLOR>${colorId(r.color)||0}</COLOR>`:''}<CONDITION>${r.cond}</CONDITION><QTY>${+r.qty}</QTY><PRICE>${(parseFloat(String(r.price).replace('$',''))||0).toFixed(2)}</PRICE>${r.bin?`<REMARKS>${x(r.bin)}</REMARKS>`:''}</ITEM>`}).join('\n');
+  dl(`bricklink-upload-${stamp()}.xml`,`<INVENTORY>\n${items}\n</INVENTORY>`,'application/xml');
+};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));$('#entry').classList.toggle('hide',b.dataset.t!=='entry');$('#sheet').classList.toggle('hide',b.dataset.t!=='sheet')});
+load();render();
+Promise.all([fetch('/employees/colors/parts.json').then(r=>r.json()),fetch('/employees/colors/catalog.json').then(r=>r.json())]).then(([p,c])=>{
+  p.forEach(x=>parts.set(String(x.no),x));colors=Object.values(c.colors).sort((a,b)=>a.name.localeCompare(b.name));render();
+}).catch(()=>{$('#stat').textContent='Catalog failed to load — you can still type descriptions by hand'});
+</script>
+</body>
+</html>
