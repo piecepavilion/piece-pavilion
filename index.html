@@ -65,6 +65,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/magazine/magazine.css?v=20261107-pages" />
   <script src="/magazine/magazine.js?v=20261108-visibility" defer></script>
+  <link rel="stylesheet" href="/countdown.css?v=20261109a" />
+  <script src="/countdown.js?v=20261109a" defer></script>
 </head>
 <body>
 
@@ -264,6 +266,21 @@
       </div>
     </div>
     <div class="hero-visual">
+      <section class="homepage-countdown" id="homepage-countdown" aria-labelledby="countdown-title" hidden>
+        <div class="countdown-confetti" data-countdown-confetti aria-hidden="true"></div>
+        <h2 id="countdown-title" data-countdown-title>Countdown</h2>
+        <div class="countdown-clock" data-countdown-clock role="timer" aria-live="off">
+          <div class="countdown-unit" data-countdown-days hidden><strong>00</strong><span>Days</span></div>
+          <div class="countdown-unit"><strong data-countdown-hours>00</strong><span>Hours</span></div>
+          <span class="countdown-colon" aria-hidden="true">:</span>
+          <div class="countdown-unit"><strong data-countdown-minutes>00</strong><span>Minutes</span></div>
+          <span class="countdown-colon" aria-hidden="true">:</span>
+          <div class="countdown-unit"><strong data-countdown-seconds>00</strong><span>Seconds</span></div>
+        </div>
+        <p class="countdown-message" data-countdown-message></p>
+        <time class="countdown-target" data-countdown-target></time>
+        <span class="countdown-status" data-countdown-status role="status"></span>
+      </section>
       <div class="hero-carousel" id="hero-carousel" aria-label="Featured products from our store">
         <div class="hero-viewport">
         <div class="hero-track" id="hero-track">
@@ -1227,6 +1244,7 @@
   </script>
 </body>
 </html>
+
 
 
 
