@@ -65,8 +65,8 @@ ol{padding-left:20px;color:var(--slate);line-height:1.7}
   <section id="entry">
     <div class="card">
       <h3 style="margin-bottom:8px">Find the BrickLink item number</h3>
-      <div class="srch"><input id="q" placeholder="Search by name or number, e.g. &quot;plate 2 x 4&quot;, &quot;wheel 11mm&quot;, &quot;hot dog&quot;" autocomplete="off"><div class="res" id="res"></div></div>
-      <p class="tip">Click a result to add it as a new row (color pre-filled with its most common color &mdash; change it if needed). Covers parts only; for <strong>sets and minifigs</strong>, enter the number from the box/instructions (sets: 10262-1) and type the name.</p>
+      <div class="srch"><input id="q" placeholder="Type any part of the name or number &mdash; e.g. &quot;1x2&quot;, &quot;plate 2x4&quot;, &quot;hot dog&quot;, &quot;3023&quot;, &quot;wheel 11&quot;" autocomplete="off"><div class="res" id="res"></div></div>
+      <p class="tip">Keep typing to narrow the list. Click any result to add it as a new row (image included, color pre&#8209;filled with its most common color &mdash; change it if needed). Covers parts only; for <strong>sets and minifigs</strong>, enter the number from the box/instructions (sets: 10262-1) and type the name.</p>
     </div>
     <div class="card">
       <div class="bar">
@@ -97,7 +97,17 @@ ol{padding-left:20px;color:var(--slate);line-height:1.7}
 </div>
 <script>
 const KEY='pp-offline-entry-v1';
-let parts=new Map(), colors=[], rows=[];
+let parts=new Map(), colors=[], rows=[], elements={};
+function partImgChain(no){
+  const urls=[];
+  const es=elements[no];
+  if(Array.isArray(es))es.forEach(e=>urls.push(`https://cdn.rebrickable.com/media/parts/elements/${e}.jpg`));
+  else if(es)urls.push(`https://cdn.rebrickable.com/media/parts/elements/${es}.jpg`);
+  const p=parts.get(no); const c=p&&p.img_c!=null?p.img_c:0;
+  urls.push(`https://img.bricklink.com/ItemImage/PN/${c}/${encodeURIComponent(no)}.png`);
+  return urls;
+}
+function imgAttrs(urls){const first=urls[0]||'';const rest=urls.slice(1).join('|');return `src="${first}" data-fb="${rest.replace(/"/g,'&quot;')}" onerror="var f=this.dataset.fb;if(f){var a=f.split('|');this.src=a.shift();this.dataset.fb=a.join('|')}else{this.style.opacity=.15;this.onerror=null}"`}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function save(){try{localStorage.setItem(KEY,JSON.stringify(rows))}catch(e){}}
@@ -107,13 +117,13 @@ function colorId(n){const c=colors.find(c=>c.name===n);return c?c.id:''}
 function info(r){
   const p=parts.get(r.no);
   const name=r.desc||(p?p.name:(r.no?'NOT IN CATALOG — type description':''));
-  let img='';
+  let urls=[];
   if(r.no){
-    if(r.type==='SET')img=`https://img.bricklink.com/ItemImage/SN/0/${r.no}.png`;
-    else if(r.type==='MINIFIG')img=`https://img.bricklink.com/ItemImage/MN/0/${r.no}.png`;
-    else{const id=colorId(r.color);if(id!=='')img=`https://img.bricklink.com/ItemImage/PN/${id}/${r.no}.png`}
+    if(r.type==='SET')urls=[`https://img.bricklink.com/ItemImage/SN/0/${r.no}.png`];
+    else if(r.type==='MINIFIG')urls=[`https://img.bricklink.com/ItemImage/MN/0/${r.no}.png`];
+    else urls=partImgChain(r.no);
   }
-  return{name,img,missing:r.no&&!p&&!r.desc&&r.type==='PART'};
+  return{name,urls,missing:r.no&&!p&&!r.desc&&r.type==='PART'};
 }
 function render(){
   const opts=['<option value=""></option>'].concat(colors.map(c=>`<option>${esc(c.name)}</option>`)).join('');
@@ -128,7 +138,7 @@ function render(){
 <td><input data-k="price" value="${esc(r.price)}" style="width:80px"></td>
 <td><input data-k="bin" value="${esc(r.bin)}" style="width:100px"></td>
 <td class="desc"><span class="${f.missing?'warn':''}">${esc(f.name)}</span>${(f.missing||r.type!=='PART')?`<input data-k="desc" placeholder="Description" value="${esc(r.desc)}" style="margin-top:4px">`:''}</td>
-<td>${f.img?`<img loading="lazy" src="${f.img}" alt="" onerror="this.style.opacity=.15">`:''}</td>
+<td>${f.urls.length?`<img alt="" ${imgAttrs(f.urls)}>`:''}</td>
 <td><button class="x" data-del title="Remove">&#10005;</button></td></tr>`}).join('');
   $('#stat').textContent=`${rows.filter(r=>r.no).length} lots · ${rows.reduce((a,r)=>a+(+r.qty||0),0)} pieces · catalog ${parts.size.toLocaleString()} parts`;
 }
@@ -160,24 +170,42 @@ $('#xml').onclick=()=>{
 };
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));$('#entry').classList.toggle('hide',b.dataset.t!=='entry');$('#sheet').classList.toggle('hide',b.dataset.t!=='sheet')});
 
-function norm(t){return t.toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()}
+function norm(t){return String(t??'').toLowerCase()
+  .replace(/[×✕✖]/g,'x')
+  .replace(/(\d)\s*x\s*(\d)/g,'$1 x $2')
+  .replace(/[^a-z0-9 ]+/g,' ')
+  .replace(/\s+/g,' ').trim()}
 let index=null;
-function buildIndex(){index=[...parts.values()].map(p=>({p,n:norm(p.name),no:String(p.no).toLowerCase()}))}
+function buildIndex(){index=[...parts.values()].map(p=>{const n=norm(p.name),no=String(p.no).toLowerCase();return{p,n,no,hay:' '+n+' '+no+' ',flat:n.replace(/ /g,'')}})}
 function doSearch(){
-  const q=norm($('#q').value),box=$('#res');
-  if(q.length<2){box.classList.remove('open');return}
+  const raw=$('#q').value,q=norm(raw),box=$('#res');
+  if(!q){box.classList.remove('open');return}
   if(!index)buildIndex();
-  const toks=q.split(' ');
+  const toks=q.split(' ').filter(Boolean),flat=q.replace(/ /g,'');
+  const hit=(hay,t)=>/^\d+$/.test(t)?hay.includes(' '+t+' '):hay.includes(t);
   const out=[];
   for(const e of index){
     if(e.no===q){out.unshift(e);continue}
-    if(toks.every(t=>(t.length<3?(' '+e.n+' ').includes(' '+t+' '):(' '+e.n).includes(' '+t))||e.no.startsWith(t))){out.push(e)}
-    if(out.length>=60)break;
+    if(toks.every(t=>hit(e.hay,t))||e.no.includes(flat)){out.push(e)}
+    if(out.length>=120)break;
   }
-  out.sort((a,b)=>(b.no===q)-(a.no===q)||(/pr\d|pb\d|^\d+[a-z]*c\d|stk|^\d+(pat|sticker)/i.test(a.p.no)-/pr\d|pb\d|^\d+[a-z]*c\d|stk|^\d+(pat|sticker)/i.test(b.p.no))||(/^duplo/i.test(a.p.name)-/^duplo/i.test(b.p.name))||a.p.name.length-b.p.name.length);
-  box.innerHTML=out.length?out.slice(0,40).map(e=>{const p=e.p;return `<div class="it" data-no="${esc(p.no)}" data-c="${esc(p.img_c??'')}"><img loading="lazy" src="https://img.bricklink.com/ItemImage/PN/${p.img_c??0}/${esc(p.no)}.png" alt="" onerror="this.style.opacity=.15"><span class="no">${esc(p.no)}</span><span>${esc(p.name)}</span></div>`}).join(''):'<div class="it"><span class="meta">No matches. Try fewer or different words, or a part number.</span></div>';
+  const score=e=>{
+    let s=0;
+    if(e.no===q)s-=1000;
+    if(e.no.startsWith(flat))s-=200;
+    if(e.n.startsWith(q))s-=100;
+    const i=e.n.indexOf(toks[0]||'');if(i>=0)s-=Math.max(0,20-i);
+    if(/pr\d|pb\d|^\d+[a-z]*c\d|stk|^\d+(pat|sticker)/i.test(e.p.no))s+=30;
+    if(/^duplo/i.test(e.p.name))s+=20;
+    s+=e.p.name.length/50;
+    return s;
+  };
+  out.sort((a,b)=>score(a)-score(b));
+  box.innerHTML=out.length?out.slice(0,50).map(e=>{const p=e.p;return `<div class="it" data-no="${esc(p.no)}" data-c="${esc(p.img_c??'')}"><img alt="" ${imgAttrs(partImgChain(p.no))}><span class="no">${esc(p.no)}</span><span>${esc(p.name)}</span></div>`}).join(''):'<div class="it"><span class="meta">No matches for &ldquo;'+esc(raw)+'&rdquo;. Try fewer or different words, or a part number.</span></div>';
   box.classList.add('open');
 }
+$('#q').addEventListener('focus',()=>{if($('#q').value)doSearch()});
+document.addEventListener('click',e=>{if(!e.target.closest('.srch'))$('#res').classList.remove('open')});
 $('#q').addEventListener('input',doSearch);
 $('#res').addEventListener('click',e=>{
   const it=e.target.closest('.it');if(!it||!it.dataset.no)return;
@@ -188,8 +216,8 @@ $('#res').addEventListener('click',e=>{
   const t=document.querySelectorAll('#rows tr');t[t.length-1].querySelector('[data-k=qty]').focus();
 });
 load();render();
-Promise.all([fetch('/employees/colors/parts.json').then(r=>r.json()),fetch('/employees/colors/catalog.json').then(r=>r.json())]).then(([p,c])=>{
-  p.forEach(x=>parts.set(String(x.no),x));colors=Object.values(c.colors).sort((a,b)=>a.name.localeCompare(b.name));render();
+Promise.all([fetch('/employees/colors/parts.json').then(r=>r.json()),fetch('/employees/colors/catalog.json').then(r=>r.json()),fetch('/employees/colors/part_elements.json').then(r=>r.json()).catch(()=>({}))]).then(([p,c,e])=>{
+  p.forEach(x=>parts.set(String(x.no),x));colors=Object.values(c.colors).sort((a,b)=>a.name.localeCompare(b.name));elements=e||{};render();
 }).catch(()=>{$('#stat').textContent='Catalog failed to load — you can still type descriptions by hand'});
 </script>
 </body>
