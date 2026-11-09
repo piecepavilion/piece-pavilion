@@ -18,3 +18,17 @@
 @media(max-width:480px){.homepage-countdown{padding:26px 14px;gap:18px;min-height:280px}.countdown-clock{gap:5px}.countdown-unit strong{font-size:1.8rem;padding:10px 2px}.countdown-colon{font-size:1.4rem}.countdown-unit span{font-size:.57rem;letter-spacing:.06em}.countdown-message{font-size:.92rem}}
 @media(prefers-reduced-motion:reduce){.countdown-complete .countdown-unit strong,.countdown-confetti i{animation:none!important}.countdown-confetti{display:none}}
 
+
+/* Keep the control clear of the countdown, including narrow screens. */
+.homepage-countdown.countdown-has-likes{padding-bottom:86px}
+.countdown-like{position:absolute;right:16px;bottom:16px;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:64px;min-height:44px;max-width:calc(100% - 32px);padding:8px 13px;border:1px solid #d9dce2;border-radius:999px;background:#fff;color:#111;font:600 14px/1.2 system-ui,sans-serif;cursor:pointer;box-shadow:0 3px 12px #0002;-webkit-tap-highlight-color:transparent}
+.countdown-like svg{width:24px;height:24px;flex:none;fill:none;stroke:#111;stroke-width:1.8;stroke-linejoin:round;transition:fill .18s,stroke .18s}
+.countdown-like.is-liked svg{fill:#e3273e;stroke:#e3273e}
+.countdown-like:focus-visible{outline:3px solid #f8d866;outline-offset:4px}
+.countdown-like[aria-busy=true]{cursor:progress}
+.countdown-like[aria-disabled=true]{cursor:default}
+.countdown-like-count{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.countdown-like-status{position:absolute;left:14px;right:14px;bottom:65px;z-index:3;font:400 11px/1.25 system-ui,sans-serif;color:#e2e8f4;text-align:right}
+.countdown-floating-heart{position:absolute;right:35px;bottom:26px;z-index:4;pointer-events:none;font-size:24px;line-height:1;opacity:0;animation:countdown-heart-rise 4.5s var(--heart-delay) ease-out both}
+@keyframes countdown-heart-rise{0%{opacity:0;transform:translate(0,0) scale(.6)}8%{opacity:1}65%{opacity:.95}100%{opacity:0;transform:translate(var(--heart-drift),-230px) scale(1.2)}}
+@media(prefers-reduced-motion:reduce){.countdown-floating-heart{display:none;animation:none}.countdown-like svg{transition:none}}
