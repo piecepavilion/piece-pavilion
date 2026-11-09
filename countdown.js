@@ -10,6 +10,30 @@
   var target = box.querySelector('[data-countdown-target]');
   var status = box.querySelector('[data-countdown-status]');
   var confetti = box.querySelector('[data-countdown-confetti]');
+  var actions = document.createElement('div');
+  actions.className = 'countdown-actions';
+  var link = document.createElement('a');
+  link.className = 'countdown-link';
+  link.hidden = true;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  actions.appendChild(link);
+  box.appendChild(actions);
+  function updateLink(complete) {
+    var label = active && active[complete ? 'afterLinkLabel' : 'linkLabel'];
+    var raw = active && active[complete ? 'afterLinkUrl' : 'linkUrl'];
+    var url = null;
+    if (typeof raw === 'string' && !/[\u0000-\u0020\u007f-\u009f]/.test(raw) && /^https?:\/\//i.test(raw)) {
+      try {
+        var parsed = new URL(raw);
+        if ((parsed.protocol === 'https:' || parsed.protocol === 'http:') && !parsed.username && !parsed.password) url = parsed.href;
+      } catch (_) {}
+    }
+    link.hidden = !(typeof label === 'string' && label.trim() && url);
+    link.textContent = link.hidden ? '' : label.trim();
+    if (link.hidden) link.removeAttribute('href');
+    else link.href = url;
+  }
   var motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var active = null, lastKey = '', refreshing = false, viewable = true;
   var AFTER_DEFAULT = 'Countdown complete. Check for updates.';
@@ -50,6 +74,7 @@
     box.querySelector('[data-countdown-minutes]').textContent=pad(mins);
     box.querySelector('[data-countdown-seconds]').textContent=pad(secs);
     clock.setAttribute('aria-label',(days?days+' days, ':'')+hours+' hours, '+mins+' minutes, '+secs+' seconds remaining');
+    updateLink(!remaining);
     if (!remaining) celebrate();
     else if (box.classList.contains('countdown-complete')) {
       clearCelebration(); status.textContent = '';
@@ -59,9 +84,9 @@
   }
   function apply(config) {
     if (!config || config.enabled!==true || !Number.isFinite(Date.parse(config.endsAt))) {
-      active=null; lastKey=''; box.hidden=true; carousel.hidden=false; clearCelebration(); return;
+      active=null; updateLink(false); lastKey=''; box.hidden=true; carousel.hidden=false; clearCelebration(); return;
     }
-    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone]);
+    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone,config.linkLabel,config.linkUrl,config.afterLinkLabel,config.afterLinkUrl]);
     if (key===lastKey) { tick(); return; }
     clearCelebration(); lastKey=key; active=config;
     title.textContent=typeof config.title==='string'?config.title:'Countdown';
@@ -102,13 +127,16 @@
   if (!box || box.querySelector('.countdown-like')) return;
   var key = 'pp_countdown_like_device_v1';
   var validId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  function newId() {
+    return typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, function (c) { return (Number(c) ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16); });
+  }
   function deviceId() {
     var id;
     try { id = localStorage.getItem(key); } catch (_) {}
     if (validId.test(id || '')) return id;
     var cookie = document.cookie.split('; ').find(function (part) { return part.indexOf(key + '=') === 0; });
     if (cookie && validId.test(cookie.slice(key.length + 1))) return cookie.slice(key.length + 1);
-    id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, function (c) { return (Number(c) ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16); });
+    id = newId();
     try { localStorage.setItem(key, id); if (localStorage.getItem(key) === id) return id; } catch (_) {}
     try {
       document.cookie = key + '=' + id + '; Max-Age=315360000; Path=/; SameSite=Lax; Secure';
@@ -118,7 +146,7 @@
   }
   var device = null;
   try { device = deviceId(); } catch (_) {}
-  var liked = false, pending = false, burstDone = false;
+  var liked = false, pending = false, initialized = false, version = 0, operation = null;
   var button = document.createElement('button');
   button.className = 'countdown-like';
   button.type = 'button';
@@ -131,21 +159,31 @@
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
   box.classList.add('countdown-has-likes');
-  box.appendChild(button);
+  var actions = box.querySelector('.countdown-actions');
+  if (!actions) {
+    actions = document.createElement('div');
+    actions.className = 'countdown-actions';
+    box.appendChild(actions);
+  }
+  actions.appendChild(button);
   box.appendChild(status);
-  function render(data) {
-    if (!data || !Number.isSafeInteger(data.count) || data.count < 0 || typeof data.liked !== 'boolean') throw new Error('Invalid response');
-    liked = liked || data.liked;
-    count.textContent = data.count.toLocaleString();
-    button.classList.toggle('is-liked', liked);
+  function updateButton() {
+    button.disabled = pending || !device;
+    button.setAttribute('aria-busy', String(pending));
     button.setAttribute('aria-pressed', String(liked));
-    button.setAttribute('aria-label', (liked ? 'You liked this countdown. ' : 'Like this countdown. ') + data.count + ' total likes');
-    button.setAttribute('aria-disabled', String(liked || !device));
-    button.title = liked ? 'You have already liked this countdown in this browser' : 'Like this countdown';
+    button.classList.toggle('is-liked', liked);
+    var label = !device ? 'Enable browser storage to like' : !initialized ? 'Retry loading likes' : operation ? (operation.liked ? 'Retry adding your like' : 'Retry removing your like') : liked ? 'Unlike this countdown' : 'Like this countdown';
+    button.setAttribute('aria-label', label + '. ' + count.textContent + ' total likes');
+    button.title = label;
+  }
+  function render(data) {
+    if (!data || !Number.isSafeInteger(data.count) || data.count < 0 || typeof data.liked !== 'boolean' || !Number.isSafeInteger(data.version) || data.version < 0) throw new Error('Invalid response');
+    liked = data.liked;
+    version = data.version;
+    initialized = true;
+    count.textContent = data.count.toLocaleString();
   }
   function burst() {
-    if (burstDone) return;
-    burstDone = true;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     for (var i = 0; i < 6; i++) {
       var heart = document.createElement('span');
@@ -159,33 +197,44 @@
     }
   }
   async function request(method) {
-    if (pending || (method === 'POST' && (liked || !device))) return;
+    // An uncertain write must be retried unchanged, never replaced by a new toggle.
+    if (pending || (method === 'GET' && operation) || (method === 'POST' && (!device || !initialized))) return;
+    if (method === 'POST' && !operation) {
+      try { operation = { device: device, liked: !liked, operationId: newId(), expectedVersion: version }; }
+      catch (_) { status.textContent = 'Could not save. Please try again.'; return; }
+    }
     pending = true;
-    button.setAttribute('aria-busy', 'true');
+    updateButton();
     var controller = new AbortController();
     var timeout = setTimeout(function () { controller.abort(); }, 10000);
     try {
       var response = await fetch('/api/countdown-likes' + (method === 'GET' && device ? '?device=' + encodeURIComponent(device) : ''), {
         method: method, cache: 'no-store', credentials: 'same-origin', signal: controller.signal,
         headers: method === 'POST' ? { 'Content-Type': 'application/json' } : {},
-        body: method === 'POST' ? JSON.stringify({ device: device }) : undefined
+        body: method === 'POST' ? JSON.stringify(operation) : undefined
       });
+      if (method === 'POST' && response.status === 409) {
+        render(await response.json());
+        operation = null;
+        status.textContent = 'Your like changed in another tab. Showing the latest state.';
+        return;
+      }
       if (!response.ok) throw new Error('Request failed');
       var data = await response.json();
-      if (method === 'POST' && (data.liked !== true || typeof data.added !== 'boolean')) throw new Error('Invalid like response');
+      if (method === 'POST' && (typeof data.added !== 'boolean' || typeof data.removed !== 'boolean')) throw new Error('Invalid like response');
       render(data);
-      status.textContent = !device ? 'Enable browser storage to like.' : method === 'POST' ? (data.added ? 'Thanks for the love!' : 'Already liked in this browser.') : '';
+      if (method === 'POST') operation = null;
+      status.textContent = !device ? 'Enable browser storage to like.' : method === 'POST' ? (data.liked ? 'Thanks for the love!' : 'Like removed.') : '';
       if (method === 'POST' && data.added) burst();
     } catch (_) {
-      status.textContent = method === 'POST' ? 'Could not save. Tap the heart to retry.' : 'Likes unavailable. Tap the heart to retry.';
+      status.textContent = method === 'POST' ? 'Could not confirm the change. Tap the heart to retry.' : 'Likes unavailable. Tap the heart to retry.';
     } finally {
       clearTimeout(timeout);
       pending = false;
-      button.setAttribute('aria-busy', 'false');
+      updateButton();
     }
   }
-  button.addEventListener('click', function () { request(device ? 'POST' : 'GET'); });
-  if (!device) button.setAttribute('aria-disabled', 'true');
+  button.addEventListener('click', function () { request(initialized && device ? 'POST' : 'GET'); });
   request('GET');
   setInterval(function () { if (!document.hidden && !box.hidden) request('GET'); }, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !box.hidden) request('GET'); });
