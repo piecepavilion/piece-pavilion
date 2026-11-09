@@ -11,18 +11,29 @@
   var status = box.querySelector('[data-countdown-status]');
   var confetti = box.querySelector('[data-countdown-confetti]');
   var motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var active = null, lastKey = '', refreshing = false;
+  var active = null, lastKey = '', refreshing = false, viewable = true;
+  var AFTER_DEFAULT = 'Countdown complete. Check for updates.';
+  function updateMotion() { box.classList.toggle('countdown-paused', document.hidden || !viewable); }
+  function updateFallDistance() { box.style.setProperty('--confetti-fall', (box.clientHeight + 32) + 'px'); }
   function pad(value) { return String(value).padStart(2, '0'); }
   function clearCelebration() { box.classList.remove('countdown-complete'); confetti.replaceChildren(); }
   function celebrate() {
-    box.classList.add('countdown-complete');
-    status.textContent = 'Countdown complete.';
+    var afterTitle = typeof active.afterTitle === 'string' && active.afterTitle.trim() ? active.afterTitle : 'Countdown complete';
+    if (title.textContent !== afterTitle) title.textContent = afterTitle;
+    var after = typeof active.afterMessage === 'string' && active.afterMessage.trim() ? active.afterMessage : AFTER_DEFAULT;
+    if (message.textContent !== after) message.textContent = after;
+    if (!box.classList.contains('countdown-complete')) {
+      box.classList.add('countdown-complete');
+      status.textContent = after;
+      updateFallDistance();
+    }
+    updateMotion();
     if (motion.matches || confetti.childElementCount) return;
     var colors = ['#f3c22d','#5db6ef','#f2779d','#9cddac','#be9cf0'];
-    for (var i=0;i<42;i++) {
+    for (var i=0;i<64;i++) {
       var piece=document.createElement('i');
       piece.style.setProperty('--x', ((i * 37) % 100) + '%');
-      piece.style.setProperty('--delay', ((i % 13) * 0.17) + 's');
+      piece.style.setProperty('--delay', (-((i % 19) * 0.19)) + 's');
       piece.style.setProperty('--duration', (2.2 + (i % 7) * 0.23) + 's');
       piece.style.setProperty('--color', colors[i % colors.length]);
       confetti.appendChild(piece);
@@ -39,13 +50,18 @@
     box.querySelector('[data-countdown-minutes]').textContent=pad(mins);
     box.querySelector('[data-countdown-seconds]').textContent=pad(secs);
     clock.setAttribute('aria-label',(days?days+' days, ':'')+hours+' hours, '+mins+' minutes, '+secs+' seconds remaining');
-    if (!remaining && !box.classList.contains('countdown-complete')) celebrate();
+    if (!remaining) celebrate();
+    else if (box.classList.contains('countdown-complete')) {
+      clearCelebration(); status.textContent = '';
+      title.textContent = typeof active.title === 'string' ? active.title : 'Countdown';
+      message.textContent = typeof active.message === 'string' ? active.message : '';
+    }
   }
   function apply(config) {
     if (!config || config.enabled!==true || !Number.isFinite(Date.parse(config.endsAt))) {
       active=null; lastKey=''; box.hidden=true; carousel.hidden=false; clearCelebration(); return;
     }
-    var key=JSON.stringify([config.endsAt,config.title,config.message,config.timeZone]);
+    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone]);
     if (key===lastKey) { tick(); return; }
     clearCelebration(); lastKey=key; active=config;
     title.textContent=typeof config.title==='string'?config.title:'Countdown';
@@ -65,9 +81,17 @@
     } catch (_) { /* Keep last good state, or the original carousel on first load. */ }
     finally {refreshing=false;}
   }
-  motion.addEventListener('change',function(){if(motion.matches)confetti.replaceChildren();});
+  motion.addEventListener('change',function(){
+    if(motion.matches) confetti.replaceChildren();
+    else tick();
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function(entries){ viewable=entries[0].isIntersecting; updateMotion(); }).observe(box);
+  }
+  if ('ResizeObserver' in window) { new ResizeObserver(updateFallDistance).observe(box); }
   setInterval(tick,1000);
   setInterval(function(){if(!document.hidden)refresh();},15000);
-  document.addEventListener('visibilitychange',function(){if(!document.hidden){tick();refresh();}});
+  document.addEventListener('visibilitychange',function(){updateMotion();if(!document.hidden){tick();refresh();}});
   refresh();
 })();
+
