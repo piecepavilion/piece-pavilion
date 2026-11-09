@@ -1158,13 +1158,15 @@ if (navDropdown) {
 
 
 
-/* Reactions are loaded only on public article pages, never in staff previews. */
+/* Reactions load on public blog cards and articles, never staff previews. */
 (function loadBlogHearts() {
-  if (!/^\/blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:index\.html)?$/.test(location.pathname) || !document.querySelector('.blog-article') || document.querySelector('script[data-blog-hearts]')) return;
+  var article = /^\/blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:index\.html)?$/.test(location.pathname) && document.querySelector('.blog-article');
+  var listing = /^\/blog\/(?:index\.html)?$/.test(location.pathname) && document.querySelector('.blog-cards');
+  if ((!article && !listing) || document.querySelector('script[data-blog-hearts]')) return;
   var style = document.createElement('link');
-  style.rel = 'stylesheet'; style.href = '/blog/hearts.css?v=20261109a';
+  style.rel = 'stylesheet'; style.href = '/blog/hearts.css?v=20261109b';
   document.head.appendChild(style);
   var script = document.createElement('script');
-  script.src = '/blog/hearts.js?v=20261109a'; script.defer = true;
+  script.src = '/blog/hearts.js?v=20261109b'; script.defer = true;
   script.dataset.blogHearts = 'true'; document.head.appendChild(script);
 })();
