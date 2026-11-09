@@ -1,0 +1,15 @@
+.blog-reactions{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0 24px}.blog-reactions[hidden]{display:none!important}.blog-actions{display:flex;align-items:center;gap:12px}.blog-reactions .blog-like-status{text-align:left}
+.blog-like{position:relative;flex:0 0 auto;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:64px;min-height:44px;max-width:100%;padding:8px 13px;border:1px solid #d9dce2;border-radius:999px;background:#fff;color:#111;font:600 14px/1.2 system-ui,sans-serif;cursor:pointer;box-shadow:0 3px 12px #0002;-webkit-tap-highlight-color:transparent}
+.blog-like svg{width:24px;height:24px;flex:none;fill:none;stroke:#111;stroke-width:1.8;stroke-linejoin:round;transition:fill .18s,stroke .18s}
+.blog-like.is-liked svg{fill:#e3273e;stroke:#e3273e}
+.blog-like:focus-visible{outline:3px solid #f8d866;outline-offset:4px}
+.blog-like[aria-busy=true]{cursor:progress}
+.blog-like:disabled{cursor:default}
+.blog-like[aria-busy=true]{cursor:progress}
+.blog-like-count{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.blog-like-status{position:relative;z-index:3;overflow-wrap:anywhere;font:400 11px/1.25 system-ui,sans-serif;color:#475569;text-align:right}
+.blog-like-status:empty{display:none}
+.blog-floating-heart{position:absolute;left:32px;bottom:26px;z-index:4;pointer-events:none;font-size:24px;line-height:1;opacity:0;animation:blog-heart-rise 4.5s var(--heart-delay) ease-out both}
+@keyframes blog-heart-rise{0%{opacity:0;transform:translate(0,0) scale(.6)}8%{opacity:1}65%{opacity:.95}100%{opacity:0;transform:translate(var(--heart-drift),-230px) scale(1.2)}}
+@media(prefers-reduced-motion:reduce){.blog-floating-heart{display:none;animation:none}.blog-like svg{transition:none}}
+
