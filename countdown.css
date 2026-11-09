@@ -61,3 +61,10 @@
 }
 
 .hero:has(.homepage-countdown:not([hidden])) .homepage-countdown h2{font-size:1.4rem;line-height:1.2}
+
+/* Let the introductory column shrink without text or search overlapping the card. */
+.hero:has(.homepage-countdown:not([hidden])) .hero-content{min-width:0;width:100%}
+.hero:has(.homepage-countdown:not([hidden])) .hero-search-bar{min-width:0;max-width:100%}
+.hero:has(.homepage-countdown:not([hidden])) .hero-search-bar input{min-width:0;width:0}
+.hero:has(.homepage-countdown:not([hidden])) .hero-search-bar .btn-primary{flex-shrink:0}
+@media(min-width:1000px){.hero:has(.homepage-countdown:not([hidden])) .hero-content h1{font-size:clamp(2rem,3.2vw,3.25rem);overflow-wrap:anywhere}}
