@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let busy=false, loaded=false, dirty=false, target=null;
+let busy=false, loaded=false, dirty=false, target=null, resetOperation=null;
 function status(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error);}
 function linkConfig(labelId,urlId,phase){
  const rawLabel=$(labelId).value,rawUrl=$(urlId).value;
@@ -52,6 +52,25 @@ function tick(){
  const total=after||target===null?0:Math.max(0,Math.ceil((target-Date.now())/1000));const values=[Math.floor(total/86400),Math.floor(total/3600)%24,Math.floor(total/60)%60,total%60];['days','hours','minutes','seconds'].forEach((id,i)=>$(id).textContent=String(values[i]).padStart(2,'0'));
 }
 async function write(publish){if(busy||!loaded)return;let c;try{c=config();}catch(e){status(e.message,true);return;}setBusy(true);status(publish?'Publishing…':'Saving draft…');try{await api(publish?'publish':'save',c);dirty=false;if(publish)showLive(c);status(publish?(c.enabled?'Published. The homepage countdown is enabled.':'Published. The homepage carousel is restored.'):'Draft saved. The live homepage is unchanged.');}catch(e){status(e.message,true);$('retry').hidden=false;}finally{setBusy(false);}}
+async function resetHearts(){
+ if(busy||!loaded)return;
+ if(!resetOperation){
+  if(!confirm('Reset all countdown hearts to zero? Visitors can heart it again. This takes effect immediately and cannot be undone. Your countdown text, settings, draft and blog hearts will not change.'))return;
+  if(!globalThis.crypto||typeof crypto.randomUUID!=='function'){status('A secure browser connection is required to reset hearts.',true);return;}
+  resetOperation={operationId:crypto.randomUUID(),confirm:true};
+ }
+ setBusy(true);status('Resetting countdown hearts…');
+ try{
+  const result=await api('hearts/reset',resetOperation);
+  if(result.ok!==true||!Number.isSafeInteger(result.epoch)||!Number.isSafeInteger(result.count)||result.count<0)throw Error('Could not confirm the reset response.');
+  resetOperation=null;$('resetHearts').textContent='Reset hearts';
+  status('Countdown hearts reset. Visitors can heart it again.'+(dirty?' Your unsaved draft changes are still here.':''));
+ }catch(e){
+  $('resetHearts').textContent='Retry same reset';
+  status(e.message+' Click “Retry same reset” to safely confirm this operation without clearing newer hearts again.',true);
+ }finally{setBusy(false);}
+}
+$('resetHearts').addEventListener('click',resetHearts);
 $('previewState').addEventListener('change',tick);
 $('form').addEventListener('input',()=>{dirty=true;preview();status('Unsaved draft changes.');});$('form').addEventListener('submit',event=>{event.preventDefault();write(true);});$('save').addEventListener('click',()=>write(false));$('retry').addEventListener('click',()=>{if(!dirty||confirm('Reload saved settings and discard unsaved changes?'))load();});window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});setInterval(tick,1000);load();
 
