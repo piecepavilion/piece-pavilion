@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let busy=false, loaded=false, dirty=false, target=null, resetOperation=null;
+let busy=false, loaded=false, dirty=false, target=null, resetOperation=null, restoreOperation=null, hearts=null;
 function status(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error);}
 function linkConfig(labelId,urlId,phase){
  const rawLabel=$(labelId).value,rawUrl=$(urlId).value;
@@ -29,15 +29,15 @@ async function api(path,body){
  try{
  const r=await fetch('/employees/api/countdown/'+path,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:controller.signal});
  if(r.status===401||r.status===403)throw Error('Your staff session has expired. Sign in again, then reload settings.');
- let data;try{data=await r.json();}catch{throw Error('Could not read the server response. Reload settings to check the saved state.');}
- if(!r.ok||data.ok===false)throw Error(data.error||'Request failed. Reload settings to check the saved state.');
+ let data;try{data=await r.json();}catch{throw Error(path.startsWith('hearts/')?'Could not read the server response.':'Could not read the server response. Reload settings to check the saved state.');}
+ if(!r.ok||data.ok===false){const error=Error(data.error||'Request failed. Reload settings to check the saved state.');error.status=r.status;throw error;}
  return data;
- }catch(e){if(e.name==='AbortError')throw Error('The request timed out. Its outcome is unknown; reload settings before trying again.');throw e;}finally{clearTimeout(timeout);}
+ }catch(e){if(e.name==='AbortError')throw Error(path.startsWith('hearts/')?'The request timed out. Its outcome is unknown.':'The request timed out. Its outcome is unknown; reload settings before trying again.');throw e;}finally{clearTimeout(timeout);}
 }
-function setBusy(value){busy=value;$('fields').disabled=value||!loaded;$('retry').disabled=value;}
+function setBusy(value){busy=value;$('fields').disabled=value||!loaded;$('retry').disabled=value;heartControls();}
 function showLive(p){$('live').textContent=p&&p.enabled?'Currently published: countdown enabled'+(p.title?' · '+p.title:''):'Currently published: carousel (countdown disabled)';}
 function fill(c){c=c||{};$('enabled').checked=c.enabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;$('title').value=c.title||'';$('afterTitle').value=c.afterTitle||'';$('message').value=c.message||'';$('afterMessage').value=c.afterMessage||'';['linkLabel','linkUrl','afterLinkLabel','afterLinkUrl'].forEach(id=>$(id).value=typeof c[id]==='string'?c[id]:'');$('zone').value=c.timeZone||'UTC';$('date').value='';$('time').value='';if(c.endsAt){const local=CountdownTime.localFields(c.endsAt,$('zone').value);$('date').value=local.date;$('time').value=local.time;}dirty=false;preview();}
-async function load(){if(busy)return;setBusy(true);$('retry').hidden=true;try{const data=await api('get');fill(data.draft||data.published);showLive(data.published);loaded=true;status('Saved settings loaded.');}catch(e){status(e.message,true);$('retry').hidden=false;}finally{setBusy(false);}}
+async function load(){if(busy)return;setBusy(true);$('retry').hidden=true;try{const data=await api('get');fill(data.draft||data.published);showLive(data.published);loaded=true;await loadHeartStatus();status('Saved settings loaded.');}catch(e){status(e.message,true);$('retry').hidden=false;}finally{setBusy(false);}}
 function preview(){
  $('previewTitle').textContent=$('title').value.trim()||'Countdown title';$('previewMessage').textContent=$('message').value;$('preview').classList.toggle('off',!$('enabled').checked);
  try{const c=config();target=c.endsAt?Date.parse(c.endsAt):null;$('previewNote').textContent=!c.enabled?'Disabled draft: publishing will show the carousel.':c.endsAt?'Target: '+new Date(c.endsAt).toLocaleString(undefined,{timeZone:c.timeZone,timeZoneName:'short'})+'.':'';}catch(e){target=null;$('previewNote').textContent=e.message;}tick();
@@ -53,9 +53,9 @@ function tick(){
 }
 async function write(publish){if(busy||!loaded)return;let c;try{c=config();}catch(e){status(e.message,true);return;}setBusy(true);status(publish?'Publishing…':'Saving draft…');try{await api(publish?'publish':'save',c);dirty=false;if(publish)showLive(c);status(publish?(c.enabled?'Published. The homepage countdown is enabled.':'Published. The homepage carousel is restored.'):'Draft saved. The live homepage is unchanged.');}catch(e){status(e.message,true);$('retry').hidden=false;}finally{setBusy(false);}}
 async function resetHearts(){
- if(busy||!loaded)return;
+ if(busy||!loaded||restoreOperation)return;
  if(!resetOperation){
-  if(!confirm('Reset all countdown hearts to zero? Visitors can heart it again. This takes effect immediately and cannot be undone. Your countdown text, settings, draft and blog hearts will not change.'))return;
+  if(!confirm('Reset all countdown hearts to zero? Visitors can heart it again. This takes effect immediately. Restore previous hearts can undo only your most recent reset, keeping new hearts added afterward. Your countdown text, settings, draft and blog hearts will not change.'))return;
   if(!globalThis.crypto||typeof crypto.randomUUID!=='function'){status('A secure browser connection is required to reset hearts.',true);return;}
   resetOperation={operationId:crypto.randomUUID(),confirm:true};
  }
@@ -63,15 +63,52 @@ async function resetHearts(){
  try{
   const result=await api('hearts/reset',resetOperation);
   if(result.ok!==true||!Number.isSafeInteger(result.epoch)||!Number.isSafeInteger(result.count)||result.count<0)throw Error('Could not confirm the reset response.');
-  resetOperation=null;$('resetHearts').textContent='Reset hearts';
+  resetOperation=null;await loadHeartStatus();
   status('Countdown hearts reset. Visitors can heart it again.'+(dirty?' Your unsaved draft changes are still here.':''));
  }catch(e){
   $('resetHearts').textContent='Retry same reset';
   status(e.message+' Click “Retry same reset” to safely confirm this operation without clearing newer hearts again.',true);
  }finally{setBusy(false);}
 }
+function heartControls(){
+ $('resetHearts').disabled=busy||!loaded||!!restoreOperation;
+ $('resetHearts').textContent=resetOperation?'Retry same reset':'Reset hearts';
+ $('restoreHearts').disabled=busy||!loaded||!!resetOperation||(!restoreOperation&&!hearts?.canRestore);
+ $('restoreHearts').textContent=restoreOperation?'Retry same restore':'Restore previous hearts';
+ $('refreshHearts').disabled=busy||!loaded||!!resetOperation||!!restoreOperation;
+}
+async function loadHeartStatus(){
+ try{
+  const data=await api('hearts/status');
+  if(data.ok!==true||!Number.isSafeInteger(data.count)||data.count<0||typeof data.canRestore!=='boolean'||(data.canRestore&&(!Number.isSafeInteger(data.previousCount)||data.previousCount<0||typeof data.resetId!=='string'||!data.resetId)))throw Error('Could not read the saved heart totals.');
+  hearts=data;
+  $('heartStatus').textContent='Current hearts: '+data.count+'. '+(data.canRestore?'Previous total before the last reset: '+data.previousCount+'. Restore keeps new hearts, without counting the same visitor twice.':'No previous reset is available to restore. Resets made before this feature was added cannot be restored.');
+ }catch(e){hearts=null;$('heartStatus').textContent=e.message+' Use Refresh heart totals to check again.';}
+ heartControls();
+}
+async function restoreHearts(){
+ if(busy||!loaded||resetOperation)return;
+ if(!restoreOperation){
+  if(!hearts?.canRestore)return;
+  if(!confirm('Restore the '+hearts.previousCount+' hearts saved before the last reset? New hearts added since then are kept, and the same visitor is counted only once. This takes effect immediately. Your countdown settings and blog hearts stay unchanged.'))return;
+  if(!globalThis.crypto||typeof crypto.randomUUID!=='function'){status('A secure browser connection is required to restore hearts.',true);return;}
+  restoreOperation={operationId:crypto.randomUUID(),confirm:true,expectedResetId:hearts.resetId};
+ }
+ setBusy(true);status('Restoring previous hearts…');
+ try{
+  const result=await api('hearts/restore',restoreOperation);
+  if(result.ok!==true||!Number.isSafeInteger(result.epoch)||!Number.isSafeInteger(result.count)||result.count<0)throw Error('Could not confirm the restore response.');
+  restoreOperation=null;await loadHeartStatus();
+  status('Previous hearts restored. New hearts are kept without duplicates.'+(dirty?' Your unsaved draft changes are still here.':''));
+ }catch(e){
+  if(e.status===409){restoreOperation=null;await loadHeartStatus();status(e.message+' Review the latest heart totals before trying again.',true);}
+  else status(e.message+' Click “Retry same restore” to safely confirm this operation.',true);
+ }finally{setBusy(false);}
+}
 $('resetHearts').addEventListener('click',resetHearts);
+$('restoreHearts').addEventListener('click',restoreHearts);
+$('refreshHearts').addEventListener('click',async()=>{if(busy||resetOperation||restoreOperation)return;setBusy(true);try{await loadHeartStatus();}finally{setBusy(false);}});
 $('previewState').addEventListener('change',tick);
-$('form').addEventListener('input',()=>{dirty=true;preview();status('Unsaved draft changes.');});$('form').addEventListener('submit',event=>{event.preventDefault();write(true);});$('save').addEventListener('click',()=>write(false));$('retry').addEventListener('click',()=>{if(!dirty||confirm('Reload saved settings and discard unsaved changes?'))load();});window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});setInterval(tick,1000);load();
+$('form').addEventListener('input',()=>{dirty=true;preview();status('Unsaved draft changes.');});$('form').addEventListener('submit',event=>{event.preventDefault();write(true);});$('save').addEventListener('click',()=>write(false));$('retry').addEventListener('click',()=>{if(!dirty||confirm('Reload saved settings and discard unsaved changes?'))load();});window.addEventListener('beforeunload',event=>{if(dirty||resetOperation||restoreOperation){event.preventDefault();event.returnValue='';}});setInterval(tick,1000);load();
 
 
