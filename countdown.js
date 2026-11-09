@@ -217,7 +217,7 @@
       if (method === 'POST' && response.status === 409) {
         render(await response.json());
         operation = null;
-        status.textContent = 'Your like changed in another tab. Showing the latest state.';
+        status.textContent = 'The heart count changed. Showing the latest state.';
         return;
       }
       if (!response.ok) throw new Error('Request failed');
