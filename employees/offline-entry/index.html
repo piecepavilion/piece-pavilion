@@ -43,6 +43,17 @@ td img{width:44px;height:44px;object-fit:contain;display:block}
 .dl p{color:var(--slate);margin:6px 0 12px;font-size:.92rem}
 ol{padding-left:20px;color:var(--slate);line-height:1.7}
 .hide{display:none}
+.srch{position:relative;margin-bottom:16px}
+.srch input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 16px;font:700 1rem Nunito}
+.srch input:focus{outline:none;border-color:var(--red)}
+.res{background:#fff;border:1.5px solid var(--line);border-radius:12px;margin-top:6px;max-height:380px;overflow-y:auto;display:none}
+.res.open{display:block}
+.res .it{display:flex;gap:12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.res .it:hover{background:#fff4f4}
+.res img{width:48px;height:48px;object-fit:contain}
+.res .no{font-weight:900;color:var(--red);min-width:90px}
+.res .meta{color:var(--mid);font-size:.8rem}
+.tip{color:var(--mid);font-size:.85rem;margin:-6px 0 14px}
 </style>
 </head>
 <body>
@@ -52,6 +63,11 @@ ol{padding-left:20px;color:var(--slate);line-height:1.7}
   <div class="tabs"><button class="tab on" data-t="entry">Enter inventory</button><button class="tab" data-t="sheet">Spreadsheet &amp; upload help</button></div>
 
   <section id="entry">
+    <div class="card">
+      <h3 style="margin-bottom:8px">Find the BrickLink item number</h3>
+      <div class="srch"><input id="q" placeholder="Search by name or number, e.g. &quot;plate 2 x 4&quot;, &quot;wheel 11mm&quot;, &quot;hot dog&quot;" autocomplete="off"><div class="res" id="res"></div></div>
+      <p class="tip">Click a result to add it as a new row (color pre-filled with its most common color &mdash; change it if needed). Covers parts only; for <strong>sets and minifigs</strong>, enter the number from the box/instructions (sets: 10262-1) and type the name.</p>
+    </div>
     <div class="card">
       <div class="bar">
         <button class="btn" id="add">+ Add row</button>
@@ -143,6 +159,34 @@ $('#xml').onclick=()=>{
   dl(`bricklink-upload-${stamp()}.xml`,`<INVENTORY>\n${items}\n</INVENTORY>`,'application/xml');
 };
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));$('#entry').classList.toggle('hide',b.dataset.t!=='entry');$('#sheet').classList.toggle('hide',b.dataset.t!=='sheet')});
+
+function norm(t){return t.toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()}
+let index=null;
+function buildIndex(){index=[...parts.values()].map(p=>({p,n:norm(p.name),no:String(p.no).toLowerCase()}))}
+function doSearch(){
+  const q=norm($('#q').value),box=$('#res');
+  if(q.length<2){box.classList.remove('open');return}
+  if(!index)buildIndex();
+  const toks=q.split(' ');
+  const out=[];
+  for(const e of index){
+    if(e.no===q){out.unshift(e);continue}
+    if(toks.every(t=>(t.length<3?(' '+e.n+' ').includes(' '+t+' '):(' '+e.n).includes(' '+t))||e.no.startsWith(t))){out.push(e)}
+    if(out.length>=60)break;
+  }
+  out.sort((a,b)=>(b.no===q)-(a.no===q)||(/pr\d|pb\d|^\d+[a-z]*c\d|stk|^\d+(pat|sticker)/i.test(a.p.no)-/pr\d|pb\d|^\d+[a-z]*c\d|stk|^\d+(pat|sticker)/i.test(b.p.no))||(/^duplo/i.test(a.p.name)-/^duplo/i.test(b.p.name))||a.p.name.length-b.p.name.length);
+  box.innerHTML=out.length?out.slice(0,40).map(e=>{const p=e.p;return `<div class="it" data-no="${esc(p.no)}" data-c="${esc(p.img_c??'')}"><img loading="lazy" src="https://img.bricklink.com/ItemImage/PN/${p.img_c??0}/${esc(p.no)}.png" alt="" onerror="this.style.opacity=.15"><span class="no">${esc(p.no)}</span><span>${esc(p.name)}</span></div>`}).join(''):'<div class="it"><span class="meta">No matches. Try fewer or different words, or a part number.</span></div>';
+  box.classList.add('open');
+}
+$('#q').addEventListener('input',doSearch);
+$('#res').addEventListener('click',e=>{
+  const it=e.target.closest('.it');if(!it||!it.dataset.no)return;
+  const cname=(colors.find(c=>String(c.id)===it.dataset.c)||{}).name||'';
+  const last=rows.at(-1),base={...blank(),no:it.dataset.no,color:cname};
+  if(last&&!last.no)rows[rows.length-1]={...last,...base};else rows.push({...base,cond:last?last.cond:'N',bin:last?last.bin:''});
+  save();render();$('#res').classList.remove('open');$('#q').value='';
+  const t=document.querySelectorAll('#rows tr');t[t.length-1].querySelector('[data-k=qty]').focus();
+});
 load();render();
 Promise.all([fetch('/employees/colors/parts.json').then(r=>r.json()),fetch('/employees/colors/catalog.json').then(r=>r.json())]).then(([p,c])=>{
   p.forEach(x=>parts.set(String(x.no),x));colors=Object.values(c.colors).sort((a,b)=>a.name.localeCompare(b.name));render();
