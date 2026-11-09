@@ -259,9 +259,7 @@
   <div class="wrap">
 
     <section class="heart-settings" aria-label="Blog hearts settings">
-      <div><label><input id="blog-hearts-enabled" type="checkbox" disabled aria-describedby="blog-hearts-help"> Show hearts on all blogs</label><p id="blog-hearts-help">Applies to existing and future posts. Hiding hearts keeps all likes and does not change articles or drafts.</p></div>
-      <button id="blog-hearts-save" class="btn btn-secondary" type="button" disabled>Save heart setting</button>
-      <button id="blog-hearts-reload" class="btn btn-ghost" type="button">Reload setting</button>
+      <div><label><input id="blog-hearts-enabled" type="checkbox" disabled aria-describedby="blog-hearts-help"> Show hearts</label><p id="blog-hearts-help">Applies to all blogs. Changes save automatically; existing likes are kept.</p></div>
       <p id="blog-hearts-status" role="status" aria-live="polite">Loading heart setting…</p>
     </section>
     <div class="pill-row" id="pill-row">
@@ -308,40 +306,56 @@
       return data;
     }
 
-    // Separate from article editing and publication. Failed writes must be checked by reload.
-    let heartBusy = false, heartLoaded = false, heartSaved = true;
+    // One autosaving control, independent of article editing and publication.
+    let heartBusy = false, heartLoaded = false;
+    async function heartRequest(enabled) {
+      const save = typeof enabled === 'boolean';
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(API + '/hearts', {method: save ? 'POST' : 'GET', credentials:'same-origin', cache:'no-store', signal:controller.signal, headers: save ? {'Content-Type':'application/json'} : {}, body: save ? JSON.stringify({enabled}) : undefined});
+        if (response.status === 401 || response.status === 403) throw Error('Staff sign-in required. Sign in again, then refresh this page.');
+        const data = await response.json();
+        if (!response.ok || typeof data.enabled !== 'boolean' || (save && data.enabled !== enabled)) throw Error('Could not confirm the heart setting.');
+        return data.enabled;
+      } finally { clearTimeout(timeout); }
+    }
     async function heartSetting(save = false) {
       if (heartBusy || (save && !heartLoaded)) return;
       heartBusy = true;
-      const toggle = $('blog-hearts-enabled'), saveButton = $('blog-hearts-save'), reload = $('blog-hearts-reload'), note = $('blog-hearts-status');
+      const toggle = $('blog-hearts-enabled'), note = $('blog-hearts-status');
       const requested = toggle.checked;
-      toggle.disabled = saveButton.disabled = reload.disabled = true;
-      note.textContent = save ? 'Saving heart setting…' : 'Loading heart setting…';
-      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+      toggle.disabled = true;
+      toggle.setAttribute('aria-busy', 'true');
+      note.textContent = save ? 'Saving…' : 'Loading heart setting…';
       try {
-        const response = await fetch(API + '/hearts', {method: save ? 'POST' : 'GET', credentials:'same-origin', cache:'no-store', signal:controller.signal, headers: save ? {'Content-Type':'application/json'} : {}, body: save ? JSON.stringify({enabled: requested}) : undefined});
-        if (response.status === 401 || response.status === 403) throw Error('Staff sign-in required. Sign in again, then reload this setting.');
-        const data = await response.json();
-        if (!response.ok || typeof data.enabled !== 'boolean' || (save && data.enabled !== requested)) throw Error('Could not confirm the setting. Reload to check the saved state.');
-        heartSaved = data.enabled; toggle.checked = data.enabled; heartLoaded = true;
-        note.textContent = 'Blog hearts are ' + (data.enabled ? 'on' : 'off') + '. Existing likes are kept.';
+        const enabled = await heartRequest(save ? requested : undefined);
+        toggle.checked = enabled; heartLoaded = true;
+        note.textContent = 'Hearts ' + (enabled ? 'on.' : 'off.');
       } catch (error) {
         heartLoaded = false;
-        note.textContent = error.name === 'AbortError' ? 'Request timed out. Reload to check the saved state before trying again.' : error.message;
+        if (save) {
+          note.textContent = 'Checking the saved setting…';
+          try {
+            const enabled = await heartRequest();
+            toggle.checked = enabled; heartLoaded = true;
+            note.textContent = enabled === requested
+              ? 'Hearts ' + (enabled ? 'on.' : 'off.') + ' Saved setting confirmed.'
+              : 'Change was not confirmed. Hearts are currently ' + (enabled ? 'on' : 'off') + '. Try the switch again.';
+          } catch (checkError) {
+            note.textContent = checkError.message.includes('Staff sign-in') ? checkError.message : 'Could not check the saved setting. Refresh this page before trying again.';
+          }
+        } else {
+          note.textContent = error.message.includes('Staff sign-in') ? error.message : 'Could not load the heart setting. Refresh this page to try again.';
+        }
       } finally {
-        clearTimeout(timeout); heartBusy = false; reload.disabled = false; toggle.disabled = !heartLoaded; saveButton.disabled = true;
+        heartBusy = false;
+        toggle.disabled = !heartLoaded;
+        toggle.setAttribute('aria-busy', 'false');
       }
     }
-    $('blog-hearts-enabled').addEventListener('change', () => {
-      $('blog-hearts-save').disabled = !heartLoaded || $('blog-hearts-enabled').checked === heartSaved;
-      $('blog-hearts-status').textContent = 'Unsaved heart setting. Click Save heart setting to apply.';
-    });
-    $('blog-hearts-save').addEventListener('click', () => heartSetting(true));
-    $('blog-hearts-reload').addEventListener('click', () => {
-      if (!heartLoaded || $('blog-hearts-enabled').checked === heartSaved || confirm('Discard the unsaved heart setting?')) heartSetting();
-    });
+    $('blog-hearts-enabled').addEventListener('change', () => heartSetting(true));
     window.addEventListener('beforeunload', event => {
-      if (heartLoaded && $('blog-hearts-enabled').checked !== heartSaved) { event.preventDefault(); event.returnValue = ''; }
+      if (heartBusy) { event.preventDefault(); event.returnValue = ''; }
     });
     heartSetting();
 
