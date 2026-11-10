@@ -67,7 +67,7 @@ def parse_blog_parts():
     for no, img, _alt, nick, name, tip in cards:
         out[no] = {
             "no": no,
-            "nick": nick.strip(),
+            "nick": htmllib.unescape(nick.strip()),
             "name": name.strip(),
             "image_url": img.strip(),
             "tip": tip.strip(),
@@ -635,7 +635,9 @@ INDEX_TMPL = """<!DOCTYPE html>
       const q = qEl.value.trim();
       const qLow = q.toLowerCase();
       const type = typeEl.value, sort = sortEl.value;
-      const terms = qLow.split(/\\s+/).filter(Boolean);
+      // Accept compact dimensions (2x4, 2X4, 2×4) like catalog names (2 x 4).
+      const searchText = qLow.replace(/(\\d)\\s*[x×]\\s*(?=\\d)/g, "$1 x ");
+      const terms = searchText.split(/\\s+/).filter(Boolean);
 
       // No query: hide inventory, show browse grid, hide spotlight.
       if (!q && !type){
