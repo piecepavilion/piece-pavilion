@@ -22,7 +22,7 @@ function config(){
  const date=$('date').value,time=$('time').value;
  if((enabled||date||time)&&(!date||!time))throw Error('Choose both a target date and time.');
  const during=linkConfig('linkLabel','linkUrl','During-countdown'),after=linkConfig('afterLinkLabel','afterLinkUrl','After-countdown');
- return {enabled,heartsEnabled:$('heartsEnabled').checked,title,afterTitle,message,afterMessage,linkLabel:during.label,linkUrl:during.url,afterLinkLabel:after.label,afterLinkUrl:after.url,timeZone,endsAt:date&&time?CountdownTime.toInstant(date,time,timeZone):null};
+ return {enabled,heartsEnabled:$('heartsEnabled').checked,confettiEnabled:$('confettiEnabled').getAttribute('aria-pressed')!=='false',title,afterTitle,message,afterMessage,linkLabel:during.label,linkUrl:during.url,afterLinkLabel:after.label,afterLinkUrl:after.url,timeZone,endsAt:date&&time?CountdownTime.toInstant(date,time,timeZone):null};
 }
 async function api(path,body){
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
@@ -36,8 +36,10 @@ async function api(path,body){
 }
 function setBusy(value){busy=value;$('fields').disabled=value||!loaded;$('retry').disabled=value;heartControls();}
 function showLive(p){$('live').textContent=p&&p.enabled?'Currently published: countdown enabled'+(p.title?' · '+p.title:''):'Currently published: carousel (countdown disabled)';}
-function fill(c){c=c||{};$('enabled').checked=c.enabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;$('title').value=c.title||'';$('afterTitle').value=c.afterTitle||'';$('message').value=c.message||'';$('afterMessage').value=c.afterMessage||'';['linkLabel','linkUrl','afterLinkLabel','afterLinkUrl'].forEach(id=>$(id).value=typeof c[id]==='string'?c[id]:'');$('zone').value=c.timeZone||'UTC';$('date').value='';$('time').value='';if(c.endsAt){const local=CountdownTime.localFields(c.endsAt,$('zone').value);$('date').value=local.date;$('time').value=local.time;}dirty=false;preview();}
+function fill(c){c=c||{};$('enabled').checked=c.enabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;setConfetti(c.confettiEnabled!==false);$('title').value=c.title||'';$('afterTitle').value=c.afterTitle||'';$('message').value=c.message||'';$('afterMessage').value=c.afterMessage||'';['linkLabel','linkUrl','afterLinkLabel','afterLinkUrl'].forEach(id=>$(id).value=typeof c[id]==='string'?c[id]:'');$('zone').value=c.timeZone||'UTC';$('date').value='';$('time').value='';if(c.endsAt){const local=CountdownTime.localFields(c.endsAt,$('zone').value);$('date').value=local.date;$('time').value=local.time;}dirty=false;preview();}
 async function load(){if(busy)return;setBusy(true);$('retry').hidden=true;try{const data=await api('get');fill(data.draft||data.published);showLive(data.published);loaded=true;await loadHeartStatus();status('Saved settings loaded.');}catch(e){status(e.message,true);$('retry').hidden=false;}finally{setBusy(false);}}
+function setConfetti(enabled){$('confettiEnabled').setAttribute('aria-pressed',String(enabled));$('confettiEnabled').textContent='Confetti '+(enabled?'on':'off');$('previewConfetti').textContent=enabled?'Confetti on after the timer ends.':'Confetti off after the timer ends.';}
+$('confettiEnabled').addEventListener('click',()=>{if(busy||!loaded)return;setConfetti($('confettiEnabled').getAttribute('aria-pressed')==='false');dirty=true;preview();status('Unsaved draft changes. Publish to apply your confetti setting.');});
 function preview(){
  $('previewTitle').textContent=$('title').value.trim()||'Countdown title';$('previewMessage').textContent=$('message').value;$('preview').classList.toggle('off',!$('enabled').checked);
  try{const c=config();target=c.endsAt?Date.parse(c.endsAt):null;$('previewNote').textContent=!c.enabled?'Disabled draft: publishing will show the carousel.':c.endsAt?'Target: '+new Date(c.endsAt).toLocaleString(undefined,{timeZone:c.timeZone,timeZoneName:'short'})+'.':'';}catch(e){target=null;$('previewNote').textContent=e.message;}tick();
