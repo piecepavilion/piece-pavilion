@@ -52,7 +52,8 @@
       updateFallDistance();
     }
     updateMotion();
-    if (motion.matches || confetti.childElementCount) return;
+    if (active.confettiEnabled === false || motion.matches) { confetti.replaceChildren(); return; }
+    if (confetti.childElementCount) return;
     var colors = ['#f3c22d','#5db6ef','#f2779d','#9cddac','#be9cf0'];
     for (var i=0;i<64;i++) {
       var piece=document.createElement('i');
@@ -87,7 +88,7 @@
     if (!config || config.enabled!==true || !Number.isFinite(Date.parse(config.endsAt))) {
       active=null; updateLink(false); lastKey=''; box.hidden=true; carousel.hidden=false; clearCelebration(); return;
     }
-    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone,config.linkLabel,config.linkUrl,config.afterLinkLabel,config.afterLinkUrl,config.heartsEnabled]);
+    var key=JSON.stringify([config.endsAt,config.title,config.message,config.afterTitle,config.afterMessage,config.timeZone,config.linkLabel,config.linkUrl,config.afterLinkLabel,config.afterLinkUrl,config.heartsEnabled,config.confettiEnabled]);
     if (key===lastKey) { tick(); return; }
     clearCelebration(); lastKey=key; active=config;
     title.textContent=typeof config.title==='string'?config.title:'Countdown';
