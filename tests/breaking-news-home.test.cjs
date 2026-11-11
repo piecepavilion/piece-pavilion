@@ -70,7 +70,7 @@ test('image text and editable blog snapshot remain independent, safe and optiona
 test('heading motion is opt-in, red throughout and honors reduced motion',()=>{
  const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');
  assert.match(css,/\.breaking-motion \.breaking-label/);assert.match(css,/prefers-reduced-motion:reduce/);assert.match(css,/animation:none!important/);assert.match(css,/@keyframes breaking-red-sweep/);
- const frames=css.split('@keyframes breaking-red-sweep')[1].split('@media')[0];assert.doesNotMatch(frames,/opacity|visibility|display/);
+ const frames=css.split('@keyframes breaking-red-sweep')[1].split('@media')[0];assert.doesNotMatch(frames,/visibility|display/);
  const api=renderer(),box=el();api.render(box,{});assert.equal(box.classList.contains('breaking-motion'),false);
 });
 
@@ -108,4 +108,11 @@ test('safe background colors keep original maroon by default and body contrast a
  function contrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
  for(const color of ['#ffffff','#000000','#ff0000','#00ff00','#0000ff','#777777','#888888','#ffff00','#00ffff','#ff00ff']){const p=api.palette(color);assert.equal(p.background,color);assert.ok(contrast(color,p.ink)>=4.5);assert.ok(contrast(color,p.heading)>=3);assert.ok(contrast(color,p.sweep)>=3);}
  const box=el(),vars={};box.style.setProperty=(k,v)=>vars[k]=v;api.render(box,{backgroundColor:'#ffffff'});assert.equal(vars['--breaking-background'],'#ffffff');assert.equal(vars['--breaking-ink'],'#000000');api.render(box,{backgroundColor:'url(https://bad.example/)'});assert.equal(vars['--breaking-background'],api.palette().background);
+});
+
+test('subtle heading pulse stays visible and preserves large-text contrast',()=>{
+ const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');assert.match(css,/breaking-red-pulse 2.8s ease-in-out infinite/);assert.match(css,/@keyframes breaking-red-pulse\{0%,100%\{opacity:1;[^}]+\}50%\{opacity:\.82;[^}]+\}\}/);
+ const api=renderer();function lum(c){let a=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;}function mix(f,b){return '#'+[1,3,5].map(i=>Math.round(parseInt(f.slice(i,i+2),16)*.82+parseInt(b.slice(i,i+2),16)*.18).toString(16).padStart(2,'0')).join('');}function contrast(a,b){const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+ for(let r=0;r<=255;r+=17)for(let g=0;g<=255;g+=17)for(let b=0;b<=255;b+=17){const bg='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''),p=api.palette(bg);for(const fg of [p.heading,p.sweep])assert.ok(contrast(mix(fg,bg),bg)>=3,bg+' / '+fg);}
+ const p=api.palette();for(const bg of ['#862d3c','#4e1725'])for(const fg of [p.heading,p.sweep])assert.ok(contrast(mix(fg,bg),bg)>=3);
 });
