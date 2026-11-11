@@ -1,18 +1,18 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const {validate,safeUrl,validateBlog,extractBlogs}=require('../employees/breaking-news/editor.js');
+const {validate,safeUrl,validateBlog,extractBlogs,cloneBlog,blogCustomized}=require('../employees/breaking-news/editor.js');
 const defaults=()=>({enabled:false,message:'',imageUrl:'',imageAlt:'',imageWidth:100,linkLabel:'',linkUrl:'',heartsEnabled:true});
 test('defaults and full card validation',()=>{assert.deepEqual(validate(defaults()),defaults());assert.ok(validate({...defaults(),enabled:true,message:'New!\nDetails',imageUrl:'https://example.org/a.png',imageAlt:'Bricks',imageWidth:20,linkLabel:'More',linkUrl:'http://example.org'}));});
 test('rejects invalid image sizes, URLs, empty enabled cards, unmatched links, missing alt and markup',()=>{
  for(const change of [{imageWidth:19},{imageWidth:101},{imageWidth:30.5},{enabled:true},{imageUrl:'http://example.org/a.png',imageAlt:'Image'},{imageUrl:'https://example.org/a.png'},{message:'<script>x</script>'},{message:'x'.repeat(1201)},{imageAlt:'x'.repeat(201)},{linkLabel:'More'},{linkUrl:'https://example.org'},{linkLabel:'More',linkUrl:'javascript:alert(1)'},{linkLabel:'More',linkUrl:'https://a:b@example.org'}])assert.throws(()=>validate({...defaults(),...change}),JSON.stringify(change));
  for(const url of ['https://example.org/<img>', 'https://example.org/\\path'])assert.throws(()=>safeUrl(url));assert.equal(safeUrl('http://example.org'),'http://example.org');assert.throws(()=>safeUrl('http://example.org',true));
 });
-function harness(respond){
- const ids=['contentType','customFields','blogControls','blogSelect','refreshBlogs','blogStatus','form','fields','message','imageUrl','imageAlt','imageWidth','linkLabel','linkUrl','enabled','heartsEnabled','status','reload','save','publish','upload','preview','previewHeart','previewNote','widthValue','live'];
- const els=Object.fromEntries(ids.map(id=>[id,{id,value:id==='imageWidth'?'100':id==='contentType'?'custom':'',checked:id==='heartsEnabled',disabled:false,files:[],classList:{toggle(){}},events:{},children:[],replaceChildren(){this.children=[];},append(child){this.children.push(child);},addEventListener(name,fn){this.events[name]=fn;}}]));
+function harness(respond,parsedDoc){
+ const ids=['motionYes','motionNo','title','motionEnabled','imageText','blogTitle','blogExcerpt','blogImageUrl','blogImageAlt','blogImageText','blogLinkLabel','blogDestination','blogUpload','blogFields','resetBlog','contentType','customFields','blogControls','blogSelect','refreshBlogs','blogStatus','form','fields','message','imageUrl','imageAlt','imageWidth','linkLabel','linkUrl','enabled','heartsEnabled','status','reload','save','publish','upload','preview','previewHeart','previewNote','widthValue','live'];
+ const els=Object.fromEntries(ids.map(id=>[id,{id,value:id==='imageWidth'?'100':id==='contentType'?'custom':'',checked:id==='heartsEnabled',disabled:false,files:[],classList:{toggle(){}},events:{},children:[],replaceChildren(){this.children=[];},append(child){this.children.push(child);},setAttribute(name,value){this[name]=value;},removeAttribute(name){delete this[name];},addEventListener(name,fn){this.events[name]=fn;}}]));
  const requests=[],window={events:{},PPBreakingNews:{render(){}},addEventListener(name,fn){this.events[name]=fn;}};
  let confirmed=false;
- const ctx={URL,AbortController,FormData,setTimeout,clearTimeout,document:{getElementById:id=>els[id],createElement:()=>({})},window,location:{origin:'https://example.org'},confirm:()=>confirmed,fetch:async(path,opts)=>{requests.push({path,opts});return respond(path,opts,requests.length);}};
+ const ctx={DOMParser:class{parseFromString(){return parsedDoc;}},URL,AbortController,FormData,setTimeout,clearTimeout,document:{getElementById:id=>els[id],createElement:()=>({})},window,location:{origin:'https://example.org'},confirm:()=>confirmed,fetch:async(path,opts)=>{requests.push({path,opts});return respond(path,opts,requests.length);}};
  vm.runInNewContext(fs.readFileSync(require.resolve('../employees/breaking-news/editor.js'),'utf8'),ctx);
  return {els,requests,window,confirm(v){confirmed=v;},flush:()=>new Promise(resolve=>setImmediate(resolve))};
 }
@@ -57,3 +57,32 @@ test('mode switching and failed list refresh preserve custom writing and saved b
  h.els.save.events.click();await h.flush();const payload=JSON.parse(h.requests.at(-1).opts.body);assert.equal(payload.contentType,'blog');assert.equal(payload.blog.url,saved.blog.url);assert.equal(payload.message,saved.message);assert.equal(payload.linkLabel,saved.linkLabel);
  h.els.contentType.value='custom';h.els.contentType.events.change();assert.equal(h.els.customFields.disabled,false);assert.equal(h.els.customFields.hidden,false);assert.equal(h.els.message.value,saved.message);assert.equal(h.els.blogSelect.value,saved.blog.url);
 });
+test('new presentation fields validate and old data remains compatible',()=>{
+ assert.ok(validate(defaults()));assert.ok(validateBlog(blog()));
+ const c={...defaults(),imageText:'New arrivals',motionEnabled:true,blog:{...blog(),imageText:'From the blog',linkLabel:'Read the story'}};assert.equal(validate(c).blog.linkLabel,'Read the story');
+ for(const imageText of ['x'.repeat(121),'<b>bad</b>']){assert.throws(()=>validate({...c,imageText}));assert.throws(()=>validateBlog({...blog(),imageText}));}
+ assert.throws(()=>validate({...c,motionEnabled:'yes'}));assert.throws(()=>validateBlog({...blog(),linkLabel:'x'.repeat(81)}));assert.equal(validateBlog({...blog(),linkLabel:''}).linkLabel,'');
+ const source=blog(),snapshot=cloneBlog(source);assert.equal(snapshot.imageText,'');assert.equal(snapshot.linkLabel,'Read article');snapshot.title='Changed';assert.equal(source.title,'An article');assert.equal(blogCustomized(snapshot,source),true);assert.equal(blogCustomized(cloneBlog(source),source),false);
+});
+function articleDoc(){return {querySelectorAll:()=>['first','second'].map(slug=>({getAttribute:()=>'/blog/'+slug+'/',querySelector:selector=>selector==='h2'?{textContent:slug+' title'}:selector==='p'?{textContent:slug+' excerpt'}:{getAttribute:()=>'/thumb/'+slug+'.png'}}))};}
+function articleHarness(){return harness(path=>path.endsWith('/get')?response({draft:{...defaults(),contentType:'blog',blog:null,imageText:'Custom overlay',message:'Custom writing'},published:null}):path==='/blog/'?{ok:true,text:async()=>'<html></html>'}:path.endsWith('/upload')?response({url:'/magazine/img/new-image'}):response({ok:true,saved:defaults()}),articleDoc());}
+test('blog edits preserve destination, confirm reset/reselection and leave article defaults untouched',async()=>{
+ const h=articleHarness();await h.flush();h.els.blogSelect.value='https://piecepavilion.com/blog/first/';h.els.blogSelect.events.change();assert.equal(h.els.blogTitle.value,'first title');
+ for(const [id,value] of [['blogTitle','My headline'],['blogExcerpt','My wording'],['blogImageText','My overlay'],['blogLinkLabel','Explore']]){h.els[id].value=value;h.els.form.events.input({target:h.els[id]});}
+ h.els.motionEnabled.checked=true;h.els.save.events.click();await h.flush();const payload=JSON.parse(h.requests.at(-1).opts.body);assert.equal(payload.blog.title,'My headline');assert.equal(payload.blog.url,'https://piecepavilion.com/blog/first/');assert.equal(payload.blog.linkLabel,'Explore');assert.equal(payload.blog.imageText,'My overlay');assert.equal(payload.imageText,'Custom overlay');assert.equal(payload.motionEnabled,true);
+ h.els.blogSelect.value='https://piecepavilion.com/blog/second/';h.els.blogSelect.events.change();assert.equal(h.els.blogSelect.value,'https://piecepavilion.com/blog/first/');assert.equal(h.els.blogTitle.value,'My headline');
+ h.els.resetBlog.events.click();assert.equal(h.els.blogTitle.value,'My headline');h.confirm(true);h.els.resetBlog.events.click();assert.equal(h.els.blogTitle.value,'first title');assert.equal(h.els.blogImageText.value,'');assert.equal(h.els.blogLinkLabel.value,'Read article');
+ h.els.blogTitle.value='Another edit';h.els.form.events.input({target:h.els.blogTitle});h.els.blogSelect.value='https://piecepavilion.com/blog/second/';h.els.blogSelect.events.change();assert.equal(h.els.blogTitle.value,'second title');assert.equal(h.els.message.value,'Custom writing');
+ h.els.blogSelect.value='https://piecepavilion.com/blog/first/';h.els.blogSelect.events.change();assert.equal(h.els.blogTitle.value,'first title');
+});
+test('blog upload updates only its snapshot and preserves custom image and overlays',async()=>{
+ const h=articleHarness();await h.flush();h.els.blogSelect.value='https://piecepavilion.com/blog/first/';h.els.blogSelect.events.change();h.els.imageUrl.value='https://example.org/custom.png';h.els.blogImageText.value='Blog overlay';h.els.form.events.input({target:h.els.blogImageText});h.els.blogUpload.files=[new File(['image'],'blog.png',{type:'image/png'})];await h.els.blogUpload.events.change();assert.equal(h.els.blogImageUrl.value,'https://example.org/magazine/img/new-image');assert.equal(h.els.imageUrl.value,'https://example.org/custom.png');assert.equal(h.els.blogImageText.value,'Blog overlay');assert.equal(h.els.imageText.value,'Custom overlay');assert.equal(h.requests.at(-1).path,'/employees/api/magazine/upload');assert.equal(h.els.blogUpload.disabled,false);
+});
+
+test('optional custom title validates, defaults blank and survives mode switching',async()=>{
+ assert.ok(validate({...defaults(),enabled:true,title:'My headline'}));assert.equal(validate({...defaults(),contentType:'blog',enabled:true,title:'Custom title',blog:blog()}).blog.title,'An article');assert.ok(validate(defaults()));for(const title of ['x'.repeat(201),'<h1>HTML</h1>','bad\u0000title'])assert.throws(()=>validate({...defaults(),title}));
+ const h=harness(path=>path.endsWith('/get')?response({draft:{...defaults(),title:'My title',blog:blog()},published:null}):path==='/blog/'?response({},503):response({ok:true,saved:defaults()}));await h.flush();assert.equal(h.els.title.value,'My title');h.els.contentType.value='blog';h.els.contentType.events.change();await h.flush();assert.equal(h.els.title.value,'My title');h.els.save.events.click();await h.flush();assert.equal(JSON.parse(h.requests.at(-1).opts.body).title,'My title');h.els.contentType.value='custom';h.els.contentType.events.change();assert.equal(h.els.title.value,'My title');
+ const old=harness(()=>response({draft:defaults(),published:null}));await old.flush();assert.equal(old.els.title.value,'');
+});
+
+test("Blinking Yes and No buttons preview without publishing and preserve the choice",async()=>{const h=harness(()=>response({draft:defaults(),published:null}));await h.flush();assert.equal(h.els.motionNo["aria-pressed"],"true");h.els.motionYes.events.click();assert.equal(h.els.motionEnabled.checked,true);assert.equal(h.els.motionYes["aria-pressed"],"true");assert.equal(h.els.motionNo["aria-pressed"],"false");assert.equal(h.requests.length,1);h.els.motionNo.events.click();assert.equal(h.els.motionEnabled.checked,false);assert.equal(h.els.motionNo["aria-pressed"],"true");assert.equal(h.requests.length,1);});

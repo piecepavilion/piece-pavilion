@@ -6,7 +6,7 @@ function renderer(){const c={window:{},URL};vm.runInNewContext(shared,c);return 
 test('safe URLs and text-only renderer; optional image sizing removal and image failure',()=>{
  const api=renderer(),box=el();api.render(box,{message:'<script>not executable</script>',imageUrl:'https://example.com/x.png',imageAlt:'Photo',imageWidth:45,linkLabel:'Read',linkUrl:'https://example.com/'});
  assert.equal(box.nodes['[data-breaking-message]'].textContent,'<script>not executable</script>');
- const im=box.nodes['[data-breaking-image]'];assert.equal(im.src,'https://example.com/x.png');assert.equal(im.style.width,'45%');assert.equal(im.hidden,false);im.onerror();assert.equal(im.hidden,true);
+ const im=box.nodes['[data-breaking-image]'];assert.equal(im.src,'https://example.com/x.png');assert.equal(box.nodes['[data-breaking-media]'].style.width,'45%');assert.equal(im.style.width,'100%');assert.equal(im.hidden,false);im.onerror();assert.equal(im.hidden,true);
  api.render(box,{imageUrl:'javascript:x',linkLabel:'Bad',linkUrl:'javascript:x'});assert.equal(im.getAttribute('src'),null);assert.equal(im.hidden,true);assert.equal(box.nodes['[data-breaking-link]'].hidden,true);
  for(const url of ['javascript:alert(1)','data:image/png;base64,a','https://user:pass@example.com/a','https://example.com/a b'])assert.equal(api.safeUrl(url,true),'');
  assert.equal(api.safeUrl('http://example.com/x',true),'');assert.equal(api.safeUrl('http://example.com/x'),'http://example.com/x');
@@ -46,7 +46,7 @@ test('blog renders only selected snapshot and custom content returns unchanged',
  assert.equal(box.nodes['[data-breaking-headline]'].textContent,'Selected article');
  assert.equal(box.nodes['[data-breaking-message]'].textContent,'Article summary');
  assert.equal(box.nodes['[data-breaking-link]'].textContent,'Read article');
- assert.equal(box.nodes['[data-breaking-image]'].style.width,'60%');
+ assert.equal(box.nodes['[data-breaking-media]'].style.width,'60%');
  api.render(box,{...custom,contentType:'blog',blog:null});
  assert.equal(box.nodes['[data-breaking-message]'].textContent,'');
  assert.equal(box.nodes['[data-breaking-link]'].hidden,true);
@@ -54,4 +54,36 @@ test('blog renders only selected snapshot and custom content returns unchanged',
  assert.equal(box.nodes['[data-breaking-headline]'].hidden,true);
  assert.equal(box.nodes['[data-breaking-message]'].textContent,'Private draft writing');
  assert.equal(box.nodes['[data-breaking-link]'].textContent,'Custom link');
+});
+
+test('image text and editable blog snapshot remain independent, safe and optional',()=>{
+ const api=renderer(),box=el(),blog={title:'Edited card headline',excerpt:'Edited card summary',url:'https://piecepavilion.com/blog/selected/',imageUrl:'https://piecepavilion.com/thumb/selected.png',imageAlt:'Alternate crop',imageText:'Blog image words',linkLabel:'See the full story'};
+ const custom={message:'Custom writing',imageText:'Custom image words',imageUrl:'https://example.com/x.png',imageAlt:'Photo',motionEnabled:true};
+ api.render(box,{...custom,contentType:'blog',blog});
+ assert.equal(box.nodes['[data-breaking-headline]'].textContent,blog.title);assert.equal(box.nodes['[data-breaking-message]'].textContent,blog.excerpt);assert.equal(box.nodes['[data-breaking-link]'].textContent,blog.linkLabel);assert.equal(box.nodes['[data-breaking-image-text]'].textContent,blog.imageText);assert.equal(box.nodes['[data-breaking-media]'].hidden,false);assert.equal(box.classList.contains('breaking-motion'),true);
+ api.render(box,{...custom,motionEnabled:false});assert.equal(box.nodes['[data-breaking-image-text]'].textContent,custom.imageText);assert.equal(box.classList.contains('breaking-motion'),false);
+ api.render(box,{...custom,imageUrl:''});assert.equal(box.nodes['[data-breaking-media]'].hidden,true);assert.equal(box.nodes['[data-breaking-image-text]'].hidden,true);
+ api.render(box,{...custom,imageText:'<img onerror=alert(1)>'});assert.equal(box.nodes['[data-breaking-image-text]'].textContent,'<img onerror=alert(1)>');
+ box.nodes['[data-breaking-image]'].onerror();assert.equal(box.nodes['[data-breaking-media]'].hidden,true);
+ box.nodes['[data-breaking-image]'].onload();assert.equal(box.nodes['[data-breaking-media]'].hidden,false);
+});
+test('heading motion is opt-in, red throughout and honors reduced motion',()=>{
+ const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');
+ assert.match(css,/\.breaking-motion \.breaking-label/);assert.match(css,/prefers-reduced-motion:reduce/);assert.match(css,/animation:none!important/);assert.match(css,/@keyframes breaking-red-sweep/);
+ const frames=css.split('@keyframes breaking-red-sweep')[1].split('@media')[0];assert.doesNotMatch(frames,/opacity|visibility|display/);
+ const api=renderer(),box=el();api.render(box,{});assert.equal(box.classList.contains('breaking-motion'),false);
+});
+
+test('custom title is separate from the permanent heading and selected blog title',()=>{
+ const api=renderer(),box=el(),c={title:'My own title',message:'My writing',contentType:'custom',blog:{title:'Original blog title',excerpt:'Blog words',url:'https://piecepavilion.com/blog/selected/',imageUrl:'',imageAlt:''}};
+ api.render(box,c);assert.equal(box.nodes['[data-breaking-headline]'].textContent,'My own title');assert.equal(box.nodes['[data-breaking-headline]'].hidden,false);
+ api.render(box,{...c,contentType:'blog'});assert.equal(box.nodes['[data-breaking-headline]'].textContent,'Original blog title');
+ api.render(box,{...c,title:''});assert.equal(box.nodes['[data-breaking-headline]'].hidden,true);
+});
+
+test('content fitting uses smaller readable text without changing card dimensions or truncating content',()=>{
+ const api=renderer(),box=el(),area=box.querySelector('.breaking-content'),vars={};box.style.setProperty=(k,v)=>vars[k]=v;area.clientHeight=210;area.clientWidth=295;Object.defineProperty(area,'scrollHeight',{get:()=>Number.parseFloat(vars['--breaking-body-size']||'14')>12.5?260:200});
+ api.fitContent(box);assert.ok(parseFloat(vars['--breaking-body-size'])>=12);assert.ok(parseFloat(vars['--breaking-body-size'])<=12.5);assert.ok(parseFloat(vars['--breaking-title-size'])>=15);assert.equal(box.style.height,undefined);
+ Object.defineProperty(box.querySelector('.breaking-message'),'clientHeight',{value:0});
+ const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');assert.match(css,/overflow-y:auto/);assert.doesNotMatch(css,/line-clamp|text-overflow:ellipsis/);
 });
