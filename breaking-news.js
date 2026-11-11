@@ -15,7 +15,7 @@
     var rgb = [1,3,5].map(function (i) { var v = parseInt(color.slice(i,i+2),16)/255; return v <= .04045 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); });
     var light = .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];
     var darkText = (light+.05)/.05 >= 1.05/(light+.05);
-    return { background: color, ink: darkText ? '#000000' : '#ffffff', link: darkText ? '#000000' : '#ffffff', heading: darkText ? '#5c071b' : '#ffe0e5', sweep: darkText ? '#39000e' : '#fff0f3', border: darkText ? '#00000030' : '#ffffff30', scrollbar: darkText ? '#00000066' : '#ffffff66' };
+    return { background: color, ink: darkText ? '#000000' : '#ffffff', link: darkText ? '#000000' : '#ffffff', heading: darkText ? '#39000e' : '#fff0f3', sweep: darkText ? '#26000a' : '#fff6f7', border: darkText ? '#00000030' : '#ffffff30', scrollbar: darkText ? '#00000066' : '#ffffff66' };
   }
   function applyPalette(box, raw) {
     var colors = palette(raw);
@@ -98,5 +98,5 @@
     if (link.hidden) link.removeAttribute('href'); else link.href = href;
     watchSize(box); scheduleFit(box);
   }
-  root.PPBreakingNews = { render: render, safeUrl: safeUrl, fitContent: fitContent, palette: palette };
+  root.PPBreakingNews = { render: render, safeUrl: safeUrl, fitContent: fitContent, palette: palette, applyPalette: applyPalette };
 })(typeof window !== 'undefined' ? window : globalThis);

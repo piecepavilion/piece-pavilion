@@ -61,6 +61,10 @@ function controls(){ $('fields').disabled=busy||!loaded;for(const id of ['save',
 function config(){const c={backgroundColor:$('backgroundColor').value,motionEnabled:$('motionEnabled').checked,contentType:$('contentType').value,blog:selectedBlog,enabled:$('enabled').checked,heartsEnabled:$('heartsEnabled').checked,imageWidth:Number($('imageWidth').value)};for(const name of names)c[name]=$(name).value.trim();return c;}
 function preview(){
  const c=config();$('colorValue').textContent=c.backgroundColor;$('motionYes').setAttribute('aria-pressed',String(c.motionEnabled));$('motionNo').setAttribute('aria-pressed',String(!c.motionEnabled));$('widthValue').textContent=c.imageWidth+'%';
+ window.PPBreakingNews.applyPalette($('appearancePreview'),c.backgroundColor);
+ $('appearancePreview').classList.toggle('breaking-motion',c.motionEnabled);
+ const reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ $('motionStatus').textContent=(c.motionEnabled?'On (preview below)':'Off')+(reduced?' · Reduced motion is enabled on your device; the heading stays still.':'');
  window.PPBreakingNews.render($('preview'),c);
  $('previewHeart').hidden=!c.heartsEnabled;
  $('previewNote').textContent=c.enabled?'Publishing this draft replaces the homepage countdown.':'Off: publishing restores your existing countdown or carousel. The draft card is shown below.';
@@ -129,6 +133,7 @@ async function loadBlogs(){
  }catch(error){$('blogStatus').textContent=(error.name==='AbortError'?'Loading blogs timed out.':error.message)+' Your saved selection and custom writing are kept. Use Refresh blog list to retry.';}
  finally{clearTimeout(timer);blogBusy=false;controls();}
 }
+if(typeof window.matchMedia==='function'){const media=window.matchMedia('(prefers-reduced-motion: reduce)');if(typeof media.addEventListener==='function')media.addEventListener('change',()=>{if(loaded)preview();});}
 $('resetColor').addEventListener('click',()=>{if(busy||!loaded)return;$('backgroundColor').value=DEFAULT_BACKGROUND;edited();});
 for(const [id,value] of [['motionYes',true],['motionNo',false]])$(id).addEventListener('click',()=>{if(busy||!loaded)return;$('motionEnabled').checked=value;edited();});
 $('contentType').addEventListener('change',()=>{controls();edited();if($('contentType').value==='blog'&&!blogsLoaded)loadBlogs();});
