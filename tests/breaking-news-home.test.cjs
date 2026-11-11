@@ -101,3 +101,11 @@ test('completed countdown blinking state clears for future dates, disabled card 
  h.state.news.enabled=true;h.refresh();await flush();assert.equal(h.box.classList.contains('countdown-complete'),false);assert.equal(h.box.hidden,true);
  h.state.news.enabled=false;h.state.countdown.enabled=false;h.refresh();await flush();assert.equal(h.box.classList.contains('countdown-complete'),false);
 });
+
+test('safe background colors keep original maroon by default and body contrast at least 4.5',()=>{
+ const api=renderer();assert.equal(api.palette().background,'linear-gradient(145deg,#862d3c,#4e1725 85%)');assert.equal(api.palette('invalid').background,api.palette().background);assert.equal(api.palette('#862D3C').background,api.palette().background);
+ function luminance(color){const c=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+ function contrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+ for(const color of ['#ffffff','#000000','#ff0000','#00ff00','#0000ff','#777777','#888888','#ffff00','#00ffff','#ff00ff']){const p=api.palette(color);assert.equal(p.background,color);assert.ok(contrast(color,p.ink)>=4.5);assert.ok(contrast(color,p.heading)>=3);assert.ok(contrast(color,p.sweep)>=3);}
+ const box=el(),vars={};box.style.setProperty=(k,v)=>vars[k]=v;api.render(box,{backgroundColor:'#ffffff'});assert.equal(vars['--breaking-background'],'#ffffff');assert.equal(vars['--breaking-ink'],'#000000');api.render(box,{backgroundColor:'url(https://bad.example/)'});assert.equal(vars['--breaking-background'],api.palette().background);
+});
