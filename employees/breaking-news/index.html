@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Breaking News editor · Piece Pavilion Staff</title>
-<link rel="stylesheet" href="/countdown.css"><link rel="stylesheet" href="/breaking-news.css?v=20261111-blog"><link rel="stylesheet" href="editor.css?v=20261111-blog">
-<script defer src="/breaking-news.js?v=20261111-blog"></script><script defer src="editor.js?v=20261111-blog"></script>
+<link rel="stylesheet" href="/countdown.css"><link rel="stylesheet" href="/breaking-news.css?v=20261111-refine1"><link rel="stylesheet" href="editor.css?v=20261111-refine1">
+<script defer src="/breaking-news.js?v=20261111-refine1"></script><script defer src="editor.js?v=20261111-refine1"></script>
 </head>
 <body><main>
 <h1>Breaking News</h1><p class="intro">Post a quick homepage update. Save draft keeps it private; Publish applies your changes.</p>
@@ -14,12 +14,25 @@
 <p class="help">Replaces the countdown in the same spot. Turn off and Publish to restore your unchanged countdown or carousel. Countdown settings and existing hearts are kept.</p>
 <label for="contentType">Content to show</label><select id="contentType" aria-describedby="contentHelp"><option value="custom">Custom writing</option><option value="blog">Feature a blog</option></select>
 <p class="help" id="contentHelp">Choose one for this homepage spot. Switching keeps your custom writing and selected blog saved separately.</p>
-<section id="blogControls" hidden><label for="blogSelect">Published blog</label><select id="blogSelect"><option value="">Choose a blog…</option></select><button id="refreshBlogs" type="button">Refresh blog list</button><p id="blogStatus" class="help" role="status" aria-live="polite">Choose a published article. Its image, title, excerpt and Read article link are filled automatically.</p></section>
-<fieldset id="customFields"><legend class="sr-only">Custom writing</legend><h2>Optional image</h2><label for="upload">Upload an image</label><input id="upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-describedby="uploadHelp">
+<section id="blogControls" hidden><label for="blogSelect">Published blog</label><select id="blogSelect"><option value="">Choose a blog…</option></select><button id="refreshBlogs" type="button">Refresh blog list</button><p id="blogStatus" class="help" role="status" aria-live="polite">Choose a published article. Its image, title, excerpt and Read article link are filled automatically.</p>
+<fieldset id="blogFields" disabled><legend class="sr-only">Homepage blog card</legend>
+<p class="help">These edits change only the homepage card, not the original blog. The article destination stays the same.</p>
+<label for="blogTitle">Card title</label><input id="blogTitle" maxlength="200">
+<label for="blogExcerpt">Card text</label><textarea id="blogExcerpt" rows="5" maxlength="1200"></textarea>
+<label for="blogUpload">Upload a card image</label><input id="blogUpload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-describedby="blogUploadHelp"><p id="blogUploadHelp" class="help">JPG, PNG, WebP or GIF, up to 8 MB. Uploaded image links are public if shared.</p>
+<label for="blogImageUrl">Card image URL</label><input id="blogImageUrl" type="url" maxlength="2048" placeholder="https://example.com/photo.jpg"><p class="help">HTTPS only. Clear to hide the card image.</p>
+<label for="blogImageAlt">Card image description</label><input id="blogImageAlt" maxlength="200">
+<label for="blogImageText">Text on image (optional)</label><input id="blogImageText" maxlength="120" aria-describedby="blogOverlayHelp"><p id="blogOverlayHelp" class="help">A short caption over the image. It appears only when the card has an image.</p>
+<label for="blogLinkLabel">Article button text</label><input id="blogLinkLabel" maxlength="80" placeholder="Read article" aria-describedby="blogLinkHelp"><p id="blogLinkHelp" class="help">Leave blank to hide the article link.</p>
+<p class="help">Article destination: <a id="blogDestination" target="_blank" rel="noopener noreferrer"></a></p>
+<button id="resetBlog" type="button">Reset to article defaults</button>
+</fieldset></section>
+<fieldset id="customFields"><legend class="sr-only">Custom writing</legend><label for="title">Your title (optional)</label><input id="title" maxlength="200" aria-describedby="titleHelp"><p id="titleHelp" class="help">Your own headline beneath Breaking News. Leave blank to show only the Breaking News heading.</p><h2>Optional image</h2><label for="upload">Upload an image</label><input id="upload" type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-describedby="uploadHelp">
 <p id="uploadHelp" class="help">JPG, PNG, WebP or GIF, up to 8 MB. Uploaded image links are public if shared. Uploading does not publish this card.</p>
 <label for="imageUrl">Or paste an image URL</label><input id="imageUrl" type="url" maxlength="2048" placeholder="https://example.com/photo.jpg" autocomplete="off" aria-describedby="imageHelp">
 <p id="imageHelp" class="help">Use a full HTTPS address. Clear this field to remove the image.</p>
 <label for="imageAlt">Image description</label><input id="imageAlt" maxlength="200" placeholder="Describe the image for visitors using a screen reader">
+<label for="imageText">Text on image (optional)</label><input id="imageText" maxlength="120"><p class="help">A short caption over the image. It appears only when the card has an image.</p>
 <label for="message">Text below the image</label><textarea id="message" rows="7" maxlength="1200" placeholder="Paste or type your update here…" aria-describedby="messageHelp"></textarea>
 <p id="messageHelp" class="help">Plain text, up to 1,200 characters. Line breaks are kept. The heading always reads “Breaking News”.</p>
 <h2>Optional bottom link</h2><label for="linkLabel">Link name</label><input id="linkLabel" maxlength="80" placeholder="Read more">
@@ -27,6 +40,7 @@
 <p id="linkHelp" class="help">Add both a name and a full HTTP or HTTPS URL, or leave both blank. Opens in a new tab.</p>
 </fieldset><label for="imageWidth">Image width <output id="widthValue" for="imageWidth">100%</output></label><input id="imageWidth" type="range" min="20" max="100" step="1" value="100" aria-describedby="widthHelp">
 <p id="widthHelp" class="help">20–100% of the card's content width. Images keep their proportions and are capped at 180 pixels tall.</p>
+<label class="toggle heart-toggle"><input id="motionEnabled" type="checkbox" aria-describedby="motionHelp"> Subtle red heading motion</label><p id="motionHelp" class="help">A gentle red wave across the heading. No blinking or flashing. Reduced-motion preferences are respected.</p>
 <label class="toggle heart-toggle"><input id="heartsEnabled" type="checkbox" checked> Show heart and like total</label>
 <div class="actions"><button id="save" type="button">Save draft</button><button id="publish" class="primary" type="submit">Publish</button></div>
 </fieldset></form>
@@ -34,8 +48,8 @@
 </section><aside class="card preview-column" aria-label="Draft preview">
 <h2>Draft preview</h2><p id="previewNote" class="help">This preview does not change the homepage.</p>
 <div id="preview" class="homepage-countdown homepage-breaking">
-<h2>Breaking News</h2><div class="breaking-content" tabindex="0" role="region" aria-label="Breaking News preview content"><img data-breaking-image class="breaking-image" hidden alt="" referrerpolicy="no-referrer">
-<h3 data-breaking-headline class="breaking-headline" hidden></h3><p data-breaking-message class="breaking-message" hidden></p></div><div class="countdown-actions"><a data-breaking-link class="countdown-link" hidden target="_blank" rel="noopener noreferrer"></a><span id="previewHeart" class="preview-heart" aria-label="Heart preview">♡ <span>0</span></span></div>
+<h2 class="breaking-label">Breaking News</h2><div class="breaking-content" tabindex="0" role="region" aria-label="Breaking News preview content"><h3 data-breaking-headline class="breaking-headline" hidden></h3><figure data-breaking-media class="breaking-media" hidden><img data-breaking-image class="breaking-image" hidden alt="" referrerpolicy="no-referrer"><figcaption data-breaking-image-text class="breaking-image-text" hidden></figcaption></figure>
+<p data-breaking-message class="breaking-message" hidden></p></div><div class="countdown-actions"><a data-breaking-link class="countdown-link" hidden target="_blank" rel="noopener noreferrer"></a><span id="previewHeart" class="preview-heart" aria-label="Heart preview">♡ <span>0</span></span></div>
 </div><p class="help">Preview only. The heart is decorative; image loading may depend on the image host.</p>
 <p id="live">Checking published settings…</p><p><a href="/" target="_blank" rel="noopener">Open homepage ↗</a></p>
 </aside></div></main></body></html>
