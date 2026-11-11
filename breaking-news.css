@@ -20,7 +20,7 @@
 @supports ((background-clip:text) or (-webkit-background-clip:text)){
  .homepage-breaking.breaking-motion .breaking-label{background-image:linear-gradient(115deg,var(--breaking-heading,#ff9aa7) 0%,var(--breaking-heading,#ff9aa7) 40%,var(--breaking-sweep,#ffc1c8) 48%,var(--breaking-heading,#ff9aa7) 56%,var(--breaking-heading,#ff9aa7) 100%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:breaking-red-sweep 4s linear infinite,breaking-red-pulse 2.8s ease-in-out infinite}
 }
-@keyframes breaking-red-pulse{0%,100%{opacity:1;text-shadow:0 0 0 transparent}50%{opacity:.82;text-shadow:0 0 6px var(--breaking-heading,#ff9aa7)}}
+@keyframes breaking-red-pulse{0%,100%{opacity:1;text-shadow:0 0 0 transparent}50%{opacity:.5;text-shadow:0 0 3px var(--breaking-heading,#ff9aa7)}}
 @keyframes breaking-red-sweep{0%,20%{background-position:100% 50%}70%,100%{background-position:0% 50%}}
 @media(max-width:699px){.hero:has(.homepage-countdown:not([hidden])) .homepage-breaking{min-height:380px;aspect-ratio:1}.breaking-message{font-size:var(--breaking-body-size,.875rem)}.breaking-image-text{font-size:.8rem;padding:6px 8px}}
 @media(prefers-reduced-motion:reduce){.homepage-breaking.breaking-motion .breaking-label{animation:none!important;background:none;-webkit-text-fill-color:currentColor}}
