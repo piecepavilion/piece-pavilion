@@ -12,7 +12,9 @@
 .countdown-confetti{pointer-events:none;position:absolute;inset:0;overflow:hidden;z-index:0}
 .countdown-confetti i{position:absolute;left:var(--x);top:-16px;width:7px;height:12px;border-radius:2px;background:var(--color);animation:countdown-confetti-fall var(--duration) var(--delay) linear infinite both}
 .countdown-paused .countdown-confetti i{animation-play-state:paused}
-.countdown-complete .countdown-unit strong{animation:countdown-zero-blink 1.4s ease-in-out 6}
+.countdown-complete .countdown-unit strong{animation:countdown-zero-blink 1.4s ease-in-out infinite}
+/* Keep blinking only while the completed countdown is visible. */
+.countdown-paused .countdown-unit strong{animation-play-state:paused}
 @keyframes countdown-zero-blink{0%,100%{opacity:1}50%{opacity:.38}}
 @keyframes countdown-confetti-fall{to{transform:translate3d(18px,var(--confetti-fall, 440px),0) rotate(650deg);opacity:0}}
 @media(max-width:480px){.homepage-countdown{padding:26px 14px;gap:18px;min-height:280px}.countdown-clock{gap:5px}.countdown-unit strong{font-size:1.8rem;padding:10px 2px}.countdown-colon{font-size:1.4rem}.countdown-unit span{font-size:.57rem;letter-spacing:.06em}.countdown-message{font-size:.92rem}}
