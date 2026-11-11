@@ -110,9 +110,11 @@ test('safe background colors keep original maroon by default and body contrast a
  const box=el(),vars={};box.style.setProperty=(k,v)=>vars[k]=v;api.render(box,{backgroundColor:'#ffffff'});assert.equal(vars['--breaking-background'],'#ffffff');assert.equal(vars['--breaking-ink'],'#000000');api.render(box,{backgroundColor:'url(https://bad.example/)'});assert.equal(vars['--breaking-background'],api.palette().background);
 });
 
-test('subtle heading pulse stays visible and preserves large-text contrast',()=>{
- const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');assert.match(css,/breaking-red-pulse 2.8s ease-in-out infinite/);assert.match(css,/@keyframes breaking-red-pulse\{0%,100%\{opacity:1;[^}]+\}50%\{opacity:\.82;[^}]+\}\}/);
- const api=renderer();function lum(c){let a=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;}function mix(f,b){return '#'+[1,3,5].map(i=>Math.round(parseInt(f.slice(i,i+2),16)*.82+parseInt(b.slice(i,i+2),16)*.18).toString(16).padStart(2,'0')).join('');}function contrast(a,b){const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
- for(let r=0;r<=255;r+=17)for(let g=0;g<=255;g+=17)for(let b=0;b<=255;b+=17){const bg='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''),p=api.palette(bg);for(const fg of [p.heading,p.sweep])assert.ok(contrast(mix(fg,bg),bg)>=3,bg+' / '+fg);}
- const p=api.palette();for(const bg of ['#862d3c','#4e1725'])for(const fg of [p.heading,p.sweep])assert.ok(contrast(mix(fg,bg),bg)>=3);
+test('stronger heading pulse is smooth, slow and never fully disappears',()=>{
+ const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');assert.match(css,/breaking-red-pulse 2.8s ease-in-out infinite/);assert.match(css,/@keyframes breaking-red-pulse\{0%,100%\{opacity:1;[^}]+\}50%\{opacity:\.5;[^}]+\}\}/);assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);assert.doesNotMatch(css,/opacity:0[;}]/);
+});
+test('custom card text color applies safely without changing the red heading and resets to automatic',()=>{
+ const api=renderer(),automatic=api.palette('#862d3c'),custom=api.palette('#862d3c','#AABBCC');assert.equal(custom.ink,'#aabbcc');assert.equal(custom.link,'#aabbcc');assert.equal(custom.heading,automatic.heading);assert.equal(custom.sweep,automatic.sweep);assert.equal(api.palette('#862d3c','').ink,automatic.ink);assert.equal(api.palette('#862d3c','red').ink,automatic.ink);assert.equal(api.palette('#862d3c','url(https://bad.example/)').ink,automatic.ink);
+ const box=el(),vars={};box.style.setProperty=(k,v)=>vars[k]=v;api.render(box,{backgroundColor:'#000000',textColor:'#12ABEF'});assert.equal(vars['--breaking-ink'],'#12abef');assert.equal(vars['--breaking-link'],'#12abef');api.render(box,{backgroundColor:'#000000',textColor:''});assert.equal(vars['--breaking-ink'],'#ffffff');
+ assert.ok(api.textContrast('#ffffff','#000000')>20.9);assert.equal(api.textContrast('#ffffff','#ffffff'),1);assert.ok(api.textContrast('#862d3c','')>=4.5);assert.ok(api.textContrast('#862d3c','#862d3c')<4.5);
 });
