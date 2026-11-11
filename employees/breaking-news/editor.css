@@ -9,3 +9,5 @@ select{display:block;width:100%;font:inherit;padding:11px;border:1px solid #b9bf
 @media(min-width:781px){.preview-column{position:sticky;top:16px}}
 
 .motion-choice{margin-top:20px;font-weight:700}.motion-buttons{display:flex;gap:8px;margin-top:8px}.motion-buttons button{min-width:80px;background:#fff;color:#8e1c30;border:1px solid #bd8993}.motion-buttons button[aria-pressed="true"]{background:#a51d35;color:#fff;border-color:#a51d35}
+
+.color-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.color-controls input[type=color]{width:64px;height:44px;padding:4px;cursor:pointer}.color-controls output{float:none;font-family:ui-monospace,monospace}.color-controls button{padding:9px 12px;font-size:14px}
