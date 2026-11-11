@@ -2,7 +2,7 @@
 .homepage-breaking[hidden],.homepage-breaking [hidden]{display:none!important}
 .homepage-countdown.homepage-breaking{background:var(--breaking-background,linear-gradient(145deg,#862d3c,#4e1725 85%));border-color:var(--breaking-border,#ffffff30);color:var(--breaking-ink,#fff6f3);justify-content:flex-start;box-shadow:0 16px 40px #32111b24}
 .homepage-breaking h2{flex:none;letter-spacing:.015em}
-.homepage-countdown.homepage-breaking .breaking-label{color:var(--breaking-heading,#ff9aa7);font-style:italic;display:block;flex:none}
+.homepage-breaking .breaking-label{color:var(--breaking-heading,#ff9aa7);font-style:italic;display:block;flex:none}
 .breaking-content{display:flex;flex-direction:column;align-items:center;gap:var(--breaking-content-gap,12px);min-height:0;min-width:0;width:100%;flex:1 1 0;contain:size;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--breaking-scrollbar,#ffffff66) transparent}
 .breaking-media{position:relative;display:block;flex:none;min-width:0;max-width:min(100%,calc(var(--breaking-max-image-height,180px) * var(--breaking-image-ratio,3)));margin:0 auto;border-radius:10px;overflow:hidden}
 .breaking-image{display:block;height:auto;max-width:100%;max-height:var(--breaking-max-image-height,180px);object-fit:contain;border-radius:10px;flex:none;margin:0 auto}
@@ -15,10 +15,12 @@
 .homepage-breaking .preview-heart{color:var(--breaking-heading,#ff9aa7)}
 .hero:has(.homepage-countdown:not([hidden])) .homepage-breaking{aspect-ratio:1}
 .breaking-headline{font-size:var(--breaking-title-size,1.15rem);line-height:1.3;color:inherit;margin:0;width:100%;overflow-wrap:anywhere}
-/* Every gradient stop stays red. A slow diagonal emphasis crosses the letters; no opacity changes. */
+/* The red heading gently pulses without disappearing or flashing abruptly. */
+.homepage-breaking.breaking-motion .breaking-label{animation:breaking-red-pulse 2.8s ease-in-out infinite}
 @supports ((background-clip:text) or (-webkit-background-clip:text)){
- .homepage-breaking.breaking-motion .breaking-label{background-image:linear-gradient(115deg,var(--breaking-heading,#ff9aa7) 0%,var(--breaking-heading,#ff9aa7) 40%,var(--breaking-sweep,#ffc1c8) 48%,var(--breaking-heading,#ff9aa7) 56%,var(--breaking-heading,#ff9aa7) 100%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:breaking-red-sweep 7s linear infinite}
+ .homepage-breaking.breaking-motion .breaking-label{background-image:linear-gradient(115deg,var(--breaking-heading,#ff9aa7) 0%,var(--breaking-heading,#ff9aa7) 40%,var(--breaking-sweep,#ffc1c8) 48%,var(--breaking-heading,#ff9aa7) 56%,var(--breaking-heading,#ff9aa7) 100%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:breaking-red-sweep 4s linear infinite,breaking-red-pulse 2.8s ease-in-out infinite}
 }
+@keyframes breaking-red-pulse{0%,100%{opacity:1;text-shadow:0 0 0 transparent}50%{opacity:.82;text-shadow:0 0 6px var(--breaking-heading,#ff9aa7)}}
 @keyframes breaking-red-sweep{0%,20%{background-position:100% 50%}70%,100%{background-position:0% 50%}}
 @media(max-width:699px){.hero:has(.homepage-countdown:not([hidden])) .homepage-breaking{min-height:380px;aspect-ratio:1}.breaking-message{font-size:var(--breaking-body-size,.875rem)}.breaking-image-text{font-size:.8rem;padding:6px 8px}}
 @media(prefers-reduced-motion:reduce){.homepage-breaking.breaking-motion .breaking-label{animation:none!important;background:none;-webkit-text-fill-color:currentColor}}
