@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>Breaking News editor · Piece Pavilion Staff</title>
-<link rel="stylesheet" href="/countdown.css"><link rel="stylesheet" href="/breaking-news.css?v=20261111color-picker"><link rel="stylesheet" href="editor.css?v=20261111color-picker">
-<script defer src="/breaking-news.js?v=20261111color-picker"></script><script defer src="editor.js?v=20261111color-picker"></script>
+<link rel="stylesheet" href="/countdown.css"><link rel="stylesheet" href="/breaking-news.css?v=20261111mobile-controls"><link rel="stylesheet" href="editor.css?v=20261111mobile-controls">
+<script defer src="/breaking-news.js?v=20261111mobile-controls"></script><script defer src="editor.js?v=20261111mobile-controls"></script>
 </head>
 <body><main>
 <h1>Breaking News</h1><p class="intro">Post a quick homepage update. Save draft keeps it private; Publish applies your changes.</p>
@@ -12,6 +13,9 @@
 <form id="form" novalidate><fieldset id="fields" disabled>
 <label class="toggle"><input id="enabled" type="checkbox"> Show Breaking News on the homepage</label>
 <p class="help">Replaces the countdown in the same spot. Turn off and Publish to restore your unchanged countdown or carousel. Countdown settings and existing hearts are kept.</p>
+<label for="backgroundColor">Card background color</label><div class="color-controls"><input id="backgroundColor" type="color" value="#862d3c" aria-describedby="colorHelp"><output id="colorValue" for="backgroundColor">#862d3c</output><button id="resetColor" type="button">Reset to maroon</button></div><p id="colorHelp" class="help">Choose a background for either card type. Save draft prepares the color; Publish applies it.</p>
+<div class="motion-choice" role="group" aria-labelledby="motionLabel" aria-describedby="motionHelp"><span id="motionLabel">Blinking</span><input id="motionEnabled" type="checkbox" hidden><div class="motion-buttons"><button id="motionYes" type="button" aria-pressed="false">Yes</button><button id="motionNo" type="button" aria-pressed="true">No</button><span id="motionStatus" class="help" role="status" aria-live="polite">Off</span></div></div><p id="motionHelp" class="help">Yes adds a gentle pulse and red sweep across Breaking News. No keeps it still. No harsh flashing. Reduced-motion preferences are respected.</p>
+<div id="appearancePreview" class="homepage-breaking appearance-preview" aria-label="Heading appearance preview"><h2 class="breaking-label">Breaking News</h2></div><p class="help">Preview only. Publish applies your color and motion settings to the homepage.</p>
 <label for="contentType">Content to show</label><select id="contentType" aria-describedby="contentHelp"><option value="custom">Custom writing</option><option value="blog">Feature a blog</option></select>
 <p class="help" id="contentHelp">Choose one for this homepage spot. Switching keeps your custom writing and selected blog saved separately.</p>
 <section id="blogControls" hidden><label for="blogSelect">Published blog</label><select id="blogSelect"><option value="">Choose a blog…</option></select><button id="refreshBlogs" type="button">Refresh blog list</button><p id="blogStatus" class="help" role="status" aria-live="polite">Choose a published article. Its image, title, excerpt and Read article link are filled automatically.</p>
@@ -40,8 +44,6 @@
 <p id="linkHelp" class="help">Add both a name and a full HTTP or HTTPS URL, or leave both blank. Opens in a new tab.</p>
 </fieldset><label for="imageWidth">Image width <output id="widthValue" for="imageWidth">100%</output></label><input id="imageWidth" type="range" min="20" max="100" step="1" value="100" aria-describedby="widthHelp">
 <p id="widthHelp" class="help">20–100% of the card's content width. Images keep their proportions and are capped at 180 pixels tall.</p>
-<label for="backgroundColor">Card background color</label><div class="color-controls"><input id="backgroundColor" type="color" value="#862d3c" aria-describedby="colorHelp"><output id="colorValue" for="backgroundColor">#862d3c</output><button id="resetColor" type="button">Reset to maroon</button></div><p id="colorHelp" class="help">Choose a background for either card type. Save draft prepares the color; Publish applies it.</p>
-<div class="motion-choice" role="group" aria-labelledby="motionLabel" aria-describedby="motionHelp"><span id="motionLabel">Blinking</span><input id="motionEnabled" type="checkbox" hidden><div class="motion-buttons"><button id="motionYes" type="button" aria-pressed="false">Yes</button><button id="motionNo" type="button" aria-pressed="true">No</button></div></div><p id="motionHelp" class="help">Yes adds a subtle red sweep across Breaking News. No keeps it still. The letters stay red, with no harsh flashing. Reduced-motion preferences are respected.</p>
 <label class="toggle heart-toggle"><input id="heartsEnabled" type="checkbox" checked> Show heart and like total</label>
 <div class="actions"><button id="save" type="button">Save draft</button><button id="publish" class="primary" type="submit">Publish</button></div>
 </fieldset></form>
