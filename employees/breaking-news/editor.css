@@ -7,3 +7,5 @@ select{display:block;width:100%;font:inherit;padding:11px;border:1px solid #b9bf
 #blogDestination{overflow-wrap:anywhere}#resetBlog{margin-top:12px;padding:9px 12px;font-size:14px}#blogFields{margin-top:18px;padding-top:2px;border-top:1px solid var(--line)}
 
 @media(min-width:781px){.preview-column{position:sticky;top:16px}}
+
+.motion-choice{margin-top:20px;font-weight:700}.motion-buttons{display:flex;gap:8px;margin-top:8px}.motion-buttons button{min-width:80px;background:#fff;color:#8e1c30;border:1px solid #bd8993}.motion-buttons button[aria-pressed="true"]{background:#a51d35;color:#fff;border-color:#a51d35}

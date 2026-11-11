@@ -59,7 +59,7 @@ function status(text,error=false){$('status').textContent=text;$('status').class
 function controls(){ $('fields').disabled=busy||!loaded;for(const id of ['save','publish','upload','blogUpload'])$(id).disabled=busy||!loaded||uncertain;$('reload').disabled=busy;$('customFields').disabled=$('contentType').value==='blog';$('customFields').hidden=$('contentType').value==='blog';$('blogControls').hidden=$('contentType').value!=='blog';$('refreshBlogs').disabled=busy||!loaded||blogBusy;$('blogSelect').disabled=busy||!loaded||blogBusy;$('blogFields').disabled=busy||!loaded||!selectedBlog;$('blogFields').hidden=!selectedBlog;$('resetBlog').disabled=busy||!loaded||blogBusy||!selectedBlog||!blogs.some(blog=>blog.url===selectedBlog.url); }
 function config(){const c={motionEnabled:$('motionEnabled').checked,contentType:$('contentType').value,blog:selectedBlog,enabled:$('enabled').checked,heartsEnabled:$('heartsEnabled').checked,imageWidth:Number($('imageWidth').value)};for(const name of names)c[name]=$(name).value.trim();return c;}
 function preview(){
- const c=config();$('widthValue').textContent=c.imageWidth+'%';
+ const c=config();$('motionYes').setAttribute('aria-pressed',String(c.motionEnabled));$('motionNo').setAttribute('aria-pressed',String(!c.motionEnabled));$('widthValue').textContent=c.imageWidth+'%';
  window.PPBreakingNews.render($('preview'),c);
  $('previewHeart').hidden=!c.heartsEnabled;
  $('previewNote').textContent=c.enabled?'Publishing this draft replaces the homepage countdown.':'Off: publishing restores your existing countdown or carousel. The draft card is shown below.';
@@ -128,6 +128,7 @@ async function loadBlogs(){
  }catch(error){$('blogStatus').textContent=(error.name==='AbortError'?'Loading blogs timed out.':error.message)+' Your saved selection and custom writing are kept. Use Refresh blog list to retry.';}
  finally{clearTimeout(timer);blogBusy=false;controls();}
 }
+for(const [id,value] of [['motionYes',true],['motionNo',false]])$(id).addEventListener('click',()=>{if(busy||!loaded)return;$('motionEnabled').checked=value;edited();});
 $('contentType').addEventListener('change',()=>{controls();edited();if($('contentType').value==='blog'&&!blogsLoaded)loadBlogs();});
 $('blogSelect').addEventListener('change',()=>{
  const url=$('blogSelect').value;if(selectedBlog&&selectedBlog.url===url)return;

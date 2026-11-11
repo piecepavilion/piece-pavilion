@@ -40,7 +40,7 @@
 <p id="linkHelp" class="help">Add both a name and a full HTTP or HTTPS URL, or leave both blank. Opens in a new tab.</p>
 </fieldset><label for="imageWidth">Image width <output id="widthValue" for="imageWidth">100%</output></label><input id="imageWidth" type="range" min="20" max="100" step="1" value="100" aria-describedby="widthHelp">
 <p id="widthHelp" class="help">20–100% of the card's content width. Images keep their proportions and are capped at 180 pixels tall.</p>
-<label class="toggle heart-toggle"><input id="motionEnabled" type="checkbox" aria-describedby="motionHelp"> Subtle red heading motion</label><p id="motionHelp" class="help">A gentle red wave across the heading. No blinking or flashing. Reduced-motion preferences are respected.</p>
+<div class="motion-choice" role="group" aria-labelledby="motionLabel" aria-describedby="motionHelp"><span id="motionLabel">Blinking</span><input id="motionEnabled" type="checkbox" hidden><div class="motion-buttons"><button id="motionYes" type="button" aria-pressed="false">Yes</button><button id="motionNo" type="button" aria-pressed="true">No</button></div></div><p id="motionHelp" class="help">Yes adds a subtle red sweep across Breaking News. No keeps it still. The letters stay red, with no harsh flashing. Reduced-motion preferences are respected.</p>
 <label class="toggle heart-toggle"><input id="heartsEnabled" type="checkbox" checked> Show heart and like total</label>
 <div class="actions"><button id="save" type="button">Save draft</button><button id="publish" class="primary" type="submit">Publish</button></div>
 </fieldset></form>
