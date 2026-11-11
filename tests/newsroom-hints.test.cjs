@@ -21,6 +21,6 @@ test('Newsroom names preserve existing routes, slideshow and article renderer',(
  assert.match(staff,/Newsroom article/);assert.match(staff,/Newsroom slideshow/);
  assert.match(staff,/data-pane="magazine"/);assert.match(staff,/data-pane="spotlight"/);
  assert.match(staff,/\/employees\/magazine\/\?embed=1/);assert.match(staff,/\/employees\/spotlight\/\?embed=1/);
- assert.match(portal,/Three tabs, one place/);assert.match(render,/<b>NEWSROOM<\/b>/);
+ assert.match(portal,/Four tabs, one place/);assert.match(render,/<b>NEWSROOM<\/b>/);
  assert.doesNotMatch(read('employees/spotlight/index.html'),/>Spotlight Editor</);
 });
