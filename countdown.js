@@ -3,6 +3,8 @@
   'use strict';
   var box = document.getElementById('homepage-countdown');
   var carousel = document.getElementById('hero-carousel');
+  var newsBox = document.getElementById('homepage-breaking-news');
+  var countdownConfig = null, newsConfig = null;
   if (!box || !carousel) return;
   var clock = box.querySelector('[data-countdown-clock]');
   var title = box.querySelector('[data-countdown-title]');
@@ -100,13 +102,41 @@
     target.dateTime=date.toISOString();
     carousel.hidden=true; box.hidden=false; tick();
   }
+  function applyHomepage() {
+    var showNews = newsBox && window.PPBreakingNews && newsConfig && newsConfig.enabled === true;
+    if (newsBox) {
+      newsBox.hidden = !showNews;
+      newsBox.dispatchEvent(new CustomEvent('countdown-hearts-change', {detail: !!showNews && newsConfig.heartsEnabled !== false}));
+    }
+    if (showNews) {
+      active = null; lastKey = ''; clearCelebration();
+      box.hidden = true; carousel.hidden = true;
+      box.dispatchEvent(new CustomEvent('countdown-hearts-change', {detail: false}));
+      window.PPBreakingNews.render(newsBox, newsConfig);
+    } else apply(countdownConfig);
+  }
+  async function readConfig(url) {
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 10000);
+    try {
+      var response = await fetch(url, {cache:'no-store', credentials:'omit', signal:controller.signal});
+      if (!response.ok) return null;
+      var data = await response.json();
+      return data && typeof data.enabled === 'boolean' ? data : null;
+    } catch (_) { return null; }
+    finally { clearTimeout(timeout); }
+  }
   async function refresh() {
     if(refreshing) return; refreshing=true;
     try {
-      var response=await fetch('/countdown/config.json',{cache:'no-store',credentials:'omit'});
-      if(response.ok) apply(await response.json());
-    } catch (_) { /* Keep last good state, or the original carousel on first load. */ }
-    finally {refreshing=false;}
+      var configs = await Promise.all([
+        readConfig('/countdown/config.json'),
+        readConfig('/countdown/config.json?section=breaking-news')
+      ]);
+      if (configs[0]) countdownConfig = configs[0];
+      if (configs[1]) newsConfig = configs[1];
+      applyHomepage();
+    } finally { refreshing=false; }
   }
   motion.addEventListener('change',function(){
     if(motion.matches) confetti.replaceChildren();
@@ -122,12 +152,15 @@
   refresh();
 })();
 
-/* Shared countdown likes, independent of countdown configuration and timer. */
-(function () {
+/* Separate shared hearts for each card. Switching cards never resets either total. */
+[
+  { id: 'homepage-countdown', key: 'pp_countdown_like_device_v1', endpoint: '/api/countdown-likes', name: 'countdown' },
+  { id: 'homepage-breaking-news', key: 'pp_breaking_news_like_device_v1', endpoint: '/api/countdown-likes?section=breaking-news', name: 'Breaking News update' }
+].forEach(function (card) {
   'use strict';
-  var box = document.getElementById('homepage-countdown');
+  var box = document.getElementById(card.id);
   if (!box || box.querySelector('.countdown-like')) return;
-  var key = 'pp_countdown_like_device_v1';
+  var key = card.key;
   var validId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   function newId() {
     return typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, function (c) { return (Number(c) ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> Number(c) / 4).toString(16); });
@@ -153,7 +186,7 @@
   button.type = 'button';
   button.hidden = true;
   button.setAttribute('aria-pressed', 'false');
-  button.setAttribute('aria-label', 'Like this countdown');
+  button.setAttribute('aria-label', 'Like this ' + card.name);
   button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><span class="countdown-like-count">…</span>';
   var count = button.querySelector('.countdown-like-count');
   var status = document.createElement('span');
@@ -174,7 +207,7 @@
     button.setAttribute('aria-busy', String(pending));
     button.setAttribute('aria-pressed', String(liked));
     button.classList.toggle('is-liked', liked);
-    var label = !device ? 'Enable browser storage to like' : !initialized ? 'Retry loading likes' : operation ? (operation.liked ? 'Retry adding your like' : 'Retry removing your like') : liked ? 'Unlike this countdown' : 'Like this countdown';
+    var label = !device ? 'Enable browser storage to like' : !initialized ? 'Retry loading likes' : operation ? (operation.liked ? 'Retry adding your like' : 'Retry removing your like') : liked ? 'Unlike this ' + card.name : 'Like this ' + card.name;
     button.setAttribute('aria-label', label + '. ' + count.textContent + ' total likes');
     button.title = label;
   }
@@ -210,7 +243,7 @@
     var controller = new AbortController();
     var timeout = setTimeout(function () { controller.abort(); }, 10000);
     try {
-      var response = await fetch('/api/countdown-likes' + (method === 'GET' && device ? '?device=' + encodeURIComponent(device) : ''), {
+      var response = await fetch(card.endpoint + (method === 'GET' && device ? (card.endpoint.includes('?') ? '&' : '?') + 'device=' + encodeURIComponent(device) : ''), {
         method: method, cache: 'no-store', credentials: 'same-origin', signal: controller.signal,
         headers: method === 'POST' ? { 'Content-Type': 'application/json' } : {},
         body: method === 'POST' ? JSON.stringify(operation) : undefined
@@ -251,5 +284,4 @@
   });
   setInterval(function () { if (!document.hidden && !box.hidden) request('GET'); }, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && !box.hidden) request('GET'); });
-})();
-
+});
