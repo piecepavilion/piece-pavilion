@@ -113,3 +113,8 @@ test('safe background colors keep original maroon by default and body contrast a
 test('stronger heading pulse is smooth, slow and never fully disappears',()=>{
  const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');assert.match(css,/breaking-red-pulse 2.8s ease-in-out infinite/);assert.match(css,/@keyframes breaking-red-pulse\{0%,100%\{opacity:1;[^}]+\}50%\{opacity:\.5;[^}]+\}\}/);assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);assert.doesNotMatch(css,/opacity:0[;}]/);
 });
+test('custom card text color applies safely without changing the red heading and resets to automatic',()=>{
+ const api=renderer(),automatic=api.palette('#862d3c'),custom=api.palette('#862d3c','#AABBCC');assert.equal(custom.ink,'#aabbcc');assert.equal(custom.link,'#aabbcc');assert.equal(custom.heading,automatic.heading);assert.equal(custom.sweep,automatic.sweep);assert.equal(api.palette('#862d3c','').ink,automatic.ink);assert.equal(api.palette('#862d3c','red').ink,automatic.ink);assert.equal(api.palette('#862d3c','url(https://bad.example/)').ink,automatic.ink);
+ const box=el(),vars={};box.style.setProperty=(k,v)=>vars[k]=v;api.render(box,{backgroundColor:'#000000',textColor:'#12ABEF'});assert.equal(vars['--breaking-ink'],'#12abef');assert.equal(vars['--breaking-link'],'#12abef');api.render(box,{backgroundColor:'#000000',textColor:''});assert.equal(vars['--breaking-ink'],'#ffffff');
+ assert.ok(api.textContrast('#ffffff','#000000')>20.9);assert.equal(api.textContrast('#ffffff','#ffffff'),1);assert.ok(api.textContrast('#862d3c','')>=4.5);assert.ok(api.textContrast('#862d3c','#862d3c')<4.5);
+});

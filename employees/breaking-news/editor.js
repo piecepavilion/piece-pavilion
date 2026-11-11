@@ -40,6 +40,7 @@ function validate(c,origin=BLOG_ORIGIN) {
  }
  if(c.title!==undefined&&(typeof c.title!=='string'||c.title.length>200||/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(c.title)))throw Error('Your title must be plain text, up to 200 characters.');
  if(c.imageText!==undefined&&(typeof c.imageText!=='string'||c.imageText.length>120||/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(c.imageText)))throw Error('Text on image must be plain text, up to 120 characters.');
+ if(c.textColor!==undefined&&c.textColor!==''&&(typeof c.textColor!=='string'||!/^#[0-9a-f]{6}$/i.test(c.textColor)))throw Error('Choose automatic text color or a six-digit hex color, such as #ffffff.');
  if(c.backgroundColor!==undefined&&(typeof c.backgroundColor!=='string'||!/^#[0-9a-f]{6}$/i.test(c.backgroundColor)))throw Error('Choose a background color in six-digit hex format, such as #862d3c.');
  if(c.motionEnabled!==undefined&&typeof c.motionEnabled!=='boolean')throw Error('Choose whether to enable heading motion.');
  if(typeof c.enabled!=='boolean'||typeof c.heartsEnabled!=='boolean')throw Error('Choose whether to show Breaking News and its heart.');
@@ -58,10 +59,15 @@ const $=id=>document.getElementById(id), names=['title','message','imageUrl','im
 let busy=false,loaded=false,dirty=false,uncertain=false,blogBusy=false,blogsLoaded=false,selectedBlog=null,blogs=[];
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 function controls(){ $('fields').disabled=busy||!loaded;for(const id of ['save','publish','upload','blogUpload'])$(id).disabled=busy||!loaded||uncertain;$('reload').disabled=busy;$('customFields').disabled=$('contentType').value==='blog';$('customFields').hidden=$('contentType').value==='blog';$('blogControls').hidden=$('contentType').value!=='blog';$('refreshBlogs').disabled=busy||!loaded||blogBusy;$('blogSelect').disabled=busy||!loaded||blogBusy;$('blogFields').disabled=busy||!loaded||!selectedBlog;$('blogFields').hidden=!selectedBlog;$('resetBlog').disabled=busy||!loaded||blogBusy||!selectedBlog||!blogs.some(blog=>blog.url===selectedBlog.url); }
-function config(){const c={backgroundColor:$('backgroundColor').value,motionEnabled:$('motionEnabled').checked,contentType:$('contentType').value,blog:selectedBlog,enabled:$('enabled').checked,heartsEnabled:$('heartsEnabled').checked,imageWidth:Number($('imageWidth').value)};for(const name of names)c[name]=$(name).value.trim();return c;}
+function config(){const c={textColor:$('autoTextColor').checked?'':$('textColor').value,backgroundColor:$('backgroundColor').value,motionEnabled:$('motionEnabled').checked,contentType:$('contentType').value,blog:selectedBlog,enabled:$('enabled').checked,heartsEnabled:$('heartsEnabled').checked,imageWidth:Number($('imageWidth').value)};for(const name of names)c[name]=$(name).value.trim();return c;}
 function preview(){
  const c=config();$('colorValue').textContent=c.backgroundColor;$('motionYes').setAttribute('aria-pressed',String(c.motionEnabled));$('motionNo').setAttribute('aria-pressed',String(!c.motionEnabled));$('widthValue').textContent=c.imageWidth+'%';
- window.PPBreakingNews.applyPalette($('appearancePreview'),c.backgroundColor);
+ if($('autoTextColor').checked)$('textColor').value=window.PPBreakingNews.palette(c.backgroundColor,'').ink;
+ $('textColorValue').textContent=$('textColor').value+($('autoTextColor').checked?' (automatic)':'');
+ const contrast=c.textColor?window.PPBreakingNews.textContrast(c.backgroundColor,c.textColor):null;
+ $('textContrastWarning').hidden=!(c.textColor&&contrast<4.5);
+ $('textContrastWarning').textContent=c.textColor&&contrast<4.5?'Low contrast: this text color may be hard to read on your background. Choose a clearer color or use automatic readable text color.':'';
+ window.PPBreakingNews.applyPalette($('appearancePreview'),c.backgroundColor,c.textColor);
  $('appearancePreview').classList.toggle('breaking-motion',c.motionEnabled);
  const reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  $('motionStatus').textContent=(c.motionEnabled?'On (preview below)':'Off')+(reduced?' · Reduced motion is enabled on your device; the heading stays still.':'');
@@ -71,7 +77,7 @@ function preview(){
 }
 function edited(){dirty=true;preview();status(uncertain?'Changes kept here. Reload saved settings to check the last request before saving again.':'Unsaved draft changes.');}
 function showLive(c){$('live').textContent=c&&c.enabled?'Currently published: Breaking News.':'Currently published: Breaking News off. Existing countdown or carousel is shown.';}
-function fill(c){c=c||{};$('backgroundColor').value=typeof c.backgroundColor==='string'&&/^#[0-9a-f]{6}$/i.test(c.backgroundColor)?c.backgroundColor.toLowerCase():DEFAULT_BACKGROUND;$('contentType').value=c.contentType==='blog'?'blog':'custom';selectedBlog=cloneBlog(c.blog);blogOptions();fillBlog();for(const name of names)$(name).value=typeof c[name]==='string'?c[name]:'';$('enabled').checked=c.enabled===true;$('motionEnabled').checked=c.motionEnabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;$('imageWidth').value=Number.isInteger(c.imageWidth)?c.imageWidth:100;dirty=false;preview();}
+function fill(c){c=c||{};$('autoTextColor').checked=!(typeof c.textColor==='string'&&/^#[0-9a-f]{6}$/i.test(c.textColor));if(!$('autoTextColor').checked)$('textColor').value=c.textColor.toLowerCase();$('backgroundColor').value=typeof c.backgroundColor==='string'&&/^#[0-9a-f]{6}$/i.test(c.backgroundColor)?c.backgroundColor.toLowerCase():DEFAULT_BACKGROUND;$('contentType').value=c.contentType==='blog'?'blog':'custom';selectedBlog=cloneBlog(c.blog);blogOptions();fillBlog();for(const name of names)$(name).value=typeof c[name]==='string'?c[name]:'';$('enabled').checked=c.enabled===true;$('motionEnabled').checked=c.motionEnabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;$('imageWidth').value=Number.isInteger(c.imageWidth)?c.imageWidth:100;dirty=false;preview();}
 async function request(path,body,upload=false){
  const writing=body!==undefined,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
  try{
@@ -144,7 +150,7 @@ $('blogSelect').addEventListener('change',()=>{
 });
 $('resetBlog').addEventListener('click',()=>{const source=selectedBlog&&blogs.find(blog=>blog.url===selectedBlog.url);if(!source||busy||!loaded)return;if(blogCustomized(selectedBlog,source)&&!confirm('Reset this homepage blog card to the article defaults? Your card edits will be replaced; the original blog will not change.'))return;selectedBlog=cloneBlog(source);fillBlog();edited();});
 $('refreshBlogs').addEventListener('click',loadBlogs);
-$('form').addEventListener('input',event=>{const id=event.target.id;if(id==='upload'||id==='blogUpload'||id==='blogSelect')return;if(selectedBlog&&blogNames[id])selectedBlog[blogNames[id]]=event.target.value;edited();});
+$('form').addEventListener('input',event=>{const id=event.target.id;if(id==='textColor')$('autoTextColor').checked=false;if(id==='upload'||id==='blogUpload'||id==='blogSelect')return;if(selectedBlog&&blogNames[id])selectedBlog[blogNames[id]]=event.target.value;edited();});
 $('form').addEventListener('submit',event=>{event.preventDefault();write(true);});
 $('save').addEventListener('click',()=>write(false));$('upload').addEventListener('change',()=>upload(false));$('blogUpload').addEventListener('change',()=>upload(true));
 $('reload').addEventListener('click',()=>{if(!dirty||confirm('Reload saved settings and discard your unsaved changes?'))load();});
