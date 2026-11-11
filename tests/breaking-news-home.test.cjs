@@ -87,3 +87,17 @@ test('content fitting uses smaller readable text without changing card dimension
  Object.defineProperty(box.querySelector('.breaking-message'),'clientHeight',{value:0});
  const css=fs.readFileSync(path.join(root,'breaking-news.css'),'utf8');assert.match(css,/overflow-y:auto/);assert.doesNotMatch(css,/line-clamp|text-overflow:ellipsis/);
 });
+
+test('countdown zero continues blinking, pauses offscreen and respects reduced motion',()=>{
+ const css=fs.readFileSync(path.join(root,'countdown.css'),'utf8');
+ assert.match(css,/\.countdown-complete \.countdown-unit strong\{animation:countdown-zero-blink 1\.4s ease-in-out infinite\}/);
+ assert.match(css,/\.countdown-paused \.countdown-unit strong\{animation-play-state:paused\}/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\.countdown-complete \.countdown-unit strong,\.countdown-confetti i\{animation:none!important\}/);
+});
+test('completed countdown blinking state clears for future dates, disabled card and Breaking News',async()=>{
+ const h=home();await flush();assert.equal(h.box.classList.contains('countdown-complete'),true);assert.equal(h.box.nodes['[data-countdown-seconds]'].textContent,'00');
+ h.state.countdown={...h.state.countdown,endsAt:new Date(Date.now()+600000).toISOString()};h.refresh();await flush();assert.equal(h.box.classList.contains('countdown-complete'),false);assert.equal(h.box.nodes['[data-countdown-title]'].textContent,'Before');
+ h.state.countdown={...h.state.countdown,endsAt:'2020-01-01T00:00:00Z'};h.refresh();await flush();assert.equal(h.box.classList.contains('countdown-complete'),true);
+ h.state.news.enabled=true;h.refresh();await flush();assert.equal(h.box.classList.contains('countdown-complete'),false);assert.equal(h.box.hidden,true);
+ h.state.news.enabled=false;h.state.countdown.enabled=false;h.refresh();await flush();assert.equal(h.box.classList.contains('countdown-complete'),false);
+});
