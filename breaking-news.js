@@ -9,6 +9,18 @@
       return url.href;
     } catch (_) { return ''; }
   }
+  function palette(raw) {
+    var color = typeof raw === 'string' && /^#[0-9a-f]{6}$/i.test(raw) ? raw.toLowerCase() : '#862d3c';
+    if (color === '#862d3c') return { background: 'linear-gradient(145deg,#862d3c,#4e1725 85%)', ink: '#fff6f3', link: '#ffe8b9', heading: '#ff9aa7', sweep: '#ffc1c8', border: '#ffffff30', scrollbar: '#ffffff66' };
+    var rgb = [1,3,5].map(function (i) { var v = parseInt(color.slice(i,i+2),16)/255; return v <= .04045 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); });
+    var light = .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];
+    var darkText = (light+.05)/.05 >= 1.05/(light+.05);
+    return { background: color, ink: darkText ? '#000000' : '#ffffff', link: darkText ? '#000000' : '#ffffff', heading: darkText ? '#5c071b' : '#ffe0e5', sweep: darkText ? '#39000e' : '#fff0f3', border: darkText ? '#00000030' : '#ffffff30', scrollbar: darkText ? '#00000066' : '#ffffff66' };
+  }
+  function applyPalette(box, raw) {
+    var colors = palette(raw);
+    Object.keys(colors).forEach(function (key) { box.style.setProperty('--breaking-' + key, colors[key]); });
+  }
   var watchedBoxes = new WeakSet();
   function fitContent(box) {
     var area = box.querySelector('.breaking-content');
@@ -35,6 +47,7 @@
   }
   function render(box, config) {
     var c = config || {};
+    applyPalette(box, c.backgroundColor);
     box.classList.toggle('breaking-motion', c.motionEnabled === true);
     var isBlog = c.contentType === 'blog';
     var article = isBlog ? (c.blog || {}) : null;
@@ -85,5 +98,5 @@
     if (link.hidden) link.removeAttribute('href'); else link.href = href;
     watchSize(box); scheduleFit(box);
   }
-  root.PPBreakingNews = { render: render, safeUrl: safeUrl, fitContent: fitContent };
+  root.PPBreakingNews = { render: render, safeUrl: safeUrl, fitContent: fitContent, palette: palette };
 })(typeof window !== 'undefined' ? window : globalThis);

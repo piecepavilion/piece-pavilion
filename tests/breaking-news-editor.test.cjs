@@ -8,9 +8,9 @@ test('rejects invalid image sizes, URLs, empty enabled cards, unmatched links, m
  for(const url of ['https://example.org/<img>', 'https://example.org/\\path'])assert.throws(()=>safeUrl(url));assert.equal(safeUrl('http://example.org'),'http://example.org');assert.throws(()=>safeUrl('http://example.org',true));
 });
 function harness(respond,parsedDoc){
- const ids=['motionYes','motionNo','title','motionEnabled','imageText','blogTitle','blogExcerpt','blogImageUrl','blogImageAlt','blogImageText','blogLinkLabel','blogDestination','blogUpload','blogFields','resetBlog','contentType','customFields','blogControls','blogSelect','refreshBlogs','blogStatus','form','fields','message','imageUrl','imageAlt','imageWidth','linkLabel','linkUrl','enabled','heartsEnabled','status','reload','save','publish','upload','preview','previewHeart','previewNote','widthValue','live'];
+ const ids=['backgroundColor','colorValue','resetColor','motionYes','motionNo','title','motionEnabled','imageText','blogTitle','blogExcerpt','blogImageUrl','blogImageAlt','blogImageText','blogLinkLabel','blogDestination','blogUpload','blogFields','resetBlog','contentType','customFields','blogControls','blogSelect','refreshBlogs','blogStatus','form','fields','message','imageUrl','imageAlt','imageWidth','linkLabel','linkUrl','enabled','heartsEnabled','status','reload','save','publish','upload','preview','previewHeart','previewNote','widthValue','live'];
  const els=Object.fromEntries(ids.map(id=>[id,{id,value:id==='imageWidth'?'100':id==='contentType'?'custom':'',checked:id==='heartsEnabled',disabled:false,files:[],classList:{toggle(){}},events:{},children:[],replaceChildren(){this.children=[];},append(child){this.children.push(child);},setAttribute(name,value){this[name]=value;},removeAttribute(name){delete this[name];},addEventListener(name,fn){this.events[name]=fn;}}]));
- const requests=[],window={events:{},PPBreakingNews:{render(){}},addEventListener(name,fn){this.events[name]=fn;}};
+ const requests=[],window={events:{},PPBreakingNews:{render(box,config){box.rendered={...config};}},addEventListener(name,fn){this.events[name]=fn;}};
  let confirmed=false;
  const ctx={DOMParser:class{parseFromString(){return parsedDoc;}},URL,AbortController,FormData,setTimeout,clearTimeout,document:{getElementById:id=>els[id],createElement:()=>({})},window,location:{origin:'https://example.org'},confirm:()=>confirmed,fetch:async(path,opts)=>{requests.push({path,opts});return respond(path,opts,requests.length);}};
  vm.runInNewContext(fs.readFileSync(require.resolve('../employees/breaking-news/editor.js'),'utf8'),ctx);
@@ -86,3 +86,15 @@ test('optional custom title validates, defaults blank and survives mode switchin
 });
 
 test("Blinking Yes and No buttons preview without publishing and preserve the choice",async()=>{const h=harness(()=>response({draft:defaults(),published:null}));await h.flush();assert.equal(h.els.motionNo["aria-pressed"],"true");h.els.motionYes.events.click();assert.equal(h.els.motionEnabled.checked,true);assert.equal(h.els.motionYes["aria-pressed"],"true");assert.equal(h.els.motionNo["aria-pressed"],"false");assert.equal(h.requests.length,1);h.els.motionNo.events.click();assert.equal(h.els.motionEnabled.checked,false);assert.equal(h.els.motionNo["aria-pressed"],"true");assert.equal(h.requests.length,1);});
+
+test('background color validates only six-digit hex, preserving legacy defaults',()=>{
+ assert.ok(validate(defaults()));for(const color of ['#862d3c','#00FFab','#000000','#ffffff'])assert.equal(validate({...defaults(),backgroundColor:color}).backgroundColor,color);
+ for(const backgroundColor of ['red','#fff','#12345678','url(x)','#12345g',' #862d3c',null,123456])assert.throws(()=>validate({...defaults(),backgroundColor}));
+});
+test('color picker defaults, loads, previews, saves and resets without changing content',async()=>{
+ const old=harness(()=>response({draft:defaults(),published:null}));await old.flush();assert.equal(old.els.backgroundColor.value,'#862d3c');assert.equal(old.els.preview.rendered.backgroundColor,'#862d3c');
+ const h=harness(path=>path.endsWith('/get')?response({draft:{...defaults(),backgroundColor:'#123456',title:'Keep title',imageText:'Keep overlay',blog:blog()},published:null}):path==='/blog/'?response({},503):response({ok:true,saved:defaults()}));await h.flush();assert.equal(h.els.backgroundColor.value,'#123456');
+ h.els.backgroundColor.value='#abcdef';h.els.form.events.input({target:h.els.backgroundColor});assert.equal(h.els.colorValue.textContent,'#abcdef');assert.equal(h.els.preview.rendered.backgroundColor,'#abcdef');h.els.save.events.click();await h.flush();assert.equal(JSON.parse(h.requests.at(-1).opts.body).backgroundColor,'#abcdef');
+ h.els.contentType.value='blog';h.els.contentType.events.change();await h.flush();assert.equal(h.els.backgroundColor.value,'#abcdef');const requestsBefore=h.requests.length;h.els.resetColor.events.click();assert.equal(h.requests.length,requestsBefore);assert.equal(h.els.backgroundColor.value,'#862d3c');assert.equal(h.els.preview.rendered.backgroundColor,'#862d3c');assert.equal(h.els.title.value,'Keep title');assert.equal(h.els.imageText.value,'Keep overlay');assert.match(h.els.status.textContent,/Unsaved/);
+ h.els.form.events.submit({preventDefault(){}});await h.flush();assert.match(h.requests.at(-1).path,/publish$/);assert.equal(JSON.parse(h.requests.at(-1).opts.body).backgroundColor,'#862d3c');
+});

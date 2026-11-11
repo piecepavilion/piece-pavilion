@@ -1,6 +1,6 @@
 (function () {
 'use strict';
-const BLOG_ORIGIN='https://piecepavilion.com';
+const BLOG_ORIGIN='https://piecepavilion.com',DEFAULT_BACKGROUND='#862d3c';
 function safeUrl(raw, httpsOnly=false) {
  if (!raw) return '';
  if (raw.length > 2048 || /\s|[<>\\\u0000-\u001f\u007f-\u009f]/.test(raw)) throw Error('Use a full '+(httpsOnly?'HTTPS':'HTTP or HTTPS')+' URL without spaces, angle brackets or backslashes (up to 2,048 characters).');
@@ -40,6 +40,7 @@ function validate(c,origin=BLOG_ORIGIN) {
  }
  if(c.title!==undefined&&(typeof c.title!=='string'||c.title.length>200||/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(c.title)))throw Error('Your title must be plain text, up to 200 characters.');
  if(c.imageText!==undefined&&(typeof c.imageText!=='string'||c.imageText.length>120||/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(c.imageText)))throw Error('Text on image must be plain text, up to 120 characters.');
+ if(c.backgroundColor!==undefined&&(typeof c.backgroundColor!=='string'||!/^#[0-9a-f]{6}$/i.test(c.backgroundColor)))throw Error('Choose a background color in six-digit hex format, such as #862d3c.');
  if(c.motionEnabled!==undefined&&typeof c.motionEnabled!=='boolean')throw Error('Choose whether to enable heading motion.');
  if(typeof c.enabled!=='boolean'||typeof c.heartsEnabled!=='boolean')throw Error('Choose whether to show Breaking News and its heart.');
  if(!Number.isInteger(c.imageWidth)||c.imageWidth<20||c.imageWidth>100)throw Error('Choose an image width between 20% and 100%.');
@@ -57,16 +58,16 @@ const $=id=>document.getElementById(id), names=['title','message','imageUrl','im
 let busy=false,loaded=false,dirty=false,uncertain=false,blogBusy=false,blogsLoaded=false,selectedBlog=null,blogs=[];
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 function controls(){ $('fields').disabled=busy||!loaded;for(const id of ['save','publish','upload','blogUpload'])$(id).disabled=busy||!loaded||uncertain;$('reload').disabled=busy;$('customFields').disabled=$('contentType').value==='blog';$('customFields').hidden=$('contentType').value==='blog';$('blogControls').hidden=$('contentType').value!=='blog';$('refreshBlogs').disabled=busy||!loaded||blogBusy;$('blogSelect').disabled=busy||!loaded||blogBusy;$('blogFields').disabled=busy||!loaded||!selectedBlog;$('blogFields').hidden=!selectedBlog;$('resetBlog').disabled=busy||!loaded||blogBusy||!selectedBlog||!blogs.some(blog=>blog.url===selectedBlog.url); }
-function config(){const c={motionEnabled:$('motionEnabled').checked,contentType:$('contentType').value,blog:selectedBlog,enabled:$('enabled').checked,heartsEnabled:$('heartsEnabled').checked,imageWidth:Number($('imageWidth').value)};for(const name of names)c[name]=$(name).value.trim();return c;}
+function config(){const c={backgroundColor:$('backgroundColor').value,motionEnabled:$('motionEnabled').checked,contentType:$('contentType').value,blog:selectedBlog,enabled:$('enabled').checked,heartsEnabled:$('heartsEnabled').checked,imageWidth:Number($('imageWidth').value)};for(const name of names)c[name]=$(name).value.trim();return c;}
 function preview(){
- const c=config();$('motionYes').setAttribute('aria-pressed',String(c.motionEnabled));$('motionNo').setAttribute('aria-pressed',String(!c.motionEnabled));$('widthValue').textContent=c.imageWidth+'%';
+ const c=config();$('colorValue').textContent=c.backgroundColor;$('motionYes').setAttribute('aria-pressed',String(c.motionEnabled));$('motionNo').setAttribute('aria-pressed',String(!c.motionEnabled));$('widthValue').textContent=c.imageWidth+'%';
  window.PPBreakingNews.render($('preview'),c);
  $('previewHeart').hidden=!c.heartsEnabled;
  $('previewNote').textContent=c.enabled?'Publishing this draft replaces the homepage countdown.':'Off: publishing restores your existing countdown or carousel. The draft card is shown below.';
 }
 function edited(){dirty=true;preview();status(uncertain?'Changes kept here. Reload saved settings to check the last request before saving again.':'Unsaved draft changes.');}
 function showLive(c){$('live').textContent=c&&c.enabled?'Currently published: Breaking News.':'Currently published: Breaking News off. Existing countdown or carousel is shown.';}
-function fill(c){c=c||{};$('contentType').value=c.contentType==='blog'?'blog':'custom';selectedBlog=cloneBlog(c.blog);blogOptions();fillBlog();for(const name of names)$(name).value=typeof c[name]==='string'?c[name]:'';$('enabled').checked=c.enabled===true;$('motionEnabled').checked=c.motionEnabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;$('imageWidth').value=Number.isInteger(c.imageWidth)?c.imageWidth:100;dirty=false;preview();}
+function fill(c){c=c||{};$('backgroundColor').value=typeof c.backgroundColor==='string'&&/^#[0-9a-f]{6}$/i.test(c.backgroundColor)?c.backgroundColor.toLowerCase():DEFAULT_BACKGROUND;$('contentType').value=c.contentType==='blog'?'blog':'custom';selectedBlog=cloneBlog(c.blog);blogOptions();fillBlog();for(const name of names)$(name).value=typeof c[name]==='string'?c[name]:'';$('enabled').checked=c.enabled===true;$('motionEnabled').checked=c.motionEnabled===true;$('heartsEnabled').checked=c.heartsEnabled!==false;$('imageWidth').value=Number.isInteger(c.imageWidth)?c.imageWidth:100;dirty=false;preview();}
 async function request(path,body,upload=false){
  const writing=body!==undefined,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
  try{
@@ -128,6 +129,7 @@ async function loadBlogs(){
  }catch(error){$('blogStatus').textContent=(error.name==='AbortError'?'Loading blogs timed out.':error.message)+' Your saved selection and custom writing are kept. Use Refresh blog list to retry.';}
  finally{clearTimeout(timer);blogBusy=false;controls();}
 }
+$('resetColor').addEventListener('click',()=>{if(busy||!loaded)return;$('backgroundColor').value=DEFAULT_BACKGROUND;edited();});
 for(const [id,value] of [['motionYes',true],['motionNo',false]])$(id).addEventListener('click',()=>{if(busy||!loaded)return;$('motionEnabled').checked=value;edited();});
 $('contentType').addEventListener('change',()=>{controls();edited();if($('contentType').value==='blog'&&!blogsLoaded)loadBlogs();});
 $('blogSelect').addEventListener('change',()=>{
