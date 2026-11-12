@@ -2490,6 +2490,12 @@ body.blog-fresh-bl .ticker-pill.blog {
 @media (max-width: 480px) {
   .hero-actions { flex-direction: column; align-items: center; }
   .btn-primary, .btn-ghost { width: 100%; text-align: center; }
+  /* Product Finder search bar: stack vertically so the Find it button
+     centers cleanly below the input instead of bleeding past the right
+     edge (the global btn-primary:100% rule above was pushing it off-screen). */
+  .hero-search-bar { flex-direction: column; align-items: stretch; }
+  .hero-search-bar input { text-align: center; width: 100%; }
+  .hero-search-bar .btn-primary { width: 100%; }
 }
 
 /* ================================================================
