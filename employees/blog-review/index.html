@@ -447,6 +447,9 @@
       const canPublish = state.tab === 'drafts';
       const canArchive = state.tab === 'drafts';
       const canUnarchive = state.tab === 'archived';
+      // Unpublish moves a live post back to Archived AND deletes the HTML
+      // file from the repo. Content is preserved so Dad can republish later.
+      const canUnpublish = state.tab === 'published';
       // Delete allowed on every tab. For Published, the worker removes the
       // live HTML file from GitHub via GH_WRITE_TOKEN (committed by the blog
       // bot) and clears all KV traces.
@@ -457,6 +460,7 @@
       if (canPublish)   actions.push('<button class="btn btn-primary" id="btn-publish">Publish to Site &rarr;</button>');
       if (canArchive)   actions.push('<button class="btn btn-ghost" id="btn-archive">Archive</button>');
       if (canUnarchive) actions.push('<button class="btn btn-ghost" id="btn-unarchive">Move back to drafts</button>');
+      if (canUnpublish) actions.push('<button class="btn btn-ghost" id="btn-unpublish">Unpublish (archive)</button>');
       if (canDelete)    actions.push('<button class="btn btn-danger" id="btn-delete">Delete</button>');
       if (d.commit_sha) actions.push('<a class="btn btn-ghost" href="https://github.com/piecepavilion/piece-pavilion/commit/' +
                                      encodeURIComponent(d.commit_sha) + '" target="_blank" rel="noopener">View commit</a>');
@@ -500,6 +504,8 @@
       if (btnArchive) btnArchive.addEventListener('click', () => doArchive(d));
       const btnUnarchive = $('btn-unarchive');
       if (btnUnarchive) btnUnarchive.addEventListener('click', () => doUnarchive(d));
+      const btnUnpublish = $('btn-unpublish');
+      if (btnUnpublish) btnUnpublish.addEventListener('click', () => doUnpublish(d));
       const btnDelete = $('btn-delete');
       if (btnDelete) btnDelete.addEventListener('click', () => doDelete(d));
     }
@@ -772,6 +778,19 @@
         $('preview').innerHTML = '<div class="empty">Select a draft from the list to review.</div>';
         loadList();
       } catch (e) { toast('Unarchive failed: ' + e.message, 'err'); }
+    }
+
+    async function doUnpublish(d) {
+      if (!confirm('Unpublish "' + d.title + '"?\n\nThe HTML file is removed from the site repo (immediate 404 on that URL), but the content is saved in Archived so you can republish later.')) return;
+      try {
+        await api('POST', '/unpublish/' + encodeURIComponent(d.id));
+        toast('Unpublished — moved to Archived.');
+        await refreshCounts();
+        state.selected = null;
+        state.current = null;
+        $('preview').innerHTML = '<div class="empty">Select a post from the list.</div>';
+        loadList();
+      } catch (e) { toast('Unpublish failed: ' + e.message, 'err'); }
     }
 
     async function doDelete(d) {
