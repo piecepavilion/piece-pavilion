@@ -1274,22 +1274,33 @@
           'font-size="11" font-weight="700" fill="#6b7280">No image</text>' +
       '</svg>'
     );
-    const fix = (img) => {
-      if (img.dataset.imgFixed) return;
+    const swap = (img) => {
+      if (img.dataset.imgFixed === '1') return;
       img.dataset.imgFixed = '1';
-      const swap = () => {
-        if (img.src === PLACEHOLDER) return;
-        img.src = PLACEHOLDER;
-        img.style.background = '#f3f4f6';
-      };
-      // If the image already failed before this script ran.
-      if (img.complete && img.naturalWidth === 0) swap();
-      img.addEventListener('error', swap, { once: true });
+      img.src = PLACEHOLDER;
+      img.style.background = '#f3f4f6';
+    };
+    const check = (img) => {
+      // Already swapped — nothing to do.
+      if (img.dataset.imgFixed === '1') return;
+      // Finished loading successfully — nothing to do.
+      if (img.complete && img.naturalWidth > 0) return;
+      // Finished loading but failed — swap NOW (covers images that errored
+      // before this script attached a listener, which is the common case).
+      if (img.complete && img.naturalWidth === 0) { swap(img); return; }
+      // Still in flight — listen for both outcomes.
+      img.addEventListener('error', () => swap(img), { once: true });
+      img.addEventListener('load', () => {
+        if (img.naturalWidth === 0) swap(img);
+      }, { once: true });
     };
     const scan = () =>
-      document.querySelectorAll('#hero-track img, #newest img, #featured-grid img').forEach(fix);
+      document.querySelectorAll('#hero-track img, #newest img, #featured-grid img').forEach(check);
     scan();
-    // Re-scan after the client-side override swap populates new cards.
+    // Re-scan at 1s, 3s, 8s to catch images whose error event fires late
+    // (BrickLink can take 10+ seconds to reject a hotlink during an outage).
+    [1000, 3000, 8000, 15000].forEach(ms => setTimeout(scan, ms));
+    // Re-scan when the client-side featured-overrides swap populates new cards.
     const mo = new MutationObserver(() => scan());
     ['hero-track', 'newest', 'featured-grid'].forEach(id => {
       const el = document.getElementById(id);
