@@ -1292,17 +1292,22 @@
       }, { once: true });
     };
     const scan = () =>
-      document.querySelectorAll('#hero-track img, #newest img, #featured-grid img').forEach(check);
+      document.querySelectorAll(
+        '#hero-track img, #newest img, #featured-grid img, .announcement-banner .ticker-item img'
+      ).forEach(check);
     scan();
     // Re-scan at 1s, 3s, 8s to catch images whose error event fires late
     // (BrickLink can take 10+ seconds to reject a hotlink during an outage).
     [1000, 3000, 8000, 15000].forEach(ms => setTimeout(scan, ms));
-    // Re-scan when the client-side featured-overrides swap populates new cards.
+    // Re-scan when the client-side featured-overrides swap populates new cards
+    // OR when the ticker re-renders from the staff banner editor save.
     const mo = new MutationObserver(() => scan());
     ['hero-track', 'newest', 'featured-grid'].forEach(id => {
       const el = document.getElementById(id);
       if (el) mo.observe(el, { childList: true, subtree: true });
     });
+    document.querySelectorAll('.announcement-banner').forEach(el =>
+      mo.observe(el, { childList: true, subtree: true }));
   })();
   </script>
 </body>
