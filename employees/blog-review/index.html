@@ -447,7 +447,10 @@
       const canPublish = state.tab === 'drafts';
       const canArchive = state.tab === 'drafts';
       const canUnarchive = state.tab === 'archived';
-      const canDelete = state.tab !== 'published';
+      // Delete allowed on every tab. For Published, the worker removes the
+      // live HTML file from GitHub via GH_WRITE_TOKEN (committed by the blog
+      // bot) and clears all KV traces.
+      const canDelete = true;
 
       const actions = [];
       if (canEdit)      actions.push('<button class="btn btn-secondary" id="btn-edit">Edit</button>');
@@ -772,14 +775,24 @@
     }
 
     async function doDelete(d) {
-      if (!confirm('Permanently delete "' + d.title + '"?\n\nThis clears all KV traces of the draft. (A PUBLISHED post is only deleted from the live site in GitHub.)')) return;
+      const isPublished = state.tab === 'published';
+      const msg = isPublished
+        ? 'Permanently delete the LIVE post "' + d.title + '"?\n\n' +
+          'This removes the HTML file from the site repo (immediate 404 for ' +
+          'that URL) AND clears all KV traces. There is no undo — you would ' +
+          'have to re-publish from scratch. Type OK to confirm.'
+        : 'Permanently delete "' + d.title + '"?\n\nThis clears all KV traces.';
+      if (!confirm(msg)) return;
+      const endpoint = isPublished
+        ? '/published/' + encodeURIComponent(d.id)
+        : '/draft/'     + encodeURIComponent(d.id);
       try {
-        await api('DELETE', '/draft/' + encodeURIComponent(d.id));
-        toast('Deleted.');
+        await api('DELETE', endpoint);
+        toast(isPublished ? 'Deleted from live site + KV.' : 'Deleted.');
         await refreshCounts();
         state.selected = null;
         state.current = null;
-        $('preview').innerHTML = '<div class="empty">Select a draft from the list to review.</div>';
+        $('preview').innerHTML = '<div class="empty">Select a post from the list.</div>';
         loadList();
       } catch (e) { toast('Delete failed: ' + e.message, 'err'); }
     }
