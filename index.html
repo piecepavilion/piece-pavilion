@@ -1262,11 +1262,24 @@
   -->
   <script>
   (() => {
-    const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    // Rotating "no image" faces — always upbeat so the fallback never feels
+    // like a complaint. Add or trim here; the rest of the code just reads
+    // the list. Chosen per Dad's filter: happy/silly, nothing sad or mad.
+    const FACES = ['😊', '😄', '😁', '😎', '🤩', '🥳', '🤗', '🤠'];
+    // Deterministic pick from the image URL so the same card always shows
+    // the same face across refreshes — no jumpy randomness. A tiny
+    // string-hash is all we need; collisions across faces are fine.
+    const faceFor = (seed) => {
+      let h = 0;
+      const s = seed || '';
+      for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+      return FACES[Math.abs(h) % FACES.length];
+    };
+    const placeholderFor = (seed) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">' +
         '<rect width="160" height="160" fill="#f3f4f6"/>' +
         '<text x="80" y="100" text-anchor="middle" font-size="72" ' +
-          'font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">😊</text>' +
+          'font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + faceFor(seed) + '</text>' +
         '<text x="80" y="140" text-anchor="middle" font-family="Nunito,system-ui,sans-serif" ' +
           'font-size="11" font-weight="700" fill="#6b7280">No image</text>' +
       '</svg>'
@@ -1274,7 +1287,9 @@
     const swap = (img) => {
       if (img.dataset.imgFixed === '1') return;
       img.dataset.imgFixed = '1';
-      img.src = PLACEHOLDER;
+      // Seed on the ORIGINAL src (plus alt as a tiebreaker) so the same
+      // card holds its face even if src gets reassigned elsewhere.
+      img.src = placeholderFor((img.getAttribute('src') || '') + '|' + (img.alt || ''));
       img.style.background = '#f3f4f6';
     };
     const check = (img) => {
