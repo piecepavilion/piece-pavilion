@@ -1269,27 +1269,58 @@
     // Deterministic pick from the image URL so the same card always shows
     // the same face across refreshes — no jumpy randomness. A tiny
     // string-hash is all we need; collisions across faces are fine.
-    const faceFor = (seed) => {
+    const hashOf = (s) => {
       let h = 0;
-      const s = seed || '';
+      s = s || '';
       for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-      return FACES[Math.abs(h) % FACES.length];
+      return Math.abs(h);
     };
-    const placeholderFor = (seed) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    // Pick a face from the hashed seed, but never the same face as the one
+    // directly before it in its container — walk forward through the list
+    // until a different face shows up. Matches Dad's "no two in a row" rule.
+    const faceForAvoiding = (seed, forbidden) => {
+      let idx = hashOf(seed) % FACES.length;
+      for (let i = 0; i < FACES.length; i++) {
+        const f = FACES[(idx + i) % FACES.length];
+        if (f !== forbidden) return f;
+      }
+      return FACES[idx];
+    };
+    const placeholderWithFace = (face) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">' +
         '<rect width="160" height="160" fill="#f3f4f6"/>' +
         '<text x="80" y="100" text-anchor="middle" font-size="72" ' +
-          'font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + faceFor(seed) + '</text>' +
+          'font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">' + face + '</text>' +
         '<text x="80" y="140" text-anchor="middle" font-family="Nunito,system-ui,sans-serif" ' +
           'font-size="11" font-weight="700" fill="#6b7280">No image</text>' +
       '</svg>'
     );
+    // Walk the previous siblings in document order and read the face each
+    // already-placeholdered card is using, so this card can avoid matching
+    // its immediate neighbor. Containers get their own scope automatically
+    // because .closest() limits the walk to the card's section.
+    const prevFaceIn = (img) => {
+      const container = img.closest('#hero-track, #newest, #featured-grid, .announcement-banner');
+      if (!container) return null;
+      const all = Array.from(container.querySelectorAll('img[data-img-face]'));
+      // Find the previous one in DOM order.
+      let last = null;
+      for (const other of all) {
+        if (other === img) break;
+        last = other;
+      }
+      return last ? last.dataset.imgFace : null;
+    };
     const swap = (img) => {
       if (img.dataset.imgFixed === '1') return;
       img.dataset.imgFixed = '1';
       // Seed on the ORIGINAL src (plus alt as a tiebreaker) so the same
-      // card holds its face even if src gets reassigned elsewhere.
-      img.src = placeholderFor((img.getAttribute('src') || '') + '|' + (img.alt || ''));
+      // card holds its face across refreshes — mostly deterministic, with
+      // a nudge to the next face if its left-neighbor would match.
+      const seed = (img.getAttribute('src') || '') + '|' + (img.alt || '');
+      const face = faceForAvoiding(seed, prevFaceIn(img));
+      img.dataset.imgFace = face;
+      img.src = placeholderWithFace(face);
       img.style.background = '#f3f4f6';
     };
     const check = (img) => {
