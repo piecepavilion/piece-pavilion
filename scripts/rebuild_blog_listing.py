@@ -138,12 +138,18 @@ THUMB_PALETTE = {
     "seller-guide":  (( 50,  50,  60), ( 10,  10,  15), (255, 255, 255), (255, 255, 255, 230)),
 }
 
-def thumb_category(title):
+def thumb_category(title, slug=None):
     """Pick a category key from the title using the same patterns the blog
     listing uses. First match wins, so order matters: minifig before parts
     (both mention 'piece'), guide before news (both can mention a year)."""
     t = (title or "").lower()
     import re as _re
+    # BrickLink SOS series — Dad's purple branded covers. Any part-N slug
+    # locks in the "parts" palette so the whole series looks consistent.
+    if slug and _SOS_PART_RE.match(slug):
+        return "parts"
+    if _re.search(r"bricklink sos", t):
+        return "parts"
     # Seller Guide wins first -- these posts carry a BrickLink-seller branding
     # and need the black palette, even though they'd also match "guide".
     if _re.search(r"seller.?guide|bricklink seller|guide for.*seller|bricklink.?blog|bricklink.?guide", t):
@@ -163,7 +169,7 @@ def generate_thumb_png(title, slug, out_path):
     'PIECE PAVILION' label centered above a big Title Case phrase in
     Fredoka Bold, small seal logo in top-right."""
     W, H = 1200, 600
-    cat = thumb_category(title)
+    cat = thumb_category(title, slug)
     bright, dark, ink, label_ink = THUMB_PALETTE[cat]
 
     # Diagonal gradient from dark (top-left) to bright (bottom-right).
@@ -240,12 +246,28 @@ THUMB_PHRASE_OVERRIDES = {
 }
 
 
+# Generic SOS series auto-cover: any slug shaped `bricklink-sos-part-N-*` gets
+# "BrickLink SOS / Part N" rendered on the purple palette so Dad never has to
+# hand-make or specify covers for Parts 8, 9, 10 ... 20+. A hand-made PNG at
+# /thumb/<slug>.png (like Dad's custom Part 7) takes precedence — this only
+# fires when no thumb file is on disk.
+_SOS_PART_RE = re.compile(r"^bricklink-sos-part-(\d+)(?:-|$)")
+
+def sos_series_phrase(slug):
+    m = _SOS_PART_RE.match(slug or "")
+    return "BrickLink SOS\nPart " + m.group(1) if m else None
+
+
 def thumb_phrase(title, slug=None):
     """Pick a 1-3 word punchy phrase in Title Case for the SVG placeholder.
     Models the hand-made thumbs ('Advent 2026', 'Halloween Guide',
     'Minifig Values')."""
     if slug in THUMB_PHRASE_OVERRIDES:
         return THUMB_PHRASE_OVERRIDES[slug]
+    # Generic BrickLink SOS Part N — covers Parts 5 through 20+ automatically.
+    sos = sos_series_phrase(slug)
+    if sos:
+        return sos
     if not title:
         return "New Post"
     words = re.sub(r"[:,.\!\?]", " ", title).split()
@@ -595,7 +617,7 @@ def main():
         with open(post_path, "r", encoding="utf-8") as f:
             txt = f.read()
         # 1. Set body data-category.
-        cat = thumb_category(p["title"])
+        cat = thumb_category(p["title"], p["slug"])
         new_txt_cat = set_body_category(txt, cat)
         # 2. Inject or refresh related-posts block.
         new_txt, changed_rel = inject_related(new_txt_cat, block) if block else (new_txt_cat, False)
