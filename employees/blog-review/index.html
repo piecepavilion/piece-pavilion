@@ -508,7 +508,6 @@
         '      <div style="font-weight:800;font-size:.92rem;margin-bottom:4px;">Cover image</div>' +
         '      <div style="color:#6b7280;font-size:.8rem;margin-bottom:8px;">PNG, JPG or WEBP &middot; 1200×600 looks best &middot; replaces both the blog card thumb AND the social share preview</div>' +
         '      <input type="file" id="cover-file" accept="image/png,image/jpeg,image/webp" style="font:inherit;font-size:.85rem;">' +
-        '      <button class="btn btn-secondary" id="btn-cover-upload" type="button" style="margin-left:8px;">Upload cover</button>' +
         '      <span id="cover-status" style="margin-left:10px;font-size:.82rem;color:#6b7280;"></span>' +
         '    </div>' +
         '  </div>' +
@@ -516,16 +515,11 @@
       );
     }
 
-    async function doCoverUpload(d) {
+    async function doCoverUpload(d, file) {
       const fileInput = $('cover-file');
       const status = $('cover-status');
-      const btn = $('btn-cover-upload');
-      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-        status.textContent = 'Choose an image first.';
-        status.style.color = '#c62222';
-        return;
-      }
-      const file = fileInput.files[0];
+      if (!file && fileInput && fileInput.files) file = fileInput.files[0];
+      if (!file) return;
       if (file.size > 10 * 1024 * 1024) {
         status.textContent = 'File is over 10 MB — pick a smaller image.';
         status.style.color = '#c62222';
@@ -533,7 +527,7 @@
       }
       status.textContent = 'Uploading…';
       status.style.color = '#6b7280';
-      btn.disabled = true;
+      if (fileInput) fileInput.disabled = true;
       try {
         const fd = new FormData();
         fd.append('file', file);
@@ -552,15 +546,18 @@
         status.textContent = 'Upload failed: ' + e.message;
         status.style.color = '#c62222';
       } finally {
-        btn.disabled = false;
+        if (fileInput) fileInput.disabled = false;
       }
     }
 
     function wireActions() {
       const d = state.current;
       if (!d) return;
-      const btnCover = $('btn-cover-upload');
-      if (btnCover) btnCover.addEventListener('click', () => doCoverUpload(d));
+      const coverFile = $('cover-file');
+      if (coverFile) coverFile.addEventListener('change', e => {
+        const f = e.target.files && e.target.files[0];
+        if (f) doCoverUpload(d, f);
+      });
       const btnEdit = $('btn-edit');
       if (btnEdit) btnEdit.addEventListener('click', () => startEditing(d));
       const btnPublish = $('btn-publish');
