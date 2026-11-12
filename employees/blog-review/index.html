@@ -484,6 +484,7 @@
           '<span class="cat-badge ' + escHtml(d.category || '') + '">' + escHtml(d.category || 'news') + '</span></p>' +
         sourcesHtml +
         thumbHint +
+        coverUploadBlock(d) +
         '<iframe class="pv-body" sandbox="" style="width:100%;min-height:400px;border:1px solid #e5e7eb;border-radius:8px;background:#fff" srcdoc="' +
           escHtml(bodySrcdoc) + '"></iframe>' +
         faqHtml +
@@ -493,9 +494,73 @@
       wireActions();
     }
 
+    function coverUploadBlock(d) {
+      // Only show for posts that actually exist in the system (has a slug).
+      if (!d.slug) return '';
+      const live = '/thumb/' + encodeURIComponent(d.slug) + '.png?v=' + Date.now();
+      return (
+        '<div class="cover-upload" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin:10px 0 14px;">' +
+        '  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+        '    <img id="cover-current" src="' + live + '" alt="Current cover" ' +
+        '         style="width:160px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;background:#f3f4f6"' +
+        '         onerror="this.style.visibility=\'hidden\'">' +
+        '    <div style="flex:1;min-width:220px;">' +
+        '      <div style="font-weight:800;font-size:.92rem;margin-bottom:4px;">Cover image</div>' +
+        '      <div style="color:#6b7280;font-size:.8rem;margin-bottom:8px;">PNG, JPG or WEBP &middot; 1200×600 looks best &middot; replaces both the blog card thumb AND the social share preview</div>' +
+        '      <input type="file" id="cover-file" accept="image/png,image/jpeg,image/webp" style="font:inherit;font-size:.85rem;">' +
+        '      <button class="btn btn-secondary" id="btn-cover-upload" type="button" style="margin-left:8px;">Upload cover</button>' +
+        '      <span id="cover-status" style="margin-left:10px;font-size:.82rem;color:#6b7280;"></span>' +
+        '    </div>' +
+        '  </div>' +
+        '</div>'
+      );
+    }
+
+    async function doCoverUpload(d) {
+      const fileInput = $('cover-file');
+      const status = $('cover-status');
+      const btn = $('btn-cover-upload');
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        status.textContent = 'Choose an image first.';
+        status.style.color = '#c62222';
+        return;
+      }
+      const file = fileInput.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        status.textContent = 'File is over 10 MB — pick a smaller image.';
+        status.style.color = '#c62222';
+        return;
+      }
+      status.textContent = 'Uploading…';
+      status.style.color = '#6b7280';
+      btn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch(API + '/cover/' + encodeURIComponent(d.id), { method: 'POST', body: fd });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        status.textContent = 'Saved! Site rebuilds in ~1–2 min.';
+        status.style.color = '#2e7d3e';
+        const img = $('cover-current');
+        if (img) {
+          const base = '/thumb/' + encodeURIComponent(d.slug) + '.png';
+          img.src = base + '?v=' + Date.now();
+          img.style.visibility = '';
+        }
+      } catch (e) {
+        status.textContent = 'Upload failed: ' + e.message;
+        status.style.color = '#c62222';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     function wireActions() {
       const d = state.current;
       if (!d) return;
+      const btnCover = $('btn-cover-upload');
+      if (btnCover) btnCover.addEventListener('click', () => doCoverUpload(d));
       const btnEdit = $('btn-edit');
       if (btnEdit) btnEdit.addEventListener('click', () => startEditing(d));
       const btnPublish = $('btn-publish');
