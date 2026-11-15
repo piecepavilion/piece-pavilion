@@ -1842,60 +1842,115 @@
     "2",   // Tan
   ];
 
-  // Build a shortlist of up to 8 candidate BL colors for the picker. Blends:
-  //   - Brickognize's top color guesses (model-based)
-  //   - Lab-distance nearest from a sampled pixel (vision-based)
-  //   - The HARD_COLOR_IDS family when the sample is dark + low-saturation
-  // Returns [{id, name, r, g, b, hex, auto: bool}] with the top-scoring one
-  // marked auto. If no sample pixel given, falls back to Brickognize + a
-  // sprinkle of the hard family.
+  // Build a tight shortlist of BL color chips (max 5) for the picker.
+  //
+  // Behavior depends on how confusable the sample is:
+  //  - Clearly saturated sample (Sky Blue, Red, etc.): 3-4 nearest colors
+  //    in Lab space, NO hard-gray family, Brickognize's lower-ranked
+  //    guesses filtered out if they're far from the sample.
+  //  - Hard zone (dark + low-saturation): show the hard-color family so
+  //    Dad can tap between black/brown/dark-brown/dark-bluish-gray/etc.
+  //    Still capped at 5 chips, prioritized by Lab distance to the sample.
+  //
+  // Dad's rule: fewer, better chips. If you're not sure which to tap,
+  // the picker failed.
   function buildColorShortlist(sampledRgb, bgColors, colorMap, autoPickId){
-    const by = new Map();  // id -> color obj
-    const pushIfReal = (c) => { if (c && c.id != null) by.set(String(c.id), c); };
+    const MAX_CHIPS = 5;
+    const MAX_LAB_DIST_SAT = 35;   // saturated sample: chip must be within 35 ΔE
+    const MAX_LAB_DIST_HARD = 50;  // hard sample: looser since the family IS spread out
+    const by = new Map();  // id -> color obj with its lab distance to sample
 
-    // 1) Brickognize top 5 — resolve id/name against colorMap.
+    // Pre-compute sample Lab + "hard zone" check so every filter uses the
+    // same reference frame.
+    let sampleLab = null, sampleIsHard = false;
+    if (sampledRgb){
+      const [r, g, b] = sampledRgb;
+      sampleLab = rgb2lab(r, g, b);
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      const sat = mx - mn;
+      const lum = (r + g + b) / 3;
+      sampleIsHard = (sat < 35 && lum < 170);
+    }
+    const maxDist = sampleIsHard ? MAX_LAB_DIST_HARD : MAX_LAB_DIST_SAT;
+
+    const pushIfReal = (c, forceInclude) => {
+      if (!c || c.id == null) return;
+      const id = String(c.id);
+      if (by.has(id)) return;
+      // Reject if too far from the sample (unless we don't have a sample,
+      // or the caller forces it in — e.g. the current auto-pick).
+      let dist = 0;
+      if (sampleLab){
+        dist = labDist(sampleLab, rgb2lab(c.r, c.g, c.b));
+        if (!forceInclude && dist > maxDist) return;
+      }
+      by.set(id, { color: c, dist });
+    };
+
     const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
-    (bgColors || []).slice(0, 5).forEach((bg) => {
+    const autoIsHard = autoPickId && HARD_COLOR_IDS.includes(String(autoPickId));
+
+    // 1) The auto-pick itself always stays (it's what we already showed Dad).
+    if (autoPickId && colorMap[autoPickId]){
+      pushIfReal(colorMap[autoPickId], /*forceInclude*/true);
+    }
+
+    // 2) Lab-nearest from the sampled pixel — the strongest signal.
+    //    For saturated samples we take top 4; for hard-zone we take top 3
+    //    and let the hard-family pass fill the rest.
+    if (sampledRgb){
+      const ranked = rankBlColors(sampledRgb, colorMap);
+      const takeN = sampleIsHard ? 3 : 4;
+      ranked.slice(0, takeN).forEach((r) => pushIfReal(r.color));
+    }
+
+    // 3) Brickognize guesses — only the top 2 highest-scoring, AND only if
+    //    they're within the Lab-distance budget. A noisy Trans-Brown vote
+    //    for a Sky Blue cone never passes the 35 ΔE gate.
+    (bgColors || []).slice(0, 2).forEach((bg) => {
       const bgId = String(bg.id || "");
       const bgN = norm(bg.name);
       const m = Object.values(colorMap).find((c) => String(c.id) === bgId || norm(c.name) === bgN);
       pushIfReal(m);
     });
 
-    // 2) Lab-distance nearest to the sampled pixel.
-    let sampleIsHard = false;
-    if (sampledRgb){
-      const [r, g, b] = sampledRgb;
-      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-      const sat = mx - mn;
-      const lum = (r + g + b) / 3;
-      // "Hard" = low saturation AND darker than mid-tan. Captures the
-      // black/brown/dark-brown/bluish-gray cluster Dad called out.
-      sampleIsHard = (sat < 35 && lum < 170);
-      const ranked = rankBlColors(sampledRgb, colorMap);
-      ranked.slice(0, 5).forEach((r) => pushIfReal(r.color));
-    }
-
-    // 3) If the sample is in the hard zone, OR the auto-pick is itself one
-    // of the hard colors, OR we have no sample at all, force the entire
-    // hard family in so Dad has them all one tap away. This catches the
-    // case where Brickognize said "Black" but the real color might be
-    // Dark Brown or Dark Bluish Gray — he should always see those as
-    // alternatives, even when the sample looks relatively clean.
-    const autoIsHard = autoPickId && HARD_COLOR_IDS.includes(String(autoPickId));
-    if (sampleIsHard || autoIsHard || !sampledRgb){
+    // 4) Hard-color family ONLY when the sample is in the hard zone, OR
+    //    the auto-pick is itself a hard color. Skip entirely for clean
+    //    saturated samples so Sky Blue scans don't get gray/brown chips.
+    if (sampleIsHard || autoIsHard){
       HARD_COLOR_IDS.forEach((id) => pushIfReal(colorMap[id]));
     }
 
-    // Return as array; auto flag goes on the pick we chose automatically.
-    const out = Array.from(by.values()).slice(0, 8).map((c) => ({
+    // 5) No sample at all (Brickognize-only path): use the top Brickognize
+    //    picks + a pinch of the hard family as a safety net.
+    if (!sampledRgb){
+      (bgColors || []).slice(0, 4).forEach((bg) => {
+        const bgId = String(bg.id || "");
+        const bgN = norm(bg.name);
+        const m = Object.values(colorMap).find((c) => String(c.id) === bgId || norm(c.name) === bgN);
+        if (m) by.set(String(m.id), { color: m, dist: 0 });
+      });
+      HARD_COLOR_IDS.slice(0, 4).forEach((id) => {
+        if (colorMap[id]) by.set(id, { color: colorMap[id], dist: 0 });
+      });
+    }
+
+    // Sort by Lab distance to the sample, auto-pick first.
+    const entries = Array.from(by.values()).sort((a, b) => {
+      const aAuto = String(a.color.id) === String(autoPickId || "");
+      const bAuto = String(b.color.id) === String(autoPickId || "");
+      if (aAuto && !bAuto) return -1;
+      if (!aAuto && bAuto) return 1;
+      return a.dist - b.dist;
+    });
+
+    return entries.slice(0, MAX_CHIPS).map(({ color: c }) => ({
       id: String(c.id),
       name: c.name,
       r: c.r, g: c.g, b: c.b,
       hex: "rgb(" + c.r + "," + c.g + "," + c.b + ")",
       auto: String(c.id) === String(autoPickId || ""),
     }));
-    return out;
   }
 
   // Per-part color-correction learning layer: when Dad taps a chip to
