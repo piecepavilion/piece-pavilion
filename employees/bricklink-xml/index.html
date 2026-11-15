@@ -345,6 +345,10 @@
                 <div><strong>Part:</strong> <span id="scanOneName">—</span></div>
                 <div><strong>ID:</strong> <code id="scanOneId" style="font-family:'JetBrains Mono','Consolas',monospace">—</code></div>
                 <div><strong>Color:</strong> <span id="scanOneColor">—</span></div>
+                <div id="scanOneColorChipsRow" style="display:none;margin-top:6px">
+                  <div style="font-size:.72rem;color:#854d0e;margin-bottom:4px">Wrong color? Tap the right one — price updates:</div>
+                  <div id="scanOneColorChips" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+                </div>
                 <div style="margin-top:8px;color:#854d0e;font-size:.78rem">Tap one to drop a row on the grid below (Qty = 1). Fill Condition is already set, you just fill Remarks on the row if you want.</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
                   <button class="btn" id="scanOneAddNewBtn" type="button" style="padding:12px 16px;font-size:.95rem;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:160px">&#10133; Add as <u>New</u><br/><span id="scanOnePriceN" style="font-size:1.1rem">—</span></button>
@@ -1692,6 +1696,31 @@
       : "—";
     document.getElementById("scanOnePriceN").textContent = (s.priceN > 0) ? ("$" + s.priceN.toFixed(2)) : "—";
     document.getElementById("scanOnePriceU").textContent = (s.priceU > 0) ? ("$" + s.priceU.toFixed(2)) : "—";
+    // Color chips — if we have a shortlist, render each as a tap target.
+    const chipsRow = document.getElementById("scanOneColorChipsRow");
+    const chipsHost = document.getElementById("scanOneColorChips");
+    if (s.colorChips && s.colorChips.length){
+      chipsRow.style.display = "block";
+      chipsHost.innerHTML = "";
+      s.colorChips.forEach((c) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        const isPicked = String(c.id) === String(s.colorId || "");
+        // Readable text on the swatch: pick white text on dark bg, black on light.
+        const lum = (c.r*0.299 + c.g*0.587 + c.b*0.114);
+        const fg = lum < 140 ? "#fff" : "#111";
+        btn.style.cssText = "padding:5px 9px;font-size:.72rem;font-weight:600;" +
+          "background:" + c.hex + ";color:" + fg + ";" +
+          "border:" + (isPicked ? "2px solid #dc2626" : "1px solid #d4d4d4") + ";" +
+          "border-radius:6px;cursor:pointer;line-height:1.1;" +
+          "box-shadow:" + (isPicked ? "0 0 0 2px #fee2e2" : "none") + ";";
+        btn.textContent = c.name + " (" + c.id + ")";
+        btn.addEventListener("click", () => selectScanOneColor(c.id, c.name));
+        chipsHost.appendChild(btn);
+      });
+    } else {
+      chipsRow.style.display = "none";
+    }
     const userImg = document.getElementById("scanOneUserImg");
     if (s.userPhotoUrl) userImg.src = s.userPhotoUrl;
     const blImg = document.getElementById("scanOneBLImg");
@@ -1703,6 +1732,150 @@
       blImg.onerror = () => { blImg.onerror = null; blImg.src = "https://img.bricklink.com/ItemImage/PN/0/" + encodeURIComponent(s.id) + ".png"; };
     } else {
       blImg.removeAttribute("src");
+    }
+  }
+
+  // Load a blob/file into an Image, draw it to a canvas, and return the
+  // average RGB of the central 40% (ignoring near-white/near-black pixels
+  // so the background doesn't drag the sample). Used by the scan-single
+  // flow for a 2nd opinion on color on top of Brickognize's own color guess.
+  async function samplePhotoRgb(fileOrBlob){
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(fileOrBlob);
+      img.onload = () => {
+        try {
+          const W = img.naturalWidth, H = img.naturalHeight;
+          const cv = document.createElement("canvas");
+          const SZ = 160;
+          cv.width = SZ; cv.height = SZ;
+          const ctx = cv.getContext("2d");
+          // Draw the central 40% of the photo scaled to SZ×SZ.
+          const cw = W * 0.4, ch = H * 0.4;
+          const sx = (W - cw) / 2, sy = (H - ch) / 2;
+          ctx.drawImage(img, sx, sy, cw, ch, 0, 0, SZ, SZ);
+          const data = ctx.getImageData(0, 0, SZ, SZ).data;
+          let rS = 0, gS = 0, bS = 0, n = 0;
+          for (let i = 0; i < data.length; i += 4){
+            const r = data[i], g = data[i+1], b = data[i+2];
+            // Skip near-white backgrounds and near-black shadows.
+            const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+            if (mx > 245 && mn > 240) continue;   // near-white
+            if (mx < 10) continue;                // pure black shadow
+            rS += r; gS += g; bS += b; n++;
+          }
+          if (!n) { resolve(null); return; }
+          resolve([Math.round(rS/n), Math.round(gS/n), Math.round(bS/n)]);
+        } catch(_){ resolve(null); }
+        finally { URL.revokeObjectURL(url); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  // Common-confusion color family: these BL ids are the dark + gray colors
+  // Dad flagged as hard to tell apart in photos. Whenever the sample lands
+  // in this neighborhood (low saturation, mid-to-dark luminance) we force
+  // all of them into the chip picker so he can tap the right one.
+  const HARD_COLOR_IDS = [
+    "11",  // Black
+    "120", // Dark Brown
+    "88",  // Reddish Brown
+    "8",   // Brown
+    "85",  // Dark Bluish Gray
+    "86",  // Light Bluish Gray (BL's new "gray")
+    "10",  // Dark Gray (old pre-2004)
+    "9",   // Light Gray (old pre-2004)
+    "69",  // Dark Tan
+    "2",   // Tan
+  ];
+
+  // Build a shortlist of up to 8 candidate BL colors for the picker. Blends:
+  //   - Brickognize's top color guesses (model-based)
+  //   - Lab-distance nearest from a sampled pixel (vision-based)
+  //   - The HARD_COLOR_IDS family when the sample is dark + low-saturation
+  // Returns [{id, name, r, g, b, hex, auto: bool}] with the top-scoring one
+  // marked auto. If no sample pixel given, falls back to Brickognize + a
+  // sprinkle of the hard family.
+  function buildColorShortlist(sampledRgb, bgColors, colorMap, autoPickId){
+    const by = new Map();  // id -> color obj
+    const pushIfReal = (c) => { if (c && c.id != null) by.set(String(c.id), c); };
+
+    // 1) Brickognize top 5 — resolve id/name against colorMap.
+    const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
+    (bgColors || []).slice(0, 5).forEach((bg) => {
+      const bgId = String(bg.id || "");
+      const bgN = norm(bg.name);
+      const m = Object.values(colorMap).find((c) => String(c.id) === bgId || norm(c.name) === bgN);
+      pushIfReal(m);
+    });
+
+    // 2) Lab-distance nearest to the sampled pixel.
+    let sampleIsHard = false;
+    if (sampledRgb){
+      const [r, g, b] = sampledRgb;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      const sat = mx - mn;
+      const lum = (r + g + b) / 3;
+      // "Hard" = low saturation AND darker than mid-tan. Captures the
+      // black/brown/dark-brown/bluish-gray cluster Dad called out.
+      sampleIsHard = (sat < 35 && lum < 170);
+      const ranked = rankBlColors(sampledRgb, colorMap);
+      ranked.slice(0, 5).forEach((r) => pushIfReal(r.color));
+    }
+
+    // 3) If the sample is in the hard zone (or we have no sample at all),
+    // force the entire hard family in so Dad has them all one tap away.
+    if (sampleIsHard || !sampledRgb){
+      HARD_COLOR_IDS.forEach((id) => pushIfReal(colorMap[id]));
+    }
+
+    // Return as array; auto flag goes on the pick we chose automatically.
+    const out = Array.from(by.values()).slice(0, 8).map((c) => ({
+      id: String(c.id),
+      name: c.name,
+      r: c.r, g: c.g, b: c.b,
+      hex: "rgb(" + c.r + "," + c.g + "," + c.b + ")",
+      auto: String(c.id) === String(autoPickId || ""),
+    }));
+    return out;
+  }
+
+  // Dad tapped a color chip — swap the picked color, refresh the preview
+  // (updates BL thumbnail + highlights the new chip), and re-fetch BOTH
+  // New + Used 6-mo prices for the new color so the Add-as-New/Used
+  // buttons update their labels.
+  async function selectScanOneColor(colorId, colorName){
+    if (!SCAN_ONE || !SCAN_ONE.id) return;
+    SCAN_ONE.colorId = String(colorId);
+    SCAN_ONE.colorName = colorName;
+    // Mark the chosen chip as the auto-pick.
+    if (SCAN_ONE.colorChips){
+      SCAN_ONE.colorChips.forEach((c) => { c.auto = String(c.id) === String(colorId); });
+    }
+    // Clear old prices so the UI shows "..." instead of stale numbers while
+    // we fetch for the new color.
+    SCAN_ONE.priceN = 0;
+    SCAN_ONE.priceU = 0;
+    renderScanOne();
+    const dbg = document.getElementById("priceDebug");
+    if (dbg) dbg.textContent = "scan: color changed to " + colorName + " (" + colorId + ") — refetching prices...";
+    const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(SCAN_ONE.id);
+    const [pN, pU] = await Promise.all([
+      fetchBLPrice(SCAN_ONE.id, String(colorId), "N", isMinifig),
+      fetchBLPrice(SCAN_ONE.id, String(colorId), "U", isMinifig),
+    ]);
+    // If Dad tapped a DIFFERENT chip while this was in flight, don't
+    // overwrite whatever the newer click populated.
+    if (SCAN_ONE && String(SCAN_ONE.colorId) === String(colorId)){
+      SCAN_ONE.priceN = pN;
+      SCAN_ONE.priceU = pU;
+      renderScanOne();
+      if (dbg) dbg.textContent = "scan: " + SCAN_ONE.id + " — " + SCAN_ONE.name +
+        " | color: " + colorName + " (" + colorId + ")" +
+        " | N $" + (pN > 0 ? pN.toFixed(2) : "—") +
+        " | U $" + (pU > 0 ? pU.toFixed(2) : "—");
     }
   }
 
@@ -1762,22 +1935,38 @@
       // template is still there for bulk/same-part listing workflows.
       let colorBit = "", colorName = "", colorIdNum = "";
       const bgColors = j.colors || [];
-      if (bgColors.length){
-        const bgPick = bgColors[0];
-        try {
-          const colorMap = await blColors();
+      let colorMap = null;
+      try { colorMap = await blColors(); } catch(_){}
+
+      // Pixel sampling for a 2nd opinion on color — fires in parallel to
+      // the BL colorMap load so it costs nothing in wall-clock.
+      const sampledRgb = await samplePhotoRgb(fileOrBlob);
+
+      // Pick the auto color: prefer reconcileColor (pixel + Brickognize
+      // blend) when we have both; else fall back to top Brickognize guess.
+      if (colorMap){
+        let autoPick = null;
+        if (sampledRgb && bgColors.length){
+          autoPick = reconcileColor(sampledRgb, colorMap, bgColors);
+        } else if (sampledRgb){
+          autoPick = closestBlColor(sampledRgb, colorMap);
+        } else if (bgColors.length){
+          const bgPick = bgColors[0];
           const norm = (s) => String(s || "").toLowerCase().replace(/[\s\-_]/g, "");
           const bgIdStr = String(bgPick.id || "");
           const bgNameNorm = norm(bgPick.name);
-          const match = Object.values(colorMap).find((c) =>
+          autoPick = Object.values(colorMap).find((c) =>
             String(c.id) === bgIdStr || norm(c.name) === bgNameNorm
-          );
-          if (match){
-            colorName = match.name;
-            colorIdNum = String(match.id);
-            colorBit = " | color: " + match.name + " (" + Math.round(bgPick.score * 100) + "%)";
-          }
-        } catch(_){}
+          ) || null;
+        }
+        if (autoPick){
+          colorName = autoPick.name;
+          colorIdNum = String(autoPick.id);
+          colorBit = " | color: " + autoPick.name;
+        }
+        // Shortlist for the chip picker — Brickognize top 5 + Lab-nearest
+        // 5 + hard-color family when sample is dark/low-sat.
+        SCAN_ONE.colorChips = buildColorShortlist(sampledRgb, bgColors, colorMap, colorIdNum);
       }
 
       // Update the preview panel with what we know BEFORE the price fetches
@@ -2834,6 +3023,61 @@
     }
     const inp = tileEl.querySelector(".sc-manual");
     if (inp){ inp.style.display = "block"; inp.value = r.manual ? r.id : ""; }
+
+    // Color chips picker — shows the hard-to-tell-apart color family
+    // (black/brown/dark-brown/dark-bluish-gray/etc) plus the top Lab-nearest
+    // + Brickognize candidates. Dad taps one to override that tile's color;
+    // the tile's price/row color updates on commit.
+    const chipsHost = tileEl.querySelector(".sc-color-chips");
+    if (chipsHost){
+      const curId = (r.detectedColor && r.detectedColor.id) ? String(r.detectedColor.id) : "";
+      // Build a per-tile shortlist: prefer whatever Brickognize/pixel picked
+      // last round, always include the hard family. Needs the color catalog.
+      const run = async () => {
+        let cm = null;
+        try { cm = await blColors(); } catch(_){}
+        if (!cm){ chipsHost.style.display = "none"; return; }
+        const list = buildColorShortlist(r.sampledRgb || null, r.bgColors || [], cm, curId);
+        if (!list.length){ chipsHost.style.display = "none"; return; }
+        chipsHost.style.display = "flex";
+        chipsHost.innerHTML = "";
+        list.forEach((c) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          const isPicked = String(c.id) === curId;
+          const lum = (c.r*0.299 + c.g*0.587 + c.b*0.114);
+          const fg = lum < 140 ? "#fff" : "#111";
+          btn.style.cssText = "padding:2px 6px;font-size:.62rem;font-weight:700;" +
+            "background:" + c.hex + ";color:" + fg + ";" +
+            "border:" + (isPicked ? "2px solid #dc2626" : "1px solid #d4d4d4") + ";" +
+            "border-radius:4px;cursor:pointer;line-height:1;touch-action:manipulation;";
+          btn.title = c.name + " (BL " + c.id + ")";
+          btn.textContent = c.name.length > 10 ? (c.name.slice(0, 9) + "…") : c.name;
+          btn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            setTileColor(i, c);
+          });
+          chipsHost.appendChild(btn);
+        });
+      };
+      run();
+    }
+  }
+
+  // Dad tapped a color chip on a scan-many tile — overwrite that tile's
+  // detectedColor + re-render. The row commit (pushScanRow) reads
+  // detectedColor at commit time, so this change rides through to the
+  // grid when he presses "Add rows for all scans".
+  function setTileColor(i, colorObj){
+    const r = SCAN_RESULTS[i];
+    if (!r || r.status !== "ok") return;
+    r.detectedColor = {
+      id: Number(colorObj.id) || 0,
+      name: colorObj.name,
+      r: colorObj.r, g: colorObj.g, b: colorObj.b,
+      _manualPick: true,  // so Dad can see this tile's color was hand-set
+    };
+    renderScanTile(i);
   }
 
   // Find distinct parts in a canvas by detecting non-background blobs.
@@ -3368,6 +3612,7 @@
                       '<div style="aspect-ratio:1;background:#fff;border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--line)" title="BrickLink reference"><img class="sc-ref" style="width:100%;height:100%;object-fit:contain" alt=""><div style="position:absolute;bottom:2px;left:3px;background:rgba(14,165,233,.9);color:#fff;font-size:.56rem;padding:1px 4px;border-radius:3px;font-weight:700">BL REF</div></div>' +
                     '</div>' +
                     '<div class="sc-label" style="color:var(--mid);font-size:.7rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace">waiting...</div>' +
+                    '<div class="sc-color-chips" style="display:none;gap:3px;flex-wrap:wrap"></div>' +
                     '<input type="text" class="sc-manual" placeholder="or type ID" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:.78rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace;font-weight:700;display:none">';
       scanGridEl.appendChild(d);
     }
@@ -3634,7 +3879,7 @@
             const blValid = partsSet && partsSet.size > 0
               ? partsSet.has((chosen.id || "").toLowerCase())
               : null;  // unknown
-            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid, phash, learned: !!learnedCorrection, ppMatch: !!customMatched, ppMatchHits: customMatched ? (customMatched.hits || 1) : 0, originalBrickognizeId: learnedCorrection ? (learnedCorrection.originalId || (options[1] && options[1].id) || "") : "" };
+            SCAN_RESULTS[i] = { idx: i, status: "ok", id: chosen.id, name: chosen.name, score: chosen.score, options, optIdx: 0, detectedColor: finalColor, blValid, phash, learned: !!learnedCorrection, ppMatch: !!customMatched, ppMatchHits: customMatched ? (customMatched.hits || 1) : 0, originalBrickognizeId: learnedCorrection ? (learnedCorrection.originalId || (options[1] && options[1].id) || "") : "", sampledRgb: sampledRgb || null, bgColors: bgColors || [] };
             renderScanTile(i);
           } else {
             SCAN_RESULTS[i] = { idx: i, status: "err", options, optIdx: 0, detectedColor: finalColor, phash };
