@@ -1656,13 +1656,23 @@
     };
     set("ITEMID", SCAN_ONE.id);
     set("COLOR", SCAN_ONE.colorName || "");
-    set("QTY", "1");
+    // Qty: respect template if Dad set one (e.g. he's listing multiples), else 1.
+    const defQty = (document.getElementById("defQty").value || "").trim();
+    set("QTY", defQty || "1");
     set("CONDITION", cond);
     if (price > 0){
       set("PRICE", price.toFixed(2));
       // Mark the price as came-from-scan so autoPriceRow doesn't overwrite.
       target.dataset.priceManual = "1";
     }
+    // Carry template Description + Remarks onto EVERY scanned row — Dad
+    // writes the bin code (e.g. "c-3/13") into the yellow template once,
+    // it auto-stamps on every subsequent scan. Same for a shared public
+    // description.
+    const defDesc = (document.getElementById("defDescription").value || "").trim();
+    if (defDesc) set("DESCRIPTION", defDesc);
+    const defRem = (document.getElementById("defRemarks").value || "").trim();
+    if (defRem) set("REMARKS", defRem);
     flagRow(target);
     recountGrid();
     saveGrid();
