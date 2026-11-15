@@ -1751,10 +1751,13 @@
     }
   }
 
-  // Load a blob/file into an Image, draw it to a canvas, and return the
-  // average RGB of the central 40% (ignoring near-white/near-black pixels
-  // so the background doesn't drag the sample). Used by the scan-single
-  // flow for a 2nd opinion on color on top of Brickognize's own color guess.
+  // Load a blob/file into an Image, draw to canvas, and return a robust
+  // color sample using MULTI-ROI median: 5 sub-regions (center + 4 offset
+  // quadrants of the central 50%), each contributes its own median color,
+  // then we median-blend. Much less noisy than one big central mean —
+  // a shiny highlight in one quadrant can't drag the whole sample toward
+  // white anymore. Specular highlight + background + shadow pixels are
+  // filtered PER sub-region BEFORE its median.
   async function samplePhotoRgb(fileOrBlob){
     return new Promise((resolve) => {
       const img = new Image();
@@ -1763,25 +1766,57 @@
         try {
           const W = img.naturalWidth, H = img.naturalHeight;
           const cv = document.createElement("canvas");
-          const SZ = 160;
+          const SZ = 200;
           cv.width = SZ; cv.height = SZ;
           const ctx = cv.getContext("2d");
-          // Draw the central 40% of the photo scaled to SZ×SZ.
-          const cw = W * 0.4, ch = H * 0.4;
+          // Draw the central 50% of the photo scaled to SZ×SZ.
+          const cw = W * 0.5, ch = H * 0.5;
           const sx = (W - cw) / 2, sy = (H - ch) / 2;
           ctx.drawImage(img, sx, sy, cw, ch, 0, 0, SZ, SZ);
           const data = ctx.getImageData(0, 0, SZ, SZ).data;
-          let rS = 0, gS = 0, bS = 0, n = 0;
-          for (let i = 0; i < data.length; i += 4){
-            const r = data[i], g = data[i+1], b = data[i+2];
-            // Skip near-white backgrounds and near-black shadows.
-            const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-            if (mx > 245 && mn > 240) continue;   // near-white
-            if (mx < 10) continue;                // pure black shadow
-            rS += r; gS += g; bS += b; n++;
-          }
-          if (!n) { resolve(null); return; }
-          resolve([Math.round(rS/n), Math.round(gS/n), Math.round(bS/n)]);
+
+          // 5 ROIs: center + 4 quadrants of the central 50% area.
+          // Each spans ~60% width/height so they overlap in the middle.
+          const roi = [
+            { x0: 0.2, y0: 0.2, x1: 0.8, y1: 0.8 },  // center-big
+            { x0: 0.05, y0: 0.05, x1: 0.55, y1: 0.55 }, // TL
+            { x0: 0.45, y0: 0.05, x1: 0.95, y1: 0.55 }, // TR
+            { x0: 0.05, y0: 0.45, x1: 0.55, y1: 0.95 }, // BL
+            { x0: 0.45, y0: 0.45, x1: 0.95, y1: 0.95 }, // BR
+          ];
+
+          const medianOfRoi = (rect) => {
+            const x0 = Math.floor(rect.x0 * SZ), y0 = Math.floor(rect.y0 * SZ);
+            const x1 = Math.floor(rect.x1 * SZ), y1 = Math.floor(rect.y1 * SZ);
+            const rs = [], gs = [], bs = [];
+            for (let y = y0; y < y1; y++){
+              for (let x = x0; x < x1; x++){
+                const p = (y * SZ + x) * 4;
+                const r = data[p], g = data[p+1], b = data[p+2];
+                const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+                // Filter: near-white background, near-black shadow,
+                // AND specular highlights (very bright regardless of sat).
+                if (mx > 240 && mn > 230) continue;   // near-white bg
+                if (mx > 248) continue;                // specular highlight
+                if (mx < 18) continue;                 // deep shadow
+                rs.push(r); gs.push(g); bs.push(b);
+              }
+            }
+            if (rs.length < 30) return null;   // sparse — probably covered highlight
+            // Per-channel median (robust to outliers).
+            rs.sort((a,b)=>a-b); gs.sort((a,b)=>a-b); bs.sort((a,b)=>a-b);
+            const m = Math.floor(rs.length / 2);
+            return [rs[m], gs[m], bs[m]];
+          };
+
+          const samples = roi.map(medianOfRoi).filter(Boolean);
+          if (!samples.length){ resolve(null); return; }
+          // Final answer: per-channel median of the ROI medians.
+          const rs = samples.map((s) => s[0]).sort((a,b)=>a-b);
+          const gs = samples.map((s) => s[1]).sort((a,b)=>a-b);
+          const bs = samples.map((s) => s[2]).sort((a,b)=>a-b);
+          const m = Math.floor(samples.length / 2);
+          resolve([rs[m], gs[m], bs[m]]);
         } catch(_){ resolve(null); }
         finally { URL.revokeObjectURL(url); }
       };
@@ -1841,9 +1876,14 @@
       ranked.slice(0, 5).forEach((r) => pushIfReal(r.color));
     }
 
-    // 3) If the sample is in the hard zone (or we have no sample at all),
-    // force the entire hard family in so Dad has them all one tap away.
-    if (sampleIsHard || !sampledRgb){
+    // 3) If the sample is in the hard zone, OR the auto-pick is itself one
+    // of the hard colors, OR we have no sample at all, force the entire
+    // hard family in so Dad has them all one tap away. This catches the
+    // case where Brickognize said "Black" but the real color might be
+    // Dark Brown or Dark Bluish Gray — he should always see those as
+    // alternatives, even when the sample looks relatively clean.
+    const autoIsHard = autoPickId && HARD_COLOR_IDS.includes(String(autoPickId));
+    if (sampleIsHard || autoIsHard || !sampledRgb){
       HARD_COLOR_IDS.forEach((id) => pushIfReal(colorMap[id]));
     }
 
@@ -1858,14 +1898,51 @@
     return out;
   }
 
+  // Per-part color-correction learning layer: when Dad taps a chip to
+  // override a color pick, remember it keyed by part ID. Future scans
+  // that land on the same part ID default to his most recent pick
+  // (unless the sampled pixel is strongly a DIFFERENT color — then we
+  // trust the sample and ignore the saved preference for this round).
+  // Local-storage only; small; ~100 entries max.
+  const COLOR_PREF_KEY = "pp_bl_color_pref_v1";
+  const COLOR_PREF_MAX = 200;
+  function loadColorPrefs(){
+    try { return JSON.parse(localStorage.getItem(COLOR_PREF_KEY) || "{}"); }
+    catch(_){ return {}; }
+  }
+  function saveColorPref(partId, colorId, colorName){
+    if (!partId || !colorId) return;
+    try {
+      const prefs = loadColorPrefs();
+      prefs[String(partId).toLowerCase()] = {
+        id: String(colorId),
+        name: colorName || "",
+        ts: Date.now(),
+      };
+      // Trim if exceeded max.
+      const keys = Object.keys(prefs);
+      if (keys.length > COLOR_PREF_MAX){
+        const sorted = keys.sort((a, b) => (prefs[a].ts || 0) - (prefs[b].ts || 0));
+        for (let i = 0; i < keys.length - COLOR_PREF_MAX; i++) delete prefs[sorted[i]];
+      }
+      localStorage.setItem(COLOR_PREF_KEY, JSON.stringify(prefs));
+    } catch(_){}
+  }
+  function getColorPref(partId){
+    const prefs = loadColorPrefs();
+    return prefs[String(partId || "").toLowerCase()] || null;
+  }
+
   // Dad tapped a color chip — swap the picked color, refresh the preview
-  // (updates BL thumbnail + highlights the new chip), and re-fetch BOTH
-  // New + Used 6-mo prices for the new color so the Add-as-New/Used
-  // buttons update their labels.
+  // (updates BL thumbnail + highlights the new chip), re-fetch BOTH
+  // New + Used 6-mo prices for the new color, AND save his pick as a
+  // per-part preference so the next scan of this part defaults to it.
   async function selectScanOneColor(colorId, colorName){
     if (!SCAN_ONE || !SCAN_ONE.id) return;
     SCAN_ONE.colorId = String(colorId);
     SCAN_ONE.colorName = colorName;
+    // Learn Dad's correction for this part ID.
+    saveColorPref(SCAN_ONE.id, colorId, colorName);
     // Mark the chosen chip as the auto-pick.
     if (SCAN_ONE.colorChips){
       SCAN_ONE.colorChips.forEach((c) => { c.auto = String(c.id) === String(colorId); });
@@ -1975,13 +2052,39 @@
             String(c.id) === bgIdStr || norm(c.name) === bgNameNorm
           ) || null;
         }
+
+        // LEARNING LAYER: if Dad has corrected this part's color before,
+        // and the saved pick is Lab-close to our sample (within 25 ΔE —
+        // so a RED 3005 doesn't get overridden by a saved DARK-BROWN 3005),
+        // prefer his saved pick. The hard-color cluster is typically
+        // within 20-30 ΔE of each other, so this clamp is tight enough
+        // to only fire inside that neighborhood.
+        const pref = getColorPref(fixedId);
+        if (pref && pref.id && colorMap[pref.id]){
+          const prefColor = colorMap[pref.id];
+          let okToApply = false;
+          if (sampledRgb){
+            const sampleLab = rgb2lab(sampledRgb[0], sampledRgb[1], sampledRgb[2]);
+            const prefLab = rgb2lab(prefColor.r, prefColor.g, prefColor.b);
+            const dist = labDist(sampleLab, prefLab);
+            okToApply = dist < 25;
+          } else {
+            okToApply = true;  // no sample — just trust the learned pref
+          }
+          if (okToApply){
+            autoPick = prefColor;
+            colorBit = " | color: " + prefColor.name + " [learned]";
+          }
+        }
+
         if (autoPick){
           colorName = autoPick.name;
           colorIdNum = String(autoPick.id);
-          colorBit = " | color: " + autoPick.name;
+          if (!colorBit) colorBit = " | color: " + autoPick.name;
         }
         // Shortlist for the chip picker — Brickognize top 5 + Lab-nearest
-        // 5 + hard-color family when sample is dark/low-sat.
+        // 5 + hard-color family when sample is dark/low-sat OR when the
+        // auto-pick is itself one of the hard colors.
         SCAN_ONE.colorChips = buildColorShortlist(sampledRgb, bgColors, colorMap, colorIdNum);
       }
 
@@ -3084,6 +3187,9 @@
   // detectedColor + re-render. The row commit (pushScanRow) reads
   // detectedColor at commit time, so this change rides through to the
   // grid when he presses "Add rows for all scans".
+  // ALSO saves the per-part color preference so the NEXT scan of the
+  // same part defaults to this color (same learning layer used by
+  // scan-single).
   function setTileColor(i, colorObj){
     const r = SCAN_RESULTS[i];
     if (!r || r.status !== "ok") return;
@@ -3093,6 +3199,7 @@
       r: colorObj.r, g: colorObj.g, b: colorObj.b,
       _manualPick: true,  // so Dad can see this tile's color was hand-set
     };
+    if (r.id) saveColorPref(r.id, colorObj.id, colorObj.name);
     renderScanTile(i);
   }
 
@@ -3628,7 +3735,7 @@
                       '<div style="aspect-ratio:1;background:#fff;border-radius:6px;overflow:hidden;position:relative;border:1px solid var(--line)" title="BrickLink reference"><img class="sc-ref" style="width:100%;height:100%;object-fit:contain" alt=""><div style="position:absolute;bottom:2px;left:3px;background:rgba(14,165,233,.9);color:#fff;font-size:.56rem;padding:1px 4px;border-radius:3px;font-weight:700">BL REF</div></div>' +
                     '</div>' +
                     '<div class="sc-label" style="color:var(--mid);font-size:.7rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace">waiting...</div>' +
-                    '<div class="sc-color-chips" style="display:none;gap:3px;flex-wrap:wrap"></div>' +
+                    '<div class="sc-color-chips" style="display:none;gap:3px;flex-wrap:wrap;max-height:60px;overflow-y:auto"></div>' +
                     '<input type="text" class="sc-manual" placeholder="or type ID" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:.78rem;font-family:\'JetBrains Mono\',\'Consolas\',monospace;font-weight:700;display:none">';
       scanGridEl.appendChild(d);
     }
