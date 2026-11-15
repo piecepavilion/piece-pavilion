@@ -350,8 +350,11 @@
                   <span style="margin-left:6px">New <span id="scanOnePriceN" style="font-weight:700">—</span></span>
                   <span style="margin-left:10px">Used <span id="scanOnePriceU" style="font-weight:700">—</span></span>
                 </div>
-                <div style="margin-top:8px;color:#854d0e;font-size:.78rem">Pick condition in the template above — price swaps to match.</div>
-                <button class="btn ghost" id="scanOneClearBtn" type="button" style="margin-top:8px;padding:5px 10px;font-size:.78rem">Clear scan</button>
+                <div style="margin-top:8px;color:#854d0e;font-size:.78rem">1. Pick Condition in the template above. 2. (Optional) type Remarks. 3. Tap Add to grid.</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                  <button class="btn" id="scanOneAddBtn" type="button" style="padding:10px 18px;font-size:.95rem;font-weight:700;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer">&#10133; Add to grid</button>
+                  <button class="btn ghost" id="scanOneClearBtn" type="button" style="padding:8px 14px;font-size:.82rem">Clear scan</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1616,6 +1619,34 @@
   // Swap defPrice to match condition when Dad flips the dropdown — uses
   // the N/U prices we already fetched during the scan, no re-roundtrip.
   document.getElementById("defCondition").addEventListener("change", swapPriceForCondition);
+
+  // Big "Add to grid" button in the scan result panel — stamps the
+  // template onto the next grid row (same as the small Fill row N button
+  // in the actions bar), then clears the scan preview so the next scan
+  // starts clean.
+  document.getElementById("scanOneAddBtn").addEventListener("click", () => {
+    const cond = (document.getElementById("defCondition").value || "").trim();
+    if (!cond){
+      gridMsg("warn", "Pick a Condition (New or Used) in the template above before adding to the grid.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3200);
+      document.getElementById("defCondition").focus();
+      return;
+    }
+    // Default Qty to 1 if you left it blank — single-part scans are
+    // almost always a count of 1.
+    const qtyEl = document.getElementById("defQty");
+    if (!(qtyEl.value || "").trim()) qtyEl.value = "1";
+    applyDefaults();
+    // Clear the preview + template Part ID/Color/Price so the next scan
+    // starts clean (leave Condition + Remarks alone — Dad is probably
+    // listing similar parts in a row).
+    try { if (SCAN_ONE && SCAN_ONE.userPhotoUrl) URL.revokeObjectURL(SCAN_ONE.userPhotoUrl); } catch(_){}
+    SCAN_ONE = null;
+    renderScanOne();
+    document.getElementById("defItemId").value = "";
+    document.getElementById("defColor").value = "";
+    document.getElementById("defPrice").value = "";
+  });
 
   // Last successful single-scan result — keeps the N/U prices so flipping
   // the Condition dropdown in the template swaps defPrice instantly without
