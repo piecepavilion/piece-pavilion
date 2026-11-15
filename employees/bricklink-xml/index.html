@@ -1261,14 +1261,21 @@
             // Color-code the cell so Dad can see which source the price
             // came from at a glance:
             //   green  = real 6-month sold data (ideal)
-            //   yellow = currently-listed stock (no sales, but market data)
-            //   amber  = discounted New (no Used data; rough estimate)
-            const bgBySource = { "sold": "#d1fae5", "stock": "#fef3c7", "new-discounted": "#fde68a" };
+            //   amber  = discounted New sold (close-to-real)
+            //   yellow = cheapest current listing (no sales — compete floor)
+            //   orange = cheapest current listing × 0.65 (last-ditch)
+            const bgBySource = {
+              "sold": "#d1fae5",
+              "new-discounted": "#fde68a",
+              "stock-min": "#fef3c7",
+              "stock-min-new-discounted": "#fed7aa",
+            };
             priceEl.style.background = bgBySource[j.source] || "#d1fae5";
             priceEl.title = {
-              "sold": "6-month sold average",
-              "stock": "Current listing average (no recent sales)",
-              "new-discounted": "Estimated from New price × " + (j.fallback && j.fallback.discount ? j.fallback.discount : 0.65) + " (no Used data)",
+              "sold": "6-month sold average (ideal)",
+              "new-discounted": "Estimated from New sold × " + (j.fallback && j.fallback.discount ? j.fallback.discount : 0.65) + " (no Used sold data)",
+              "stock-min": "Cheapest current listing (no recent sales — price to beat it)",
+              "stock-min-new-discounted": "Cheapest New listing × " + (j.fallback && j.fallback.discount ? j.fallback.discount : 0.65) + " (no sold data at all)",
             }[j.source] || "6-month sold average";
             flagRow(tr); recountGrid(); saveGridDebounced();
             if (dbg) dbg.textContent = "price: " + no + " c=" + (color || "n/a") + " " + cond + " → $" + Number(p).toFixed(2) +
