@@ -345,16 +345,12 @@
                 <div><strong>Part:</strong> <span id="scanOneName">—</span></div>
                 <div><strong>ID:</strong> <code id="scanOneId" style="font-family:'JetBrains Mono','Consolas',monospace">—</code></div>
                 <div><strong>Color:</strong> <span id="scanOneColor">—</span></div>
-                <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #fde68a">
-                  <strong>6-mo avg:</strong>
-                  <span style="margin-left:6px">New <span id="scanOnePriceN" style="font-weight:700">—</span></span>
-                  <span style="margin-left:10px">Used <span id="scanOnePriceU" style="font-weight:700">—</span></span>
-                </div>
-                <div style="margin-top:8px;color:#854d0e;font-size:.78rem">1. Pick Condition in the template above. 2. (Optional) type Remarks. 3. Tap Add to grid.</div>
+                <div style="margin-top:8px;color:#854d0e;font-size:.78rem">Tap one to drop a row on the grid below (Qty = 1). Fill Condition is already set, you just fill Remarks on the row if you want.</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-                  <button class="btn" id="scanOneAddBtn" type="button" style="padding:10px 18px;font-size:.95rem;font-weight:700;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer">&#10133; Add to grid</button>
-                  <button class="btn ghost" id="scanOneClearBtn" type="button" style="padding:8px 14px;font-size:.82rem">Clear scan</button>
+                  <button class="btn" id="scanOneAddNewBtn" type="button" style="padding:12px 16px;font-size:.95rem;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:160px">&#10133; Add as <u>New</u><br/><span id="scanOnePriceN" style="font-size:1.1rem">—</span></button>
+                  <button class="btn" id="scanOneAddUsedBtn" type="button" style="padding:12px 16px;font-size:.95rem;font-weight:700;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;min-width:160px">&#10133; Add as <u>Used</u><br/><span id="scanOnePriceU" style="font-size:1.1rem">—</span></button>
                 </div>
+                <button class="btn ghost" id="scanOneClearBtn" type="button" style="margin-top:8px;padding:6px 12px;font-size:.78rem">Clear scan</button>
               </div>
             </div>
           </div>
@@ -1616,37 +1612,58 @@
     if (dbg) dbg.textContent = "price: idle";
   });
 
-  // Swap defPrice to match condition when Dad flips the dropdown — uses
-  // the N/U prices we already fetched during the scan, no re-roundtrip.
-  document.getElementById("defCondition").addEventListener("change", swapPriceForCondition);
-
-  // Big "Add to grid" button in the scan result panel — stamps the
-  // template onto the next grid row (same as the small Fill row N button
-  // in the actions bar), then clears the scan preview so the next scan
-  // starts clean.
-  document.getElementById("scanOneAddBtn").addEventListener("click", () => {
-    const cond = (document.getElementById("defCondition").value || "").trim();
-    if (!cond){
-      gridMsg("warn", "Pick a Condition (New or Used) in the template above before adding to the grid.");
-      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3200);
-      document.getElementById("defCondition").focus();
+  // Drop the scanned part directly onto the next empty grid row — no
+  // template middleman. Finds the first row where ITEMID is blank, or
+  // appends a new row if every current row is full. Fills ITEMID, COLOR,
+  // QTY=1, PRICE (the chosen condition's 6-mo avg), and CONDITION.
+  // Leaves REMARKS and DESCRIPTION blank — Dad fills those on the row
+  // itself if he wants.
+  function addScanToGrid(cond){
+    if (!SCAN_ONE || !SCAN_ONE.id){
+      gridMsg("warn", "Scan a part first.");
+      setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 2400);
       return;
     }
-    // Default Qty to 1 if you left it blank — single-part scans are
-    // almost always a count of 1.
-    const qtyEl = document.getElementById("defQty");
-    if (!(qtyEl.value || "").trim()) qtyEl.value = "1";
-    applyDefaults();
-    // Clear the preview + template Part ID/Color/Price so the next scan
-    // starts clean (leave Condition + Remarks alone — Dad is probably
-    // listing similar parts in a row).
-    try { if (SCAN_ONE && SCAN_ONE.userPhotoUrl) URL.revokeObjectURL(SCAN_ONE.userPhotoUrl); } catch(_){}
+    const price = (cond === "U") ? SCAN_ONE.priceU : SCAN_ONE.priceN;
+
+    // Find first row with a blank Part ID, or add a new one.
+    let target = null;
+    for (const tr of GRID_BODY.children){
+      const id = (tr.querySelector('[data-k="ITEMID"]').value || "").trim();
+      if (!id){ target = tr; break; }
+    }
+    if (!target){
+      addRows(1);
+      target = GRID_BODY.lastElementChild;
+    }
+
+    const set = (k, v) => {
+      const el = target.querySelector('[data-k="'+k+'"]');
+      if (el) el.value = v;
+    };
+    set("ITEMID", SCAN_ONE.id);
+    set("COLOR", SCAN_ONE.colorName || "");
+    set("QTY", "1");
+    set("CONDITION", cond);
+    if (price > 0){
+      set("PRICE", price.toFixed(2));
+      // Mark the price as came-from-scan so autoPriceRow doesn't overwrite.
+      target.dataset.priceManual = "1";
+    }
+    flagRow(target);
+    recountGrid();
+    saveGrid();
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    gridMsg("ok", "Added " + SCAN_ONE.id + " to row " + (Array.from(GRID_BODY.children).indexOf(target) + 1) + " as " + (cond === "U" ? "Used" : "New") + (price > 0 ? " @ $" + price.toFixed(2) : "") + ". Scan the next one.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3200);
+
+    // Clear preview so the next scan starts clean.
+    try { if (SCAN_ONE.userPhotoUrl) URL.revokeObjectURL(SCAN_ONE.userPhotoUrl); } catch(_){}
     SCAN_ONE = null;
     renderScanOne();
-    document.getElementById("defItemId").value = "";
-    document.getElementById("defColor").value = "";
-    document.getElementById("defPrice").value = "";
-  });
+  }
+  document.getElementById("scanOneAddNewBtn").addEventListener("click", () => addScanToGrid("N"));
+  document.getElementById("scanOneAddUsedBtn").addEventListener("click", () => addScanToGrid("U"));
 
   // Last successful single-scan result — keeps the N/U prices so flipping
   // the Condition dropdown in the template swaps defPrice instantly without
@@ -1677,18 +1694,6 @@
       blImg.onerror = () => { blImg.onerror = null; blImg.src = "https://img.bricklink.com/ItemImage/PN/0/" + encodeURIComponent(s.id) + ".png"; };
     } else {
       blImg.removeAttribute("src");
-    }
-  }
-
-  function swapPriceForCondition(){
-    if (!SCAN_ONE) return;
-    const cond = (document.getElementById("defCondition").value || "").toUpperCase();
-    const p = (cond === "U") ? SCAN_ONE.priceU : SCAN_ONE.priceN;
-    if (p > 0){
-      const el = document.getElementById("defPrice");
-      el.value = p.toFixed(2);
-      el.style.background = "#d1fae5";
-      setTimeout(() => { el.style.background = ""; }, 2500);
     }
   }
 
@@ -1743,8 +1748,9 @@
         const partsSet = await blPartsSet();
         fixedId = fixPartId(top.id, partsSet);
       } catch(_){}
-      document.getElementById("defItemId").value = fixedId;
-      // Also fill the template Color field from Brickognize's color guess.
+      // NOTE: we no longer touch the yellow template fields from a scan —
+      // Dad asked for scan→grid-row directly, no template middleman. The
+      // template is still there for bulk/same-part listing workflows.
       let colorBit = "", colorName = "", colorIdNum = "";
       const bgColors = j.colors || [];
       if (bgColors.length){
@@ -1758,7 +1764,6 @@
             String(c.id) === bgIdStr || norm(c.name) === bgNameNorm
           );
           if (match){
-            document.getElementById("defColor").value = match.name;
             colorName = match.name;
             colorIdNum = String(match.id);
             colorBit = " | color: " + match.name + " (" + Math.round(bgPick.score * 100) + "%)";
@@ -1793,14 +1798,6 @@
       SCAN_ONE.priceU = pU;
       renderScanOne();
 
-      // Default defPrice to whichever condition is already set, else New
-      // (most store listings go up as New). Dad picks the condition in the
-      // template and swapPriceForCondition() handles any later change.
-      const curCond = (document.getElementById("defCondition").value || "").toUpperCase();
-      const defaultPrice = (curCond === "U") ? pU : pN;
-      if (defaultPrice > 0){
-        document.getElementById("defPrice").value = defaultPrice.toFixed(2);
-      }
       if (dbg) dbg.textContent = "scan: " + fixedId + " — " + top.name + colorBit +
         " | N $" + (pN > 0 ? pN.toFixed(2) : "—") +
         " | U $" + (pU > 0 ? pU.toFixed(2) : "—");
