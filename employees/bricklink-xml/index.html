@@ -326,6 +326,35 @@
           </div>
           <span class="d-note">Each press fills the next row with every field above (including Part ID). Great for listing a lot of the same part.</span>
           <div id="priceDebug" style="font-family:'JetBrains Mono','Consolas',monospace;font-size:.78rem;color:var(--mid);padding-top:6px;border-top:1px dashed #fde68a;margin-top:8px;word-break:break-all">price: idle</div>
+
+          <!-- Scan single part result panel. Shows the user's photo next to
+               BrickLink's catalog image so Dad can confirm the match, plus
+               the identified part ID, color, and 6-month avg prices for
+               both New and Used. Hidden until a scan finishes. -->
+          <div id="scanOneResult" style="display:none;margin-top:12px;padding:12px;background:#fff;border:1px solid #fde68a;border-radius:10px">
+            <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+              <div style="flex:1 1 180px;min-width:150px">
+                <div style="font-size:.72rem;font-weight:800;color:#854d0e;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Your photo</div>
+                <img id="scanOneUserImg" alt="your photo" style="width:100%;max-width:220px;aspect-ratio:1/1;object-fit:cover;background:#f5f5f4;border:1px solid #e7e5e4;border-radius:8px"/>
+              </div>
+              <div style="flex:1 1 180px;min-width:150px">
+                <div style="font-size:.72rem;font-weight:800;color:#854d0e;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">BrickLink catalog</div>
+                <img id="scanOneBLImg" alt="bricklink catalog" style="width:100%;max-width:220px;aspect-ratio:1/1;object-fit:contain;background:#fff;border:1px solid #e7e5e4;border-radius:8px"/>
+              </div>
+              <div style="flex:2 1 260px;min-width:200px;font-size:.88rem;line-height:1.55">
+                <div><strong>Part:</strong> <span id="scanOneName">—</span></div>
+                <div><strong>ID:</strong> <code id="scanOneId" style="font-family:'JetBrains Mono','Consolas',monospace">—</code></div>
+                <div><strong>Color:</strong> <span id="scanOneColor">—</span></div>
+                <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #fde68a">
+                  <strong>6-mo avg:</strong>
+                  <span style="margin-left:6px">New <span id="scanOnePriceN" style="font-weight:700">—</span></span>
+                  <span style="margin-left:10px">Used <span id="scanOnePriceU" style="font-weight:700">—</span></span>
+                </div>
+                <div style="margin-top:8px;color:#854d0e;font-size:.78rem">Pick condition in the template above — price swaps to match.</div>
+                <button class="btn ghost" id="scanOneClearBtn" type="button" style="margin-top:8px;padding:5px 10px;font-size:.78rem">Clear scan</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="bl-grid-wrap">
@@ -1572,9 +1601,94 @@
   // Hook up the two buttons.
   document.getElementById("scanOneBtn").addEventListener("click", () => openCamera("one"));
 
+  // Clear the scan-one preview panel (and the template fields it filled).
+  document.getElementById("scanOneClearBtn").addEventListener("click", () => {
+    try { if (SCAN_ONE && SCAN_ONE.userPhotoUrl) URL.revokeObjectURL(SCAN_ONE.userPhotoUrl); } catch(_){}
+    SCAN_ONE = null;
+    renderScanOne();
+    document.getElementById("defItemId").value = "";
+    document.getElementById("defColor").value = "";
+    document.getElementById("defPrice").value = "";
+    const dbg = document.getElementById("priceDebug");
+    if (dbg) dbg.textContent = "price: idle";
+  });
+
+  // Swap defPrice to match condition when Dad flips the dropdown — uses
+  // the N/U prices we already fetched during the scan, no re-roundtrip.
+  document.getElementById("defCondition").addEventListener("change", swapPriceForCondition);
+
+  // Last successful single-scan result — keeps the N/U prices so flipping
+  // the Condition dropdown in the template swaps defPrice instantly without
+  // re-hitting BL.
+  let SCAN_ONE = null;
+
+  function renderScanOne(){
+    const panel = document.getElementById("scanOneResult");
+    if (!panel) return;
+    if (!SCAN_ONE){ panel.style.display = "none"; return; }
+    panel.style.display = "block";
+    const s = SCAN_ONE;
+    document.getElementById("scanOneName").textContent = s.name || "—";
+    document.getElementById("scanOneId").textContent = s.id || "—";
+    document.getElementById("scanOneColor").textContent = s.colorName
+      ? (s.colorName + (s.colorId ? " (" + s.colorId + ")" : ""))
+      : "—";
+    document.getElementById("scanOnePriceN").textContent = (s.priceN > 0) ? ("$" + s.priceN.toFixed(2)) : "—";
+    document.getElementById("scanOnePriceU").textContent = (s.priceU > 0) ? ("$" + s.priceU.toFixed(2)) : "—";
+    const userImg = document.getElementById("scanOneUserImg");
+    if (s.userPhotoUrl) userImg.src = s.userPhotoUrl;
+    const blImg = document.getElementById("scanOneBLImg");
+    // BL thumbnail: /PN/{color_id}/{item}.png — if no color (minifig/set),
+    // falls back to /PN/0/{item}.png which BL still serves.
+    if (s.id){
+      const cid = s.colorId || "0";
+      blImg.src = "https://img.bricklink.com/ItemImage/PN/" + cid + "/" + encodeURIComponent(s.id) + ".png";
+      blImg.onerror = () => { blImg.onerror = null; blImg.src = "https://img.bricklink.com/ItemImage/PN/0/" + encodeURIComponent(s.id) + ".png"; };
+    } else {
+      blImg.removeAttribute("src");
+    }
+  }
+
+  function swapPriceForCondition(){
+    if (!SCAN_ONE) return;
+    const cond = (document.getElementById("defCondition").value || "").toUpperCase();
+    const p = (cond === "U") ? SCAN_ONE.priceU : SCAN_ONE.priceN;
+    if (p > 0){
+      const el = document.getElementById("defPrice");
+      el.value = p.toFixed(2);
+      el.style.background = "#d1fae5";
+      setTimeout(() => { el.style.background = ""; }, 2500);
+    }
+  }
+
+  async function fetchBLPrice(no, colorId, cond, isMinifig){
+    const qs = "no=" + encodeURIComponent(no) +
+               "&type=" + (isMinifig ? "M" : "P") +
+               "&condition=" + cond +
+               (colorId ? "&color_id=" + encodeURIComponent(colorId) : "");
+    try {
+      const r = await fetch("/employees/api/colors/price?" + qs, { credentials: "include" });
+      if (!r.ok) return 0;
+      const j = await r.json();
+      if (!j || j.error) return 0;
+      const p = Number(j.qty_avg_price) > 0 ? Number(j.qty_avg_price) : Number(j.avg_price);
+      return (p > 0) ? p : 0;
+    } catch(_){ return 0; }
+  }
+
   async function processSinglePhoto(fileOrBlob){
     const dbg = document.getElementById("priceDebug");
     if (dbg) dbg.textContent = "scan: uploading " + Math.round(fileOrBlob.size/1024) + " KB to Brickognize...";
+
+    // Show the user's photo in the preview panel immediately so they know
+    // the capture went through, even while the recognize call is still out.
+    try {
+      if (SCAN_ONE && SCAN_ONE.userPhotoUrl) URL.revokeObjectURL(SCAN_ONE.userPhotoUrl);
+    } catch(_){}
+    const userPhotoUrl = URL.createObjectURL(fileOrBlob);
+    SCAN_ONE = { userPhotoUrl, id: "", name: "scanning...", colorId: "", colorName: "", priceN: 0, priceU: 0 };
+    renderScanOne();
+
     const fd = new FormData();
     fd.append("query_image", fileOrBlob, "scan.jpg");
     fd.append("predict_color", "true");
@@ -1586,6 +1700,8 @@
       try { j = JSON.parse(text); } catch(_){}
       if (!r.ok || !j || !j.top){
         if (dbg) dbg.textContent = "scan: no part recognized (HTTP " + r.status + "). " + (j && j.error || text.slice(0, 100));
+        SCAN_ONE.name = "not recognized — try again";
+        renderScanOne();
         return;
       }
       const top = j.top;
@@ -1598,7 +1714,7 @@
       } catch(_){}
       document.getElementById("defItemId").value = fixedId;
       // Also fill the template Color field from Brickognize's color guess.
-      let colorBit = "";
+      let colorBit = "", colorName = "", colorIdNum = "";
       const bgColors = j.colors || [];
       if (bgColors.length){
         const bgPick = bgColors[0];
@@ -1612,14 +1728,55 @@
           );
           if (match){
             document.getElementById("defColor").value = match.name;
+            colorName = match.name;
+            colorIdNum = String(match.id);
             colorBit = " | color: " + match.name + " (" + Math.round(bgPick.score * 100) + "%)";
           }
         } catch(_){}
       }
-      if (dbg) dbg.textContent = "scan: " + fixedId + " — " + top.name + " (" + Math.round(top.score * 100) + "%)" + colorBit;
+
+      // Update the preview panel with what we know BEFORE the price fetches
+      // come back, so Dad sees the photo + ID + color even if BL is slow.
+      SCAN_ONE.id = fixedId;
+      SCAN_ONE.name = top.name || "";
+      SCAN_ONE.colorId = colorIdNum;
+      SCAN_ONE.colorName = colorName;
+      renderScanOne();
+
+      if (dbg) dbg.textContent = "scan: " + fixedId + " — " + top.name + " (" + Math.round(top.score * 100) + "%)" + colorBit + " — fetching prices...";
       try { localStorage.setItem("pp_bl_defItemId", fixedId); } catch(e){}
+
+      // Fetch BOTH New + Used 6-mo averages in parallel so Dad can see both,
+      // and flipping Condition in the template swaps defPrice instantly.
+      const isMinifig = /^(sh|tlm|njo|col|cas|cty|dim|hp|lor|sw|hs|hol|pi|pln|tgb|idea|fab|jw)/i.test(fixedId);
+      const needsColor = !isMinifig;
+      if (needsColor && !colorIdNum){
+        if (dbg) dbg.textContent = "scan: " + fixedId + " — " + top.name + colorBit + " (no color id, skipping price)";
+        return;
+      }
+      const [pN, pU] = await Promise.all([
+        fetchBLPrice(fixedId, colorIdNum, "N", isMinifig),
+        fetchBLPrice(fixedId, colorIdNum, "U", isMinifig),
+      ]);
+      SCAN_ONE.priceN = pN;
+      SCAN_ONE.priceU = pU;
+      renderScanOne();
+
+      // Default defPrice to whichever condition is already set, else New
+      // (most store listings go up as New). Dad picks the condition in the
+      // template and swapPriceForCondition() handles any later change.
+      const curCond = (document.getElementById("defCondition").value || "").toUpperCase();
+      const defaultPrice = (curCond === "U") ? pU : pN;
+      if (defaultPrice > 0){
+        document.getElementById("defPrice").value = defaultPrice.toFixed(2);
+      }
+      if (dbg) dbg.textContent = "scan: " + fixedId + " — " + top.name + colorBit +
+        " | N $" + (pN > 0 ? pN.toFixed(2) : "—") +
+        " | U $" + (pU > 0 ? pU.toFixed(2) : "—");
     } catch (e) {
       if (dbg) dbg.textContent = "scan: network error — " + String(e);
+      SCAN_ONE.name = "network error — try again";
+      renderScanOne();
     }
   }
 
