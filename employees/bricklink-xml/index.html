@@ -1677,8 +1677,14 @@
     recountGrid();
     saveGrid();
     target.scrollIntoView({ behavior: "smooth", block: "center" });
-    gridMsg("ok", "Added " + SCAN_ONE.id + " to row " + (Array.from(GRID_BODY.children).indexOf(target) + 1) + " as " + (cond === "U" ? "Used" : "New") + (price > 0 ? " @ $" + price.toFixed(2) : "") + ". Scan the next one.");
-    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 3200);
+    // Echo exactly what got stamped so Dad can SEE whether the template
+    // Remarks came through (helps diagnose stale-cache cases).
+    const stampedBits = [];
+    if (defRem) stampedBits.push('Remarks "' + defRem + '"');
+    if (defDesc) stampedBits.push('Desc "' + defDesc + '"');
+    const stampMsg = stampedBits.length ? " — stamped " + stampedBits.join(" + ") : "";
+    gridMsg("ok", "Added " + SCAN_ONE.id + " to row " + (Array.from(GRID_BODY.children).indexOf(target) + 1) + " as " + (cond === "U" ? "Used" : "New") + (price > 0 ? " @ $" + price.toFixed(2) : "") + stampMsg + ". Scan the next one.");
+    setTimeout(() => { GRID_MSG.className = "msg hidden"; }, 4000);
 
     // Clear preview so the next scan starts clean.
     try { if (SCAN_ONE.userPhotoUrl) URL.revokeObjectURL(SCAN_ONE.userPhotoUrl); } catch(_){}
