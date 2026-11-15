@@ -1266,6 +1266,7 @@
             //   orange = cheapest current listing × 0.65 (last-ditch)
             const bgBySource = {
               "sold": "#d1fae5",
+              "sold-capped-at-new": "#a7f3d0",
               "new-discounted": "#fde68a",
               "stock-min": "#fef3c7",
               "stock-min-new-discounted": "#fed7aa",
@@ -1273,6 +1274,7 @@
             priceEl.style.background = bgBySource[j.source] || "#d1fae5";
             priceEl.title = {
               "sold": "6-month sold average (ideal)",
+              "sold-capped-at-new": "6-mo sold Used was higher than New (BL low-sample noise) — capped at New sold avg",
               "new-discounted": "Estimated from New sold × " + (j.fallback && j.fallback.discount ? j.fallback.discount : 0.65) + " (no Used sold data)",
               "stock-min": "Cheapest current listing (no recent sales — price to beat it)",
               "stock-min-new-discounted": "Cheapest New listing × " + (j.fallback && j.fallback.discount ? j.fallback.discount : 0.65) + " (no sold data at all)",
