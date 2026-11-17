@@ -16,6 +16,7 @@ Each blog post's own index.html is the source of truth:
 """
 
 import html
+from datetime import datetime, timezone
 import io
 import json
 import os
@@ -523,6 +524,26 @@ def update_banner(html_txt, newest):
     return html3, (html3 != html_txt)
 
 
+def publication_sort_key(post):
+    """Rank by actual publication, not the date a draft was written.
+
+    Edits do not bump posts: first_commit_at is the latest ADD, so an
+    intentionally unpublished and republished article gets a fresh slot.
+    Keep the displayed article date unchanged.
+    """
+    for value in (post.get("first_commit_at"), post["date_iso"]):
+        if not value:
+            continue
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return (parsed.timestamp(), post["date_iso"], post["slug"])
+        except (ValueError, TypeError):
+            continue
+    raise ValueError("Post has no valid publication date: " + post["slug"])
+
+
 def main():
     if not os.path.isdir(BLOG_DIR):
         sys.exit("blog/ not found")
@@ -549,7 +570,7 @@ def main():
         rel = "blog/" + entry + "/index.html"
         try:
             first_ts = subprocess.check_output(
-                ["git", "log", "--diff-filter=A", "-1", "--format=%aI", "--", rel],
+                ["git", "log", "--diff-filter=A", "-1", "--format=%cI", "--", rel],
                 cwd=ROOT, text=True,
             ).strip()
         except Exception:
@@ -557,10 +578,9 @@ def main():
         post["first_commit_at"] = first_ts
         posts.append(post)
 
-    # Sort newest-first by date_iso, and break ties by first-publication
-    # commit time so two posts with the same datePublished still land in
-    # the right order and later edits never shuffle the ranking.
-    posts.sort(key=lambda p: (p["date_iso"], p.get("first_commit_at") or ""), reverse=True)
+    # New publications go first even when their drafts carry older dates.
+    # Subsequent article edits keep their original publication position.
+    posts.sort(key=publication_sort_key, reverse=True)
     print("Found %d posts, newest = %s" % (len(posts), posts[0]["slug"] if posts else "(none)"))
 
     # Generate thumbnails for any post without a hand-made /thumb/<slug>.png.
@@ -656,7 +676,7 @@ def write_latest_json(slug):
     # freshness window on that older post.
     try:
         ts = subprocess.check_output(
-            ["git", "log", "--diff-filter=A", "-1", "--format=%aI", "--", rel],
+            ["git", "log", "--diff-filter=A", "-1", "--format=%cI", "--", rel],
             cwd=ROOT, text=True,
         ).strip()
     except Exception as e:
@@ -675,6 +695,7 @@ def write_latest_json(slug):
 
 if __name__ == "__main__":
     main()
+
 
 
 
