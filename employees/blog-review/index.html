@@ -245,26 +245,38 @@
       #celebrate-panel .burst { animation: none; }
       #celebrate-confetti .c { animation-duration: 10s; }
     }
-    .blog-requests { background:#fff; border:1px solid var(--line); border-radius:var(--radius); margin-bottom:18px; box-shadow:var(--shadow-sm); }
-    .blog-requests summary { padding:14px 18px; cursor:pointer; font-weight:900; }
+    .blog-requests { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:18px; box-shadow:var(--shadow-sm); }
+    .blog-requests summary { padding:15px clamp(12px,3vw,20px); cursor:pointer; font-weight:900; line-height:1.4; }
     .blog-requests summary:focus-visible,.blog-requests :is(input,textarea,button):focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
-    .blog-request-content { padding:0 18px 18px; }
-    .blog-request-content p { color:var(--slate); font-size:.9rem; }
-    .blog-request-fields { display:grid; grid-template-columns:minmax(160px,200px) minmax(0,1fr); gap:12px; margin:16px 0 12px; }
-    .blog-request-fields label { display:grid; align-content:start; gap:5px; font-size:.9rem; font-weight:800; min-width:0; }
-    .blog-request-fields label:nth-last-child(-n+2) { grid-column:1 / -1; }
-    .blog-request-fields input,.blog-request-fields textarea { width:100%; min-width:0; min-height:44px; padding:9px 12px; border:1px solid #9299a5; border-radius:8px; color:var(--ink); font:400 1rem 'Nunito',system-ui,sans-serif; background:#fff; }
+    .blog-request-content { padding:0 clamp(12px,3vw,20px) 20px; min-inline-size:0; overflow-wrap:anywhere; }
+    .blog-request-content > p,.blog-request-content li > p { color:var(--slate); font-size:.9rem; line-height:1.5; }
+    #blog-request-form { margin:14px 0 20px; padding:clamp(12px,3vw,18px); background:#f8f9fc; border:1px solid var(--line); border-radius:12px; }
+    .blog-request-fields { display:flex; flex-direction:column; gap:13px; }
+    .blog-request-fields label { display:flex; flex-direction:column; gap:5px; font-size:.9rem; font-weight:800; min-inline-size:0; }
+    .blog-request-fields input,.blog-request-fields textarea { display:block; box-sizing:border-box; inline-size:100%; min-inline-size:0; max-inline-size:100%; min-block-size:46px; padding:10px 11px; border:1px solid #9299a5; border-radius:8px; color:var(--ink); font:400 1rem/1.4 'Nunito',system-ui,sans-serif; background:#fff; }
+    .blog-request-fields input[type=date] { -webkit-appearance:none; appearance:none; text-align:start; }
+    .blog-request-fields input[type=date]::-webkit-date-and-time-value { text-align:left; min-height:1.4em; }
     .blog-request-fields textarea { resize:vertical; }
-    .blog-request-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:18px; }
-    #blog-request-status { color:var(--slate); font-size:.9rem; }
-    #blog-request-list { list-style:none; display:grid; gap:8px; margin-top:8px; }
-    #blog-request-list li { border:1px solid var(--line); border-radius:8px; padding:10px; overflow-wrap:anywhere; }
-    #blog-request-list .request-row-actions { display:flex; flex-wrap:wrap; gap:8px; }
-    #blog-request-cancel[hidden] { display:none; }
-    #blog-request-list p { white-space:pre-wrap; margin:6px 0; }
-    #blog-request-more { margin-top:8px; }
-    #blog-request-more[hidden] { display:none; }
-    @media(max-width:560px) { .blog-request-fields { grid-template-columns:minmax(0,1fr); } }
+    .blog-request-actions,.request-row-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+    .blog-request-actions { margin-top:13px; }
+    .blog-request-actions .btn,.request-row-actions .btn,#blog-request-more { min-height:44px; max-inline-size:100%; padding-inline:14px; }
+    #blog-request-status { flex-basis:100%; min-inline-size:0; color:var(--slate); font-size:.88rem; line-height:1.4; }
+    #blog-request-status:empty,#blog-request-cancel[hidden],#blog-request-more[hidden] { display:none; }
+    #blog-request-list { list-style:none; display:grid; grid-template-columns:minmax(0,1fr); gap:10px; margin-top:10px; }
+    #blog-request-list li { display:flex; flex-direction:column; gap:7px; min-inline-size:0; border:1px solid var(--line); border-radius:10px; padding:12px; overflow-wrap:anywhere; }
+    #blog-request-list p { white-space:pre-wrap; }
+    #blog-request-list .request-row-actions { margin-top:3px; }
+    #blog-request-more { margin-top:10px; }
+    @media(max-width:600px) {
+      .wrap { padding-inline:12px; }
+      .topbar { gap:8px; padding-inline:12px; }
+      .topbar .crumb { display:none; }
+      .topbar h1 { font-size:1rem; }
+      .topbar .back { padding-inline:9px; font-size:.78rem; }
+      .pill-row { flex-wrap:wrap; max-inline-size:100%; }
+      .pill-row button { padding-inline:10px; }
+      .pill-row .count { margin-left:2px; }
+    }
   </style>
 </head>
 <body>
@@ -289,9 +301,9 @@
         <form id="blog-request-form" method="post" action="/employees/api/blog/requests">
           <div class="blog-request-fields">
             <label>Date <input name="date" type="date" min="2000-01-01" max="2099-12-31" required></label>
-            <label>Blog Title (optional) <input name="blogTitle" type="text" maxlength="120" placeholder="Example: Three LEGO Star Wars Tiles to Watch"></label>
-            <label>Main Idea <input name="mainIdea" type="text" maxlength="160" placeholder="Example: New Star Wars poster tiles" required></label>
-            <label>What to Cover <textarea name="details" rows="4" maxlength="2400" placeholder="What should the post focus on? Add set numbers, details, or links here." required></textarea></label>
+            <label>Blog Title (optional) <input name="blogTitle" type="text" maxlength="120" placeholder="Example: Three LEGO Tiles to Watch"></label>
+            <label>Main Idea <input name="mainIdea" type="text" maxlength="160" placeholder="Example: Star Wars poster tiles" required></label>
+            <label>What to Cover <textarea name="details" rows="4" maxlength="2400" placeholder="Add details, set numbers, or links." required></textarea></label>
           </div>
           <div class="blog-request-actions">
             <button class="btn btn-primary" type="submit">Save Request</button>
