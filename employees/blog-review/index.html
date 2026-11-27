@@ -245,6 +245,24 @@
       #celebrate-panel .burst { animation: none; }
       #celebrate-confetti .c { animation-duration: 10s; }
     }
+    .blog-requests { background:#fff; border:1px solid var(--line); border-radius:var(--radius); margin-bottom:18px; box-shadow:var(--shadow-sm); }
+    .blog-requests summary { padding:14px 18px; cursor:pointer; font-weight:900; }
+    .blog-requests summary:focus-visible,.blog-requests :is(input,textarea,button):focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+    .blog-request-content { padding:0 18px 18px; }
+    .blog-request-content p { color:var(--slate); font-size:.9rem; }
+    .blog-request-fields { display:grid; grid-template-columns:minmax(160px,200px) minmax(0,1fr); gap:12px; margin:16px 0 12px; }
+    .blog-request-fields label { display:grid; align-content:start; gap:5px; font-size:.9rem; font-weight:800; min-width:0; }
+    .blog-request-fields label:last-child { grid-column:1 / -1; }
+    .blog-request-fields input,.blog-request-fields textarea { width:100%; min-width:0; min-height:44px; padding:9px 12px; border:1px solid #9299a5; border-radius:8px; color:var(--ink); font:400 1rem 'Nunito',system-ui,sans-serif; background:#fff; }
+    .blog-request-fields textarea { resize:vertical; }
+    .blog-request-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:18px; }
+    #blog-request-status { color:var(--slate); font-size:.9rem; }
+    #blog-request-list { list-style:none; display:grid; gap:8px; margin-top:8px; }
+    #blog-request-list li { border:1px solid var(--line); border-radius:8px; padding:10px; overflow-wrap:anywhere; }
+    #blog-request-list p { white-space:pre-wrap; margin:6px 0; }
+    #blog-request-more { margin-top:8px; }
+    #blog-request-more[hidden] { display:none; }
+    @media(max-width:560px) { .blog-request-fields { grid-template-columns:minmax(0,1fr); } }
   </style>
 </head>
 <body>
@@ -262,6 +280,27 @@
       <div><label><input id="blog-hearts-enabled" type="checkbox" disabled aria-describedby="blog-hearts-help"> Show hearts</label><p id="blog-hearts-help">Applies to all blogs. Changes save automatically; existing likes are kept.</p></div>
       <p id="blog-hearts-status" role="status" aria-live="polite">Loading heart setting…</p>
     </section>
+    <details class="blog-requests" id="blog-requests">
+      <summary>Blog Requests</summary>
+      <div class="blog-request-content">
+        <p>Tell us what you want the next blog to cover. The date is a suggestion; the 5 a.m. schedule stays the same. Requests are private to Staff.</p>
+        <form id="blog-request-form" method="post" action="/employees/api/blog/requests">
+          <div class="blog-request-fields">
+            <label>Date <input name="date" type="date" min="2000-01-01" max="2099-12-31" required></label>
+            <label>Main Idea <input name="mainIdea" type="text" maxlength="160" placeholder="Example: New Star Wars poster tiles" required></label>
+            <label>What to Cover <textarea name="details" rows="4" maxlength="2400" placeholder="What should the post focus on? Add set numbers, details, or links here." required></textarea></label>
+          </div>
+          <div class="blog-request-actions">
+            <button class="btn btn-primary" type="submit">Save Request</button>
+            <span id="blog-request-status" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+        <h3>Saved Requests</h3>
+        <p id="blog-request-empty">Loading requests…</p>
+        <ul id="blog-request-list"></ul>
+        <button class="btn btn-ghost" id="blog-request-more" type="button" hidden>Load more</button>
+      </div>
+    </details>
     <div class="pill-row" id="pill-row">
       <button data-tab="drafts" class="active">Drafts <span class="count" id="count-drafts">0</span></button>
       <button data-tab="archived">Archived <span class="count" id="count-archived">0</span></button>
@@ -304,6 +343,112 @@
       try { data = await r.json(); } catch (e) { data = null; }
       if (!r.ok) throw new Error((data && data.error) || ('HTTP ' + r.status));
       return data;
+    }
+
+    {
+      const panel = $('blog-requests'), form = $('blog-request-form');
+      const status = $('blog-request-status'), list = $('blog-request-list');
+      const empty = $('blog-request-empty'), more = $('blog-request-more');
+      const save = form.querySelector('button[type="submit"]');
+      const fields = Array.from(form.querySelectorAll('input, textarea'));
+      const items = new Map();
+      let cursor = null, loaded = false, loading = false, pending = null;
+      const keyFor = item => item.date + '/' + item.id;
+      const dateLabel = date => new Intl.DateTimeFormat('en-US', {
+        dateStyle: 'medium', timeZone: 'UTC'
+      }).format(new Date(date + 'T00:00:00Z'));
+
+      function renderRequests() {
+        list.replaceChildren();
+        const rows = [...items.values()].sort((a, b) =>
+          a.date.localeCompare(b.date) || a.savedAt.localeCompare(b.savedAt));
+        for (const item of rows) {
+          const li = document.createElement('li');
+          const title = document.createElement('strong');
+          title.textContent = dateLabel(item.date) + ' · ' + item.mainIdea;
+          const note = document.createElement('p');
+          note.textContent = item.details;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'btn btn-ghost';
+          remove.textContent = 'Remove';
+          remove.setAttribute('aria-label', 'Remove request: ' + item.mainIdea);
+          remove.addEventListener('click', async () => {
+            if (!confirm('Remove this blog request?')) return;
+            remove.disabled = true;
+            try {
+              const result = await api('DELETE', '/requests/' + keyFor(item));
+              if (!result?.ok) throw Error('Not removed.');
+              items.delete(keyFor(item));
+              renderRequests();
+              status.textContent = 'Request removed.';
+            } catch {
+              remove.disabled = false;
+              status.textContent = 'Could not remove the request. Try again.';
+            }
+          });
+          li.append(title, note, remove);
+          list.append(li);
+        }
+        if (loaded) empty.textContent = rows.length ? '' : 'No requests yet.';
+        empty.hidden = !empty.textContent;
+        more.hidden = loaded && !cursor;
+        more.textContent = loaded ? 'Load more' : 'Retry';
+      }
+
+      async function loadRequests() {
+        if (loading) return;
+        loading = true;
+        more.disabled = true;
+        try {
+          const data = await api('GET', '/requests' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''));
+          if (!Array.isArray(data?.requests)) throw Error('Unexpected response.');
+          data.requests.forEach(item => items.set(keyFor(item), item));
+          cursor = data.cursor;
+          loaded = true;
+          renderRequests();
+        } catch {
+          empty.textContent = 'Could not load saved requests. Try again or refresh Staff sign-in.';
+          empty.hidden = false;
+          more.textContent = 'Retry';
+          more.hidden = false;
+        } finally {
+          loading = false;
+          more.disabled = false;
+        }
+      }
+
+      panel.addEventListener('toggle', () => { if (panel.open && !loaded) loadRequests(); });
+      more.addEventListener('click', loadRequests);
+      for (const field of fields) field.addEventListener('input', () => { pending = null; });
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (save.disabled) return;
+        const { date, mainIdea, details } = Object.fromEntries(new FormData(form));
+        if (!mainIdea.trim() || !details.trim()) {
+          status.textContent = 'Enter a main idea and what to cover.';
+          return;
+        }
+        pending ??= { id: crypto.randomUUID(), date, mainIdea, details };
+        save.disabled = true;
+        fields.forEach(field => field.disabled = true);
+        status.textContent = 'Saving…';
+        try {
+          const data = await api('POST', '/requests', pending);
+          if (data?.request?.id !== pending.id) throw Error('Save not confirmed.');
+          items.set(keyFor(data.request), data.request);
+          renderRequests();
+          form.reset();
+          pending = null;
+          status.textContent = 'Request saved.';
+        } catch {
+          status.textContent = 'Could not confirm the save. Your text is still here; try Save Request again.';
+        } finally {
+          save.disabled = false;
+          fields.forEach(field => field.disabled = false);
+        }
+      });
+      if (location.hash === '#blog-requests') panel.open = true;
     }
 
     // One autosaving control, independent of article editing and publication.
