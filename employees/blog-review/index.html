@@ -278,6 +278,34 @@
       .pill-row .count { margin-left:2px; }
     }
   </style>
+<style id="pp-touch-layout">
+#back-to-blog-list{display:none}
+@media(max-width:1000px){
+  .wrap{padding:16px clamp(12px,3vw,24px) 45px}
+  .split{grid-template-columns:minmax(0,1fr)}
+  .pill-row{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:13px}
+  .pill-row button{min-height:44px;border-radius:9px;padding:4px 3px;min-width:0;line-height:1.2}
+  .pill-row .count{display:inline-block;padding:1px 4px;margin:0 0 0 2px}
+  .draft-list{max-height:min(38vh,320px)}
+  .draft-item{min-height:52px;overflow-wrap:anywhere}
+  .draft-item:focus-visible{outline:3px solid var(--blue);outline-offset:-4px}
+  .preview{min-width:0;min-height:0;padding:16px;overflow-wrap:anywhere;scroll-margin-top:12px}
+  .preview:focus{outline:none}
+  .preview .pv-title{font-size:clamp(1.35rem,4.6vw,1.75rem)}
+  .preview img{max-width:100%;height:auto}
+  .edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .edit-field input,.edit-field select,.edit-field textarea{min-width:0;font-size:16px}
+  .action-bar .btn,.blog-requests summary{min-height:44px}
+  #back-to-blog-list{display:inline-flex;align-items:center;min-height:44px;color:var(--blue);font-weight:800}
+}
+@media(max-width:600px){
+  .topbar .back{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+  .edit-grid{grid-template-columns:minmax(0,1fr)}
+  .action-bar{gap:8px;margin-top:18px;padding-top:12px}
+  .action-bar .btn{flex:1 1 135px;padding-inline:10px}
+  .toast{inset:auto 12px max(12px,env(safe-area-inset-bottom));max-width:unset}
+}
+</style>
 </head>
 <body>
 
@@ -324,10 +352,10 @@
     </div>
 
     <div class="split">
-      <aside class="draft-list" id="list">
+      <aside class="draft-list" id="list" aria-label="Blog posts" tabindex="-1">
         <div class="empty">Loading…</div>
       </aside>
-      <section class="preview" id="preview">
+      <section class="preview" id="preview" aria-label="Blog preview" tabindex="-1">
         <div class="empty">Select a draft from the list to review.</div>
       </section>
     </div>
@@ -656,7 +684,7 @@
         const dt = it.generated_at ? new Date(it.generated_at).toLocaleString() : '';
         const sel = state.selected === it.id ? ' selected' : '';
         return (
-          '<div class="draft-item' + sel + '" data-id="' + escHtml(it.id) + '">' +
+          '<div class="draft-item' + sel + '" role="button" tabindex="0" data-id="' + escHtml(it.id) + '">' +
             '<h3>' + escHtml(it.title || '(untitled)') + '</h3>' +
             '<div class="meta">' +
               '<span class="cat-badge ' + escHtml(it.category || '') + '">' + escHtml(it.category || 'news') + '</span>' +
@@ -667,11 +695,16 @@
         );
       }).join('');
       Array.from($('list').querySelectorAll('.draft-item')).forEach((el) => {
-        el.addEventListener('click', () => selectItem(el.dataset.id));
+        const open = () => selectItem(el.dataset.id, true);
+        el.addEventListener('click', open);
+        el.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+        });
       });
     }
 
-    async function selectItem(id) {
+    async function selectItem(id, reveal = false) {
+      const tab = state.tab;
       state.selected = id;
       state.editing = false;
       Array.from($('list').querySelectorAll('.draft-item')).forEach((el) => {
@@ -681,9 +714,27 @@
       const bucketPath = state.tab === 'drafts' ? '/draft/' : (state.tab === 'archived' ? '/archived/' : '/published/');
       try {
         const d = await api('GET', bucketPath + encodeURIComponent(id));
+        if (state.selected !== id || state.tab !== tab) return;
         renderPreview(d);
       } catch (e) {
+        if (state.selected !== id || state.tab !== tab) return;
         $('preview').innerHTML = '<div class="empty">Could not load: ' + escHtml(e.message) + '</div>';
+      }
+      if (reveal && matchMedia('(max-width: 1000px)').matches) {
+        const preview = $('preview');
+        const back = document.createElement('a');
+        back.id = 'back-to-blog-list';
+        back.href = '#list';
+        back.textContent = '← Back to posts';
+        back.addEventListener('click', (event) => {
+          event.preventDefault();
+          const target = $('list').querySelector('.draft-item.selected') || $('list');
+          target.focus({preventScroll:true});
+          target.scrollIntoView({block:'nearest'});
+        });
+        preview.prepend(back);
+        preview.focus({preventScroll:true});
+        preview.scrollIntoView({block:'start'});
       }
     }
 
