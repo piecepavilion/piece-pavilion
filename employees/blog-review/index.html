@@ -259,6 +259,8 @@
     #blog-request-status { color:var(--slate); font-size:.9rem; }
     #blog-request-list { list-style:none; display:grid; gap:8px; margin-top:8px; }
     #blog-request-list li { border:1px solid var(--line); border-radius:8px; padding:10px; overflow-wrap:anywhere; }
+    #blog-request-list .request-row-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    #blog-request-cancel[hidden] { display:none; }
     #blog-request-list p { white-space:pre-wrap; margin:6px 0; }
     #blog-request-more { margin-top:8px; }
     #blog-request-more[hidden] { display:none; }
@@ -292,6 +294,7 @@
           </div>
           <div class="blog-request-actions">
             <button class="btn btn-primary" type="submit">Save Request</button>
+            <button class="btn btn-ghost" id="blog-request-cancel" type="button" hidden>Cancel Edit</button>
             <span id="blog-request-status" role="status" aria-live="polite"></span>
           </div>
         </form>
@@ -349,11 +352,30 @@
       const panel = $('blog-requests'), form = $('blog-request-form');
       const status = $('blog-request-status'), list = $('blog-request-list');
       const empty = $('blog-request-empty'), more = $('blog-request-more');
-      const save = form.querySelector('button[type="submit"]');
+      const save = form.querySelector('button[type="submit"]'), cancel = $('blog-request-cancel');
       const fields = Array.from(form.querySelectorAll('input, textarea'));
       const items = new Map();
       let cursor = null, loaded = false, loading = false, pending = null;
-      const keyFor = item => item.date + '/' + item.id;
+      let editingRequest = null, newRequestValues = null;
+      const keyFor = item => (item.storageDate || item.date) + '/' + item.id;
+      const formValues = () => Object.fromEntries(new FormData(form));
+      const fillForm = values => fields.forEach(field => { field.value = values[field.name] || ''; });
+      const editChanged = () => editingRequest && fields.some(field => field.value !== editingRequest[field.name]);
+      function endEdit(message) {
+        const previousId = editingRequest?.id;
+        editingRequest = null;
+        fillForm(newRequestValues || {});
+        newRequestValues = null;
+        pending = null;
+        save.textContent = 'Save Request';
+        cancel.hidden = true;
+        status.textContent = message;
+        return previousId;
+      }
+      cancel.addEventListener('click', () => {
+        const previousId = endEdit('Edit canceled.');
+        list.querySelector('[data-request-edit="' + previousId + '"]')?.focus();
+      });
       const dateLabel = date => new Intl.DateTimeFormat('en-US', {
         dateStyle: 'medium', timeZone: 'UTC'
       }).format(new Date(date + 'T00:00:00Z'));
@@ -368,18 +390,40 @@
           title.textContent = dateLabel(item.date) + ' · ' + item.mainIdea;
           const note = document.createElement('p');
           note.textContent = item.details;
+          const actions = document.createElement('div');
+          actions.className = 'request-row-actions';
+          const edit = document.createElement('button');
+          edit.type = 'button';
+          edit.className = 'btn btn-ghost';
+          edit.textContent = 'Edit';
+          edit.dataset.requestEdit = item.id;
+          edit.setAttribute('aria-label', 'Edit request: ' + item.mainIdea);
+          edit.addEventListener('click', () => {
+            if (save.disabled) return;
+            if (editingRequest?.id === item.id) { fields[0].focus(); return; }
+            if (editChanged() && !confirm('Discard your unsaved changes to this request?')) return;
+            if (!editingRequest) newRequestValues = formValues();
+            editingRequest = item;
+            pending = null;
+            fillForm(item);
+            save.textContent = 'Save Changes';
+            cancel.hidden = false;
+            status.textContent = 'Editing: ' + item.mainIdea;
+            fields[0].focus();
+          });
           const remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'btn btn-ghost';
           remove.textContent = 'Remove';
           remove.setAttribute('aria-label', 'Remove request: ' + item.mainIdea);
           remove.addEventListener('click', async () => {
-            if (!confirm('Remove this blog request?')) return;
+            if (save.disabled || !confirm('Remove this blog request?')) return;
             remove.disabled = true;
             try {
               const result = await api('DELETE', '/requests/' + keyFor(item));
               if (!result?.ok) throw Error('Not removed.');
               items.delete(keyFor(item));
+              if (editingRequest?.id === item.id) endEdit('Request removed.');
               renderRequests();
               status.textContent = 'Request removed.';
             } catch {
@@ -387,7 +431,8 @@
               status.textContent = 'Could not remove the request. Try again.';
             }
           });
-          li.append(title, note, remove);
+          actions.append(edit, remove);
+          li.append(title, note, actions);
           list.append(li);
         }
         if (loaded) empty.textContent = rows.length ? '' : 'No requests yet.';
@@ -424,27 +469,37 @@
       form.addEventListener('submit', async event => {
         event.preventDefault();
         if (save.disabled) return;
-        const { date, mainIdea, details } = Object.fromEntries(new FormData(form));
+        const { date, mainIdea, details } = formValues();
         if (!mainIdea.trim() || !details.trim()) {
           status.textContent = 'Enter a main idea and what to cover.';
           return;
         }
-        pending ??= { id: crypto.randomUUID(), date, mainIdea, details };
+        const editing = editingRequest;
+        pending ??= { id: editing?.id || crypto.randomUUID(), date, mainIdea, details };
         save.disabled = true;
+        cancel.disabled = true;
         fields.forEach(field => field.disabled = true);
         status.textContent = 'Saving…';
         try {
-          const data = await api('POST', '/requests', pending);
+          const data = editing
+            ? await api('PUT', '/requests/' + keyFor(editing), pending)
+            : await api('POST', '/requests', pending);
           if (data?.request?.id !== pending.id) throw Error('Save not confirmed.');
           items.set(keyFor(data.request), data.request);
           renderRequests();
-          form.reset();
-          pending = null;
-          status.textContent = 'Request saved.';
+          if (editing) {
+            endEdit('Changes saved.');
+            list.querySelector('[data-request-edit="' + editing.id + '"]')?.focus();
+          } else {
+            form.reset();
+            pending = null;
+            status.textContent = 'Request saved.';
+          }
         } catch {
-          status.textContent = 'Could not confirm the save. Your text is still here; try Save Request again.';
+          status.textContent = editing ? 'Could not confirm the changes. Your edits are still here; try again or refresh the list.' : 'Could not confirm the save. Your text is still here; try Save Request again.';
         } finally {
           save.disabled = false;
+          cancel.disabled = false;
           fields.forEach(field => field.disabled = false);
         }
       });
