@@ -211,3 +211,131 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
   window.addEventListener('pageshow', function () { if (!document.hidden) refresh(); });
 })();
+
+/* Staff-authored post notes, independent of reactions and view counting. */
+(function () {
+  'use strict';
+  var match = location.pathname.match(/^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/(?:index\.html)?$/);
+  var article = document.querySelector('article.blog-article');
+  if (!match || !article || article.querySelector('.pp-blog-note')) return;
+  var anchor = article.querySelector('.blog-byline') || article.querySelector('h1');
+  if (!anchor) return;
+  fetch('/magazine/data.json?blogNote=' + encodeURIComponent(match[1]), {
+    credentials: 'omit', cache: 'no-store'
+  }).then(function (response) {
+    return response.ok ? response.json() : null;
+  }).then(function (data) {
+    var note = typeof data?.message === 'string' ? data.message.trim() : '';
+    if (!note || note.length > 5000 || article.querySelector('.pp-blog-note')) return;
+    if (!document.querySelector('#pp-blog-note-style')) {
+      var style = document.createElement('style');
+      style.id = 'pp-blog-note-style';
+      style.textContent = '.blog-article .pp-blog-note{box-sizing:border-box;margin:12px 0;padding:9px 13px;background:#fff9e8;border:1px solid #eed69b;border-inline-start:3px solid #c9850a;border-radius:8px;color:#3b3124;text-align:start;overflow-wrap:anywhere}.blog-article .pp-blog-note .pp-blog-note-label{display:block;margin:0 0 3px;color:#654313;font:800 .7rem/1.3 Nunito,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase}.blog-article .pp-blog-note p{margin:0;font:600 .89rem/1.45 Nunito,system-ui,sans-serif;white-space:pre-wrap;color:inherit}.blog-article .pp-blog-note button{display:inline-block;border:0;background:transparent;color:#7a4500;padding:4px 2px 0;margin:0;font:800 .83rem/1.4 Nunito,system-ui,sans-serif;text-decoration:underline;cursor:pointer}.blog-article .pp-blog-note button:focus-visible{outline:2px solid #164fc8;outline-offset:2px}';
+      document.head.appendChild(style);
+    }
+    var block = document.createElement('aside');
+    block.className = 'pp-blog-note';
+    block.setAttribute('aria-label', 'Blog note');
+    var label = document.createElement('strong');
+    label.className = 'pp-blog-note-label';
+    label.textContent = 'Blog note';
+    var p = document.createElement('p');
+    p.id = 'pp-blog-note-message';
+    p.textContent = note;
+    block.append(label, p);
+    if (note.length > 300) {
+      var preview = note.slice(0, 260).replace(/\s+\S*$/, '') + '…';
+      p.textContent = preview;
+      var more = document.createElement('button');
+      more.type = 'button';
+      more.setAttribute('aria-controls', p.id);
+      more.setAttribute('aria-expanded', 'false');
+      more.textContent = 'Read full note';
+      more.addEventListener('click', function () {
+        var open = more.getAttribute('aria-expanded') === 'true';
+        p.textContent = open ? preview : note;
+        more.setAttribute('aria-expanded', String(!open));
+        more.textContent = open ? 'Read full note' : 'Show less';
+      });
+      block.appendChild(more);
+    }
+    anchor.after(block); // Read time, then note, then the existing heart box.
+  }).catch(function () { /* A missing note never changes the article. */ });
+})();
+
+/* Blog views: one 30-second foreground visit per article page load. */
+(function countBlogVisitV2() {
+  "use strict";
+  const match = /^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:\/index\.html|\/)?$/.exec(location.pathname);
+  if (!match || !document.querySelector(".blog-article") || window.__ppBlogVisitV2) return;
+  window.__ppBlogVisitV2 = true;
+
+  const slug = match[1], minimum = 30000;
+  let activeSince = null, seen = 0, timer = null;
+  let ticket = null, startedAt = null, running = false, done = false;
+  const visible = () => document.visibilityState === "visible";
+  const duration = () => seen + (activeSince === null ? 0 : performance.now() - activeSince);
+  const post = (phase, extra) => fetch("/api/views/track", {
+    method: "POST", credentials: "same-origin", keepalive: true,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ version: 2, phase, slug, ...extra }),
+  });
+
+  function schedule(wait) {
+    clearTimeout(timer);
+    if (!done && visible() && !running) timer = setTimeout(step, wait);
+  }
+
+  async function step() {
+    clearTimeout(timer);
+    if (done || running) return;
+    if (!ticket) {
+      if (!visible()) return;
+      running = true;
+      try {
+        const response = await post("start");
+        if (!response.ok) { done = true; return; } // No ticket: never increment.
+        const result = await response.json();
+        if (typeof result.ticket !== "string") { done = true; return; }
+        ticket = result.ticket;
+        startedAt = performance.now();
+      } catch (_) { done = true; return; }
+      finally { running = false; }
+    }
+    const remaining = minimum - duration();
+    if (remaining > 0) { schedule(remaining); return; }
+    if (performance.now() - startedAt >= 4 * 60 * 1000) {
+      // The tab may have been hidden a long time. A fresh server ticket
+      // must mature before counting; a resumed tab is still the same visit.
+      ticket = null;
+      schedule(0);
+      return;
+    }
+    running = true;
+    try {
+      const response = await post("finish", { ticket });
+      if (response.status === 425 || response.status >= 500) {
+        running = false;
+        schedule(response.status === 425 ? 1000 : 3000);
+        return;
+      }
+      done = true; // Accepted (including replay) or definitively rejected.
+    } catch (_) {
+      // Retry the same idempotent ticket after transient network errors.
+      running = false;
+      schedule(3000);
+    } finally { running = false; }
+  }
+
+  function visibleChanged() {
+    if (visible() && activeSince === null) activeSince = performance.now();
+    else if (!visible() && activeSince !== null) {
+      seen += performance.now() - activeSince;
+      activeSince = null;
+    }
+    void step();
+  }
+
+  document.addEventListener("visibilitychange", visibleChanged);
+  visibleChanged();
+})();
