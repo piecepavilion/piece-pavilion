@@ -8,7 +8,7 @@
 <style>
 :root{font-family:system-ui,sans-serif;color:#191923;background:#f5f6f9}
 *{box-sizing:border-box}body{margin:0}
-main{max-width:680px;margin:0 auto;padding:clamp(14px,4vw,32px)}
+main{max-width:1120px;margin:0 auto;padding:clamp(14px,4vw,32px)}
 section{border:1px solid #e0e3eb;background:#fff;border-radius:15px;padding:clamp(16px,4vw,27px)}
 h1{margin:0 0 6px;font-size:1.45rem}p{line-height:1.5;margin:0 0 18px;color:#4b5563}.live{padding:12px 14px;background:#f6f7fb;border-left:3px solid #0057a8;border-radius:5px;color:#303744;overflow-wrap:anywhere}
 label{display:block;font-weight:700;margin:16px 0 6px}
@@ -22,8 +22,23 @@ button:disabled{opacity:.55;cursor:default}
 #status{margin:14px 0 0;overflow-wrap:anywhere}#status[data-error=true]{color:#a11223}
 fieldset{padding:0;border:0;margin:0;min-width:0}
 </style>
+<link rel="stylesheet" href="/magazine/magazine.css?v=20261127-feature">
+<style>
+.card-preview{margin:18px 0 0}
+.preview-toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 18px;margin-bottom:8px;color:#4b5563;font-size:.84rem}
+.preview-toolbar strong{color:#191923}
+#story-preview .pp-magazine{margin:0}
+#story-preview .pp-magazine-heading h2{font-size:clamp(27px,5vw,54px)}
+#story-preview .pp-feature-link{cursor:default}
+#story-preview textarea.pp-magazine-dek{display:block;width:100%;min-height:3.1em;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.55;letter-spacing:normal;color:#403a34;border:1px dashed #b96f43;border-radius:6px;background:#fffdf7;padding:8px 10px;margin:0 0 14px}
+#story-preview textarea.pp-magazine-dek:focus{outline:2px solid #0057a8;outline-offset:2px}
+#story-preview textarea.pp-magazine-dek::placeholder{color:#6f6256}
+#story-preview .pp-magazine-lead.has-image{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:700px){#story-preview .pp-magazine-lead.has-image{grid-template-columns:minmax(0,1fr)}}
+</style>
 <script defer src="/magazine/feature.js?v=20261127-feature"></script>
-<script defer src="./featured-story-editor.js?v=20261127-cardwords"></script>
+<script defer src="/magazine/magazine.js?v=20261127-cardwords"></script>
+<script defer src="./featured-story-editor.js?v=20261127-inlinecard"></script>
 </head>
 <body>
 <main><section>
@@ -41,10 +56,15 @@ fieldset{padding:0;border:0;margin:0;min-width:0}
 <div id="details" hidden>
 <label for="story">Choose a story</label>
 <select id="story"></select>
-<label for="summary">Text inside the card (optional)</label>
-<textarea id="summary" rows="3" maxlength="300" aria-describedby="summary-help"></textarea>
-<small id="summary-help">Replaces the text under the headline on the homepage only. Leave blank to use the story’s original summary. <span id="summary-count">0/300</span></small>
-<label for="caption">Text underneath (optional)</label>
+<div class="card-preview" id="preview-block" hidden>
+  <div class="preview-toolbar">
+    <strong>Homepage preview</strong>
+    <span id="summary-help">Tap the text under the headline to edit it. <span id="summary-count">0/300</span></span>
+  </div>
+  <div id="story-preview"></div>
+  <small><button id="reset-summary" type="button">Use original wording</button></small>
+</div>
+<label for="caption">Note below the card (optional)</label>
 <textarea id="caption" rows="3" maxlength="300" aria-describedby="note-help"></textarea>
 <small id="note-help">A short note under the story. Leave it blank to show only the story. <span id="count">0/300</span></small>
 </div>
