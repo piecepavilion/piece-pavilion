@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Featured Story | Piece Pavilion Staff</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#191923;background:#f5f6f9}
+*{box-sizing:border-box}body{margin:0}
+main{max-width:680px;margin:0 auto;padding:clamp(14px,4vw,32px)}
+section{border:1px solid #e0e3eb;background:#fff;border-radius:15px;padding:clamp(16px,4vw,27px)}
+h1{margin:0 0 6px;font-size:1.45rem}p{line-height:1.5;margin:0 0 18px;color:#4b5563}.live{padding:12px 14px;background:#f6f7fb;border-left:3px solid #0057a8;border-radius:5px;color:#303744;overflow-wrap:anywhere}
+label{display:block;font-weight:700;margin:16px 0 6px}
+textarea,select,button{font:inherit}textarea,select{width:100%;padding:10px 11px;border:1px solid #aab2c0;border-radius:7px;background:white;color:inherit;min-width:0}
+textarea{resize:vertical;min-height:91px}small{display:block;color:#4b5563;margin:4px 0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+button,.preview{padding:10px 14px;border-radius:8px;border:1px solid #aab2c0;background:#fff;color:#242431;cursor:pointer;text-decoration:none}
+button[type=submit]{background:#ac101e;color:#fff;border-color:#ac101e;font-weight:700}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:2px solid #0057a8;outline-offset:3px}
+#status{margin:14px 0 0;overflow-wrap:anywhere}#status[data-error=true]{color:#a11223}
+fieldset{padding:0;border:0;margin:0;min-width:0}
+</style>
+<script defer src="/magazine/feature.js?v=20261127-feature"></script>
+<script defer src="./featured-story-editor.js?v=20261127-feature"></script>
+</head>
+<body>
+<main><section>
+<h1>Homepage Featured Story</h1>
+<p>Choose what appears right below customer feedback on the public homepage. This doesn’t change the story itself, its publish date, or the blog schedule.</p>
+<p id="live" class="live">Loading live setting…</p>
+<form id="form">
+<fieldset id="fields" disabled>
+<label for="kind">Show on the homepage</label>
+<select id="kind">
+<option value="hidden">Nothing (hide this spot)</option>
+<option value="blog">Blog post</option>
+<option value="newsroom">Newsroom article</option>
+</select>
+<div id="details" hidden>
+<label for="story">Choose a story</label>
+<select id="story"></select>
+<label for="caption">Text underneath (optional)</label>
+<textarea id="caption" rows="3" maxlength="300" aria-describedby="note-help"></textarea>
+<small id="note-help">A short note under the story. Leave it blank to show only the story. <span id="count">0/300</span></small>
+</div>
+</fieldset>
+<div class="actions">
+<button id="publish" type="submit" disabled>Publish to homepage</button>
+<button id="reload" type="button">Reload choices</button>
+<a class="preview" href="/#homepage-featured-story" target="_blank" rel="noopener">View homepage</a>
+</div>
+<p role="status" aria-live="polite" id="status"></p>
+</form>
+</section></main>
+</body></html>
