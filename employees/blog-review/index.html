@@ -252,7 +252,7 @@
     .blog-request-content p { color:var(--slate); font-size:.9rem; }
     .blog-request-fields { display:grid; grid-template-columns:minmax(160px,200px) minmax(0,1fr); gap:12px; margin:16px 0 12px; }
     .blog-request-fields label { display:grid; align-content:start; gap:5px; font-size:.9rem; font-weight:800; min-width:0; }
-    .blog-request-fields label:last-child { grid-column:1 / -1; }
+    .blog-request-fields label:nth-last-child(-n+2) { grid-column:1 / -1; }
     .blog-request-fields input,.blog-request-fields textarea { width:100%; min-width:0; min-height:44px; padding:9px 12px; border:1px solid #9299a5; border-radius:8px; color:var(--ink); font:400 1rem 'Nunito',system-ui,sans-serif; background:#fff; }
     .blog-request-fields textarea { resize:vertical; }
     .blog-request-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:18px; }
@@ -289,6 +289,7 @@
         <form id="blog-request-form" method="post" action="/employees/api/blog/requests">
           <div class="blog-request-fields">
             <label>Date <input name="date" type="date" min="2000-01-01" max="2099-12-31" required></label>
+            <label>Blog Title (optional) <input name="blogTitle" type="text" maxlength="120" placeholder="Example: Three LEGO Star Wars Tiles to Watch"></label>
             <label>Main Idea <input name="mainIdea" type="text" maxlength="160" placeholder="Example: New Star Wars poster tiles" required></label>
             <label>What to Cover <textarea name="details" rows="4" maxlength="2400" placeholder="What should the post focus on? Add set numbers, details, or links here." required></textarea></label>
           </div>
@@ -360,7 +361,7 @@
       const keyFor = item => (item.storageDate || item.date) + '/' + item.id;
       const formValues = () => Object.fromEntries(new FormData(form));
       const fillForm = values => fields.forEach(field => { field.value = values[field.name] || ''; });
-      const editChanged = () => editingRequest && fields.some(field => field.value !== editingRequest[field.name]);
+      const editChanged = () => editingRequest && fields.some(field => field.value !== (editingRequest[field.name] || ''));
       function endEdit(message) {
         const previousId = editingRequest?.id;
         editingRequest = null;
@@ -432,7 +433,13 @@
             }
           });
           actions.append(edit, remove);
-          li.append(title, note, actions);
+          li.append(title);
+          if (item.blogTitle) {
+            const headline = document.createElement('p');
+            headline.textContent = 'Blog title: ' + item.blogTitle;
+            li.append(headline);
+          }
+          li.append(note, actions);
           list.append(li);
         }
         if (loaded) empty.textContent = rows.length ? '' : 'No requests yet.';
@@ -469,13 +476,13 @@
       form.addEventListener('submit', async event => {
         event.preventDefault();
         if (save.disabled) return;
-        const { date, mainIdea, details } = formValues();
+        const { date, blogTitle, mainIdea, details } = formValues();
         if (!mainIdea.trim() || !details.trim()) {
           status.textContent = 'Enter a main idea and what to cover.';
           return;
         }
         const editing = editingRequest;
-        pending ??= { id: editing?.id || crypto.randomUUID(), date, mainIdea, details };
+        pending ??= { id: editing?.id || crypto.randomUUID(), date, blogTitle, mainIdea, details };
         save.disabled = true;
         cancel.disabled = true;
         fields.forEach(field => field.disabled = true);
