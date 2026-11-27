@@ -117,7 +117,7 @@
   &lt;main&gt;
     &lt;a class=&quot;back&quot; href=&quot;/employees/site-tracker/#blog-edition&quot;&gt;&amp;larr; Back to Site Tracker&lt;/a&gt;
     &lt;h1&gt;Site Tracker Blog Edition&lt;/h1&gt;
-    &lt;p&gt;Show a short message on one published blog post. Nothing changes on other posts.&lt;/p&gt;
+    &lt;p&gt;Show a short note on one post or all blogs. A post with its own note shows that note instead.&lt;/p&gt;
     &lt;form class=&quot;panel&quot; id=&quot;editor&quot;&gt;
       &lt;label for=&quot;post&quot;&gt;Published blog&lt;/label&gt;
       &lt;select id=&quot;post&quot; disabled&gt;&lt;option value=&quot;&quot;&gt;Loading published blogs…&lt;/option&gt;&lt;/select&gt;
@@ -137,7 +137,7 @@
     (() =&gt; {
       &#x27;use strict&#x27;;
       const STAFF_API = &#x27;/employees/api/magazine/blog-note&#x27;;
-      const limit = 230;
+      const limit = 230, ALL = &#x27;__all__&#x27;;
       const el = id =&gt; document.getElementById(id);
       const post = el(&#x27;post&#x27;), message = el(&#x27;message&#x27;), save = el(&#x27;save&#x27;), remove = el(&#x27;remove&#x27;);
       const reload = el(&#x27;reload&#x27;), status = el(&#x27;status&#x27;), view = el(&#x27;view&#x27;), count = el(&#x27;word-count&#x27;);
@@ -175,9 +175,12 @@
         saved = message.value = &#x27;&#x27;;
         revision = null;
         view.hidden = !slug;
-        if (slug) view.href = &#x27;/blog/&#x27; + encodeURIComponent(slug) + &#x27;/&#x27;;
+        if (slug) {
+          view.href = slug === ALL ? &#x27;/blog/&#x27; : &#x27;/blog/&#x27; + encodeURIComponent(slug) + &#x27;/&#x27;;
+          view.textContent = slug === ALL ? &#x27;Open the public blog ↗&#x27; : &#x27;Open public post ↗&#x27;;
+        }
         showState();
-        notice(slug ? &#x27;Loading this post’s message…&#x27; : &#x27;&#x27;);
+        notice(slug ? &#x27;Loading the saved message…&#x27; : &#x27;&#x27;);
         if (!slug) return;
         try {
           const data = await getData(slug);
@@ -185,7 +188,8 @@
           saved = message.value = data.message;
           revision = data.revision;
           loaded = true;
-          notice(saved ? &#x27;This message is public.&#x27; : &#x27;This post does not have a message.&#x27;);
+          notice(slug === ALL ? (saved ? &#x27;This shared message is public.&#x27; : &#x27;No all-blogs message is set.&#x27;) :
+            (saved ? &#x27;This post’s own message is public.&#x27; : &#x27;No individual message. This post uses the all-blogs message if one is set.&#x27;));
         } catch (error) {
           if (token === loadToken) notice(error.message, true);
         } finally {
@@ -201,7 +205,8 @@
           const data = await getData(selected, value);
           saved = message.value = data.message;
           revision = data.revision;
-          notice(saved ? &#x27;Message published on this post.&#x27; : &#x27;Message removed from this post.&#x27;);
+          notice(selected === ALL ? (saved ? &#x27;All-blogs message published.&#x27; : &#x27;All-blogs message removed. Individual messages were kept.&#x27;) :
+            (saved ? &#x27;Message published on this post.&#x27; : &#x27;Individual message removed. The all-blogs message will show if one is set.&#x27;));
         } catch (error) {
           notice(error.message, true);
         } finally {
@@ -215,7 +220,7 @@
           if (!response.ok) throw new Error();
           const doc = new DOMParser().parseFromString(await response.text(), &#x27;text/html&#x27;);
           const used = new Set();
-          post.replaceChildren(new Option(&#x27;Choose a published blog…&#x27;, &#x27;&#x27;));
+          post.replaceChildren(new Option(&#x27;Choose where to show the message…&#x27;, &#x27;&#x27;), new Option(&#x27;All Blogs&#x27;, ALL));
           for (const card of doc.querySelectorAll(&#x27;.blog-cards .blog-card[href]&#x27;)) {
             const path = card.getAttribute(&#x27;href&#x27;);
             const slug = /^\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/$/.exec(path)?.[1];
@@ -227,9 +232,9 @@
           if (!used.size) throw new Error();
           showState();
         } catch {
-          post.replaceChildren(new Option(&#x27;Published blogs unavailable&#x27;, &#x27;&#x27;));
-          post.disabled = true;
-          notice(&#x27;Could not load the blog list. Refresh and try again.&#x27;, true);
+          post.replaceChildren(new Option(&#x27;Choose where to show the message…&#x27;, &#x27;&#x27;), new Option(&#x27;All Blogs&#x27;, ALL));
+          showState();
+          notice(&#x27;Individual blogs did not load. You can still use All Blogs.&#x27;, true);
         }
       }
       post.addEventListener(&#x27;change&#x27;, () =&gt; {
@@ -243,10 +248,10 @@
       reload.addEventListener(&#x27;click&#x27;, () =&gt; {
         if (!loaded || message.value.trim() === saved || confirm(&#x27;Discard your unsaved changes?&#x27;)) selectPost(selected);
       });
-      remove.addEventListener(&#x27;click&#x27;, () =&gt; { if (saved &amp;&amp; confirm(&#x27;Remove the public message from this blog post?&#x27;)) publish(&#x27;&#x27;); });
+      remove.addEventListener(&#x27;click&#x27;, () =&gt; { if (saved &amp;&amp; confirm(selected === ALL ? &#x27;Remove the shared message from all blogs? Individual notes will stay.&#x27; : &#x27;Remove this post’s own message?&#x27;)) publish(&#x27;&#x27;); });
       el(&#x27;editor&#x27;).addEventListener(&#x27;submit&#x27;, event =&gt; {
         event.preventDefault();
-        if (!save.disabled) publish(message.value.trim());
+        if (!save.disabled &amp;&amp; (selected !== ALL || confirm(&#x27;Publish this note on all blogs that don’t have their own note?&#x27;))) publish(message.value.trim());
       });
       populate();
     })();
