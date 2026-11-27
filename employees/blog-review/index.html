@@ -727,7 +727,7 @@
       if (canArchive)   actions.push('<button class="btn btn-ghost" id="btn-archive">Archive</button>');
       if (canUnarchive) actions.push('<button class="btn btn-ghost" id="btn-unarchive">Move back to drafts</button>');
       if (canUnpublish) actions.push('<button class="btn btn-ghost" id="btn-unpublish">Unpublish (archive)</button>');
-      if (linkedRequest) actions.push('<button class="btn btn-ghost" id="btn-reschedule">Put Back in Scheduled</button>');
+      if (linkedRequest) actions.push('<button class="btn btn-ghost" id="btn-reschedule" style="display:none">Put Back in Scheduled</button>');
       if (canDelete)    actions.push('<button class="btn btn-danger" id="btn-delete">Delete</button>');
       if (d.commit_sha) actions.push('<a class="btn btn-ghost" href="https://github.com/piecepavilion/piece-pavilion/commit/' +
                                      encodeURIComponent(d.commit_sha) + '" target="_blank" rel="noopener">View commit</a>');
@@ -760,7 +760,24 @@
 
       state.current = d;
       wireActions();
-      $('btn-reschedule')?.addEventListener('click', async event => {
+      const reschedule = $('btn-reschedule');
+      if (reschedule) (async () => {
+        try {
+          let cursor = null;
+          do {
+            const data = await api('GET', '/requests' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''));
+            const request = data?.requests?.find(item => item.id === d.source_request_id);
+            if (request) {
+              const parts = new Intl.DateTimeFormat('en-US', {timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+              const part = type => parts.find(p => p.type === type)?.value;
+              if (request.date >= part('year') + '-' + part('month') + '-' + part('day') && state.current?.id === d.id) reschedule.style.display = '';
+              return;
+            }
+            cursor = data?.cursor;
+          } while (cursor);
+        } catch (_) { /* no verified scheduled request; leave the button hidden */ }
+      })();
+      reschedule?.addEventListener('click', async event => {
         if (!confirm('Put this article back in its dated request? It will leave Drafts, and the article will be kept.')) return;
         event.currentTarget.disabled = true;
         try {
