@@ -33,7 +33,7 @@
   .tab { font:inherit; background:transparent; border:0; cursor:pointer;
     padding:14px 22px 12px; font-weight:800; color:var(--mid);
     border-bottom:3px solid transparent; transition:color .15s, border-color .15s;
-    display:inline-flex; align-items:center; gap:8px; font-size:.95rem; }
+    display:inline-flex; align-items:center; gap:8px; font-size:.95rem; white-space:nowrap; }
   .tab:hover { color:var(--ink); }
   .tab.active { color:var(--red); border-bottom-color:var(--red); }
   .tab .ico { font-size:1.1rem; }
@@ -59,6 +59,7 @@
     <span class="ico">&#128250;</span> Newsroom slideshow
   </button>
   <button class="tab" role="tab" data-pane="breaking-news" aria-selected="false"><span class="ico" aria-hidden="true">&#128308;</span> Breaking News</button>
+  <button class="tab" role="tab" data-pane="featured-story" aria-selected="false"><span class="ico" aria-hidden="true">&#128214;</span> Featured Story</button>
 </div>
 <div class="panes">
   <section class="pane" id="pane-magazine" role="tabpanel"><iframe src="/employees/magazine/?embed=1" title="Newsroom article editor"></iframe></section>
@@ -69,11 +70,12 @@
     <iframe src="/employees/spotlight/?embed=1" title="Newsroom slideshow editor"></iframe>
   </section>
   <section class="pane" id="pane-breaking-news" role="tabpanel"><iframe src="/employees/breaking-news/?embed=1&amp;v=20261111text-colors" title="Breaking News editor"></iframe></section>
+  <section class="pane" id="pane-featured-story" role="tabpanel"><iframe src="/employees/content/featured-story.html?v=20261127-feature" title="Homepage featured story editor" loading="lazy"></iframe></section>
 </div>
 <script>
   // Start on whichever tab the URL hash names (#featured / #spotlight).
   const want = (location.hash || '').replace('#', '');
-  if (want === 'spotlight' || want === 'featured' || want === 'magazine' || want === 'breaking-news') {
+  if (want === 'spotlight' || want === 'featured' || want === 'magazine' || want === 'breaking-news' || want === 'featured-story') {
     document.querySelectorAll('.tab').forEach(t => {
       const on = t.dataset.pane === want;
       t.classList.toggle('active', on); t.setAttribute('aria-selected', on);
