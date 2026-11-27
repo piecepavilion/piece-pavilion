@@ -4,6 +4,7 @@
   const endpoint = '/employees/api/magazine/feature';
   const lists = {blog:[],newsroom:[]};
   const selection = {blog:'',newsroom:''};
+  const summaries = new Map();
   let state, busy=false, loaded=false, failures=[];
   function status(message,error=false){
     $('status').dataset.error=String(error);
@@ -21,6 +22,14 @@
     $('fields').disabled=!loaded||busy;
     $('reload').disabled=busy;
   }
+  function refreshSummary(){
+    const kind=$('kind').value, id=$('story').value;
+    const chosen=lists[kind]?.find(item=>item.id===id);
+    const field=$('summary');
+    field.value=summaries.get(kind+':'+id)||'';
+    field.placeholder=chosen?.summary || chosen?.dek || '';
+    $('summary-count').textContent=field.value.length+'/300';
+  }
   function refresh(){
     const kind=$('kind').value;
     $('details').hidden=kind==='hidden';
@@ -32,6 +41,7 @@
       if(!story.value) story.selectedIndex=0;
     }
     $('count').textContent=$('caption').value.length+'/300';
+    refreshSummary();
     canPublish();
   }
   function showLive(){
@@ -46,6 +56,8 @@
       const [settings,blog,news]=await Promise.allSettled([json(endpoint),PPFeatured.blogs(),json('/magazine/pages.json')]);
       if(settings.status!=='fulfilled') throw settings.reason;
       state=settings.value;
+      summaries.clear();
+      if(state.summary) summaries.set(state.kind+':'+state.id,state.summary);
       lists.blog=blog.status==='fulfilled'?blog.value:[];
       const newsValue=news.status==='fulfilled'?news.value:null;
       lists.newsroom=Array.isArray(newsValue?.pages)?newsValue.pages.filter(page=>typeof page.id==='string'&&typeof page.title==='string'&&page.title.trim()):[];
@@ -60,18 +72,23 @@
     finally{busy=false;canPublish();}
   }
   $('kind').addEventListener('change',refresh);
-  $('story').addEventListener('change',()=>{selection[$('kind').value]=$('story').value;canPublish();});
+  $('story').addEventListener('change',()=>{selection[$('kind').value]=$('story').value;refreshSummary();canPublish();});
+  $('summary').addEventListener('input',()=>{
+    const field=$('summary');
+    summaries.set($('kind').value+':'+$('story').value,field.value);
+    $('summary-count').textContent=field.value.length+'/300';
+  });
   $('caption').addEventListener('input',()=>{$('count').textContent=$('caption').value.length+'/300';});
   $('reload').addEventListener('click',load);
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
     if($('publish').disabled) return;
     const kind=$('kind').value;
-    const change={kind,id:kind==='hidden'?'':$('story').value,caption:$('caption').value,updatedAt:state.updatedAt};
+    const change={kind,id:kind==='hidden'?'':$('story').value,caption:$('caption').value,summary:kind==='hidden'?'':$('summary').value,updatedAt:state.updatedAt};
     busy=true;canPublish();status('Publishing…');
     try{
       const saved=await json(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(change)});
-      if(saved.kind!==change.kind||saved.id!==change.id||typeof saved.updatedAt!=='string') throw new Error('Could not confirm the change. Reload to check the live setting.');
+      if(saved.kind!==change.kind||saved.id!==change.id||saved.summary!==change.summary.trim()||typeof saved.updatedAt!=='string') throw new Error('Could not confirm the change. Reload to check the live setting.');
       state=saved;showLive();
       status(kind==='hidden'?'Saved. The featured story spot is hidden.':'Saved. Your selection will appear on the public homepage.');
     }catch(error){status(error.message,true);}
