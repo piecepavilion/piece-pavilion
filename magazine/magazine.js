@@ -93,7 +93,6 @@
           render(root,feature?.summary ? {...featured,dek:feature.summary} : featured,false);
         }
         global.PPFeatured?.applyCard?.(root,feature?.kind,feature?.card);
-        global.PPFeatured?.caption(root,feature?.caption);
       }
       else renderPages(root,visiblePages);
     } catch (_) {
