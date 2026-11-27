@@ -101,16 +101,25 @@
       }catch(error){status(error.message,true);}
       finally{busy=false;canPublish();}
     });
-    const button=(label,fn)=>{const el=document.createElement('button');el.type='button';el.textContent=label;el.addEventListener('click',fn);return el;};
-    const row=document.createElement('div');row.className='cover-actions';
-    row.append(button('Change cover image',()=>picker.click()));
-    row.append(button('Remove image',()=>{card.coverImage='none';refreshSummary();}));
-    if(card.coverImage)row.append(button('Use original image',()=>{delete card.coverImage;refreshSummary();}));
+    const image=imageArea.querySelector('img');
+    const coverPicker=document.createElement('label');
+    coverPicker.className='pp-cover-picker';
+    coverPicker.setAttribute('role','button');
+    coverPicker.setAttribute('aria-label',image?'Replace cover image':'Add cover image');
+    coverPicker.tabIndex=0;
+    coverPicker.title=image?'Tap to replace the cover image':'Tap to add a cover image';
+    coverPicker.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();picker.click();}
+    });
+    if(image){image.before(coverPicker);coverPicker.append(image);}
+    else imageArea.prepend(coverPicker);
+    coverPicker.htmlFor='feature-cover-input';
+    picker.id='feature-cover-input';
     const existing=imageArea.querySelector('figcaption');
     const coverCaption=fieldFor('coverCaption',originalImageCaption);
     const coverAlt=fieldFor('coverAlt',originalImageAlt);
     if(existing)existing.replaceWith(coverCaption);else imageArea.append(coverCaption);
-    imageArea.append(coverAlt,row,picker);
+    imageArea.append(coverAlt,picker);
     resizeText($('summary'));
   }
   function refresh(){
@@ -157,12 +166,6 @@
   }
   $('kind').addEventListener('change',refresh);
   $('story').addEventListener('change',()=>{selection[$('kind').value]=$('story').value;refreshSummary();canPublish();});
-  $('reset-summary').addEventListener('click',()=>{
-    const key=$('kind').value+':'+$('story').value;
-    summaries.delete(key);cards.delete(key);
-    refreshSummary();
-    $('summary')?.focus();
-  });
   window.addEventListener('resize',()=>{if($('summary')) resizeText($('summary'));});
   $('caption').addEventListener('input',()=>{$('count').textContent=$('caption').value.length+'/300';});
   $('reload').addEventListener('click',load);
