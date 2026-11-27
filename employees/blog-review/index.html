@@ -297,7 +297,7 @@
     <details class="blog-requests" id="blog-requests">
       <summary>Blog Requests</summary>
       <div class="blog-request-content">
-        <p>Tell us what you want the next blog to cover. The date is a suggestion; the 5 a.m. schedule stays the same. Requests are private to Staff. Put in Drafts opens a private draft early. If the article hasn’t been written yet, it starts with your notes.</p>
+        <p>Tell us what you want the next blog to cover. The date is a suggestion; the 5 a.m. schedule stays the same. Requests are private to Staff. Put in Drafts writes the article early and saves it here for your review. It can take a minute or two. Nothing publishes automatically.</p>
         <form id="blog-request-form" method="post" action="/employees/api/blog/requests">
           <div class="blog-request-fields">
             <label>Date <input name="date" type="date" min="2000-01-01" max="2099-12-31" required></label>
@@ -371,6 +371,10 @@
       let cursor = null, loaded = false, loading = false, pending = null;
       let editingRequest = null, newRequestValues = null;
       const keyFor = item => (item.storageDate || item.date) + '/' + item.id;
+      window.noteScheduledRequest = item => {
+        items.set(keyFor(item), item);
+        renderRequests();
+      };
       const formValues = () => Object.fromEntries(new FormData(form));
       const fillForm = values => fields.forEach(field => { field.value = values[field.name] || ''; });
       const editChanged = () => editingRequest && fields.some(field => field.value !== (editingRequest[field.name] || ''));
@@ -452,7 +456,7 @@
           move.addEventListener('click', async () => {
             if (save.disabled || (state.editing && !confirm('Discard unsaved article edits?'))) return;
             move.disabled = true;
-            status.textContent = 'Opening draft…';
+            status.textContent = item.draftId ? 'Opening draft…' : 'Writing your article… This can take a minute or two.';
             try {
               const data = await api('POST', '/requests/' + keyFor(item) + '/draft');
               if (!data?.draftId || !data.request || data.draft?.id !== data.draftId) throw Error('Draft not confirmed.');
@@ -469,7 +473,7 @@
                 renderList();
               }
               renderPreview(data.draft);
-              status.textContent = data.needsArticle ? 'Starter draft saved. Add the article before publishing.' : 'Draft opened. Nothing was published.';
+              status.textContent = data.needsArticle ? 'This draft still needs article text.' : 'Article saved in Drafts. Nothing was published.';
               $('preview').scrollIntoView({block:'start'});
             } catch (e) {
               move.disabled = false;
@@ -478,6 +482,11 @@
           });
           actions.append(move, edit, remove);
           li.append(title);
+          if (item.heldDraftId) {
+            const scheduled = document.createElement('p');
+            scheduled.textContent = 'Back in Scheduled · article saved';
+            li.append(scheduled);
+          }
           if (item.blogTitle) {
             const headline = document.createElement('p');
             headline.textContent = 'Blog title: ' + item.blogTitle;
@@ -701,6 +710,8 @@
       const starterNotice = needsArticle
         ? '<p class="thumb-hint"><strong>Starter draft:</strong> Add the article body in Edit before publishing. Your request is saved in the internal review notes.</p>' : '';
       const canArchive = state.tab === 'drafts';
+      const linkedRequest = state.tab === 'drafts' && /^[0-9a-f-]{36}$/.test(d.source_request_id || '') &&
+        /^20\d\d-\d\d-\d\d$/.test(d.source_request_storage_date || d.date_iso || '');
       const canUnarchive = state.tab === 'archived';
       // Unpublish moves a live post back to Archived AND deletes the HTML
       // file from the repo. Content is preserved so Dad can republish later.
@@ -716,6 +727,7 @@
       if (canArchive)   actions.push('<button class="btn btn-ghost" id="btn-archive">Archive</button>');
       if (canUnarchive) actions.push('<button class="btn btn-ghost" id="btn-unarchive">Move back to drafts</button>');
       if (canUnpublish) actions.push('<button class="btn btn-ghost" id="btn-unpublish">Unpublish (archive)</button>');
+      if (linkedRequest) actions.push('<button class="btn btn-ghost" id="btn-reschedule">Put Back in Scheduled</button>');
       if (canDelete)    actions.push('<button class="btn btn-danger" id="btn-delete">Delete</button>');
       if (d.commit_sha) actions.push('<a class="btn btn-ghost" href="https://github.com/piecepavilion/piece-pavilion/commit/' +
                                      encodeURIComponent(d.commit_sha) + '" target="_blank" rel="noopener">View commit</a>');
@@ -748,6 +760,24 @@
 
       state.current = d;
       wireActions();
+      $('btn-reschedule')?.addEventListener('click', async event => {
+        if (!confirm('Put this article back in its dated request? It will leave Drafts, and the article will be kept.')) return;
+        event.currentTarget.disabled = true;
+        try {
+          const sourceDate = d.source_request_storage_date || d.date_iso;
+          const result = await api('POST', '/requests/' + sourceDate + '/' + d.source_request_id + '/schedule');
+          if (!result?.scheduled || !result.request) throw Error('Could not confirm the move.');
+          window.noteScheduledRequest(result.request);
+          state.selected = null;
+          state.editing = false;
+          $('preview').innerHTML = '<div class="empty">Article returned to its dated request. Nothing was published.</div>';
+          await loadList();
+          toast('Put back in Scheduled.');
+        } catch (e) {
+          if ($('btn-reschedule')) $('btn-reschedule').disabled = false;
+          toast(e.message || 'Could not return this draft to Scheduled.', 'error');
+        }
+      });
     }
 
     function coverUploadBlock(d) {
