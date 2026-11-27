@@ -297,7 +297,7 @@
     <details class="blog-requests" id="blog-requests">
       <summary>Blog Requests</summary>
       <div class="blog-request-content">
-        <p>Tell us what you want the next blog to cover. The date is a suggestion; the 5 a.m. schedule stays the same. Requests are private to Staff.</p>
+        <p>Tell us what you want the next blog to cover. The date is a suggestion; the 5 a.m. schedule stays the same. Requests are private to Staff. Put in Drafts opens a private draft early. If the article hasn’t been written yet, it starts with your notes.</p>
         <form id="blog-request-form" method="post" action="/employees/api/blog/requests">
           <div class="blog-request-fields">
             <label>Date <input name="date" type="date" min="2000-01-01" max="2099-12-31" required></label>
@@ -444,7 +444,39 @@
               status.textContent = 'Could not remove the request. Try again.';
             }
           });
-          actions.append(edit, remove);
+          const move = document.createElement('button');
+          move.type = 'button';
+          move.className = 'btn btn-primary';
+          move.textContent = item.draftId ? 'Open Draft' : 'Put in Drafts';
+          move.setAttribute('aria-label', move.textContent + ': ' + item.mainIdea);
+          move.addEventListener('click', async () => {
+            if (save.disabled || (state.editing && !confirm('Discard unsaved article edits?'))) return;
+            move.disabled = true;
+            status.textContent = 'Opening draft…';
+            try {
+              const data = await api('POST', '/requests/' + keyFor(item) + '/draft');
+              if (!data?.draftId || !data.request || data.draft?.id !== data.draftId) throw Error('Draft not confirmed.');
+              items.set(keyFor(data.request), data.request);
+              renderRequests();
+              activateTab('drafts');
+              state.selected = data.draftId;
+              state.editing = false;
+              await loadList();
+              if (!state.items.some(item => item.id === data.draftId)) {
+                state.items.unshift(data.draft);
+                state.counts.drafts = state.items.length;
+                $('count-drafts').textContent = state.items.length;
+                renderList();
+              }
+              renderPreview(data.draft);
+              status.textContent = data.needsArticle ? 'Starter draft saved. Add the article before publishing.' : 'Draft opened. Nothing was published.';
+              $('preview').scrollIntoView({block:'start'});
+            } catch (e) {
+              move.disabled = false;
+              status.textContent = e.message || 'Could not open the draft. Try again.';
+            }
+          });
+          actions.append(move, edit, remove);
           li.append(title);
           if (item.blogTitle) {
             const headline = document.createElement('p');
@@ -663,7 +695,11 @@
         ? ('<div class="thumb-hint"><strong>Thumb hint:</strong> ' + escHtml(d.thumb_hint) + '</div>')
         : '';
       const canEdit = state.tab === 'drafts';
-      const canPublish = state.tab === 'drafts';
+      const needsArticle = d.request_starter && !String(d.body_html || '')
+        .replace(/<!--[\s\S]*?-->|<[^>]*>|&nbsp;|&#160;|&#x0*a0;/gi, '').trim();
+      const canPublish = state.tab === 'drafts' && !needsArticle;
+      const starterNotice = needsArticle
+        ? '<p class="thumb-hint"><strong>Starter draft:</strong> Add the article body in Edit before publishing. Your request is saved in the internal review notes.</p>' : '';
       const canArchive = state.tab === 'drafts';
       const canUnarchive = state.tab === 'archived';
       // Unpublish moves a live post back to Archived AND deletes the HTML
@@ -701,6 +737,7 @@
         '<p class="pv-byline">Piece Pavilion &middot; ' + escHtml(d.date_display || '') + ' &middot; ' +
           escHtml(String(d.reading_time_min || 4)) + ' min read &middot; ' +
           '<span class="cat-badge ' + escHtml(d.category || '') + '">' + escHtml(d.category || 'news') + '</span></p>' +
+        starterNotice +
         sourcesHtml +
         thumbHint +
         coverUploadBlock(d) +
@@ -797,7 +834,7 @@
         '<p class="pv-slug">Editing: /blog/' + escHtml(d.slug || '') + '/</p>' +
         '<div class="edit-grid">' +
           '<div class="edit-field full"><label>Title</label><input type="text" id="ed-title" value="' + escHtml(d.title || '') + '" /></div>' +
-          '<div class="edit-field"><label>Slug</label><input type="text" id="ed-slug" value="' + escHtml(d.slug || '') + '" /></div>' +
+          '<div class="edit-field"><label>Slug</label><input type="text" id="ed-slug" value="' + escHtml(d.slug || d.suggested_slug || '') + '" /></div>' +
           '<div class="edit-field"><label>Category</label>' +
             '<select id="ed-category">' +
               ['minifig','sets','parts','guide','news'].map((c) =>
@@ -842,6 +879,8 @@
         notes: $('ed-notes').value,
       };
       $('btn-save').disabled = true;
+      if (d.request_starter && !String(payload.body_html || '')
+        .replace(/<!--[\s\S]*?-->|<[^>]*>|&nbsp;|&#160;|&#x0*a0;/gi, '').trim()) payload.slug = '';
       try {
         await api('PUT', '/draft/' + encodeURIComponent(d.id), payload);
         toast('Draft saved.');
