@@ -79,12 +79,25 @@
       const hiddenIds=new Set(Array.isArray(data.layout?.hiddenIds)?data.layout.hiddenIds:[]);
       const visiblePages=data.pages.filter(a=>a && !hiddenIds.has(a.id));
       if(coverOnly){
-        const featured=visiblePages.find(a=>a.id===data.layout?.homepageId) || visiblePages[0];
-        render(root,featured || empty,false);
+        const feature=data.feature;
+        if(feature?.kind==='hidden') return;
+        if(feature?.kind==='blog'){
+          const post=(await global.PPFeatured.blogs()).find(item=>item.id===feature.id);
+          if(!post) return;
+          global.PPFeatured.renderBlog(root,post);
+        }else{
+          const featured=feature?.kind==='newsroom'
+            ? visiblePages.find(a=>a.id===feature.id)
+            : visiblePages.find(a=>a.id===data.layout?.homepageId) || visiblePages[0];
+          if(!featured) return;
+          render(root,featured,false);
+        }
+        global.PPFeatured?.caption(root,feature?.caption);
       }
       else renderPages(root,visiblePages);
     } catch (_) {
-      // A cached frontend or staged backend deployment still shows the original story.
+      if (coverOnly) { root.hidden=true; root.replaceChildren(); return; }
+      // Newsroom's full page keeps the original fallback on temporary errors.
       try {
         const r=await fetch('/magazine/data.json',{cache:'no-store',credentials:'omit'});if(!r.ok)throw new Error();render(root,{...await r.json(),id:'front'},false);
         if(!coverOnly){const notice=document.createElement('p');notice.className='pp-magazine-page-error';notice.setAttribute('role','status');notice.textContent='Additional Newsroom pages could not be loaded. Please refresh to try again.';root.prepend(notice);root.hidden=false;}
