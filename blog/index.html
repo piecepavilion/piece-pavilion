@@ -37,10 +37,10 @@
   <link rel="stylesheet" href="../style.css?v=20261112-finditfix" />
   <link rel="stylesheet" href="blog.css?v=20261103c" />
   <style>
-    /* Live view rank: opposite Latest/Hot and separate from the view count. */
+    /* Live view rank: keep the cover logo clear on the right. */
     .blog-card-thumb .blog-view-rank {
       position: absolute;
-      inset: 12px 12px auto auto;
+      inset: 12px auto auto 12px;
       z-index: 3;
       display: inline-flex;
       align-items: center;
@@ -53,12 +53,14 @@
       white-space: nowrap;
       pointer-events: none;
     }
+    .blog-card-thumb:has(.blog-badge) .blog-view-rank { top: 42px; }
     .blog-view-rank-star { color: #ffce00; }
     @media (max-width: 540px) {
       .blog-card-thumb .blog-view-rank {
-        inset: 10px 10px auto auto;
+        inset: 10px auto auto 10px;
         padding: 3px 7px;
       }
+      .blog-card-thumb:has(.blog-badge) .blog-view-rank { top: 38px; }
     }
   </style>
   <!-- Favicon / tab identity -->
