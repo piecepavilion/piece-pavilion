@@ -233,6 +233,7 @@
           <button class="btn sm ghost noprint" id="backbtn">Orders</button>
         </div>
         <div class="l2" id="p-sub"></div>
+        <div class="l2 noprint" id="p-active-time">Active pick time: 0s</div>
         <div class="pbar">
           <div class="g" id="p-green" style="width:0"></div>
           <div class="a" id="p-amber" style="width:0"></div>
@@ -312,14 +313,41 @@
     var colors = null;
     var me = "";
 
+  function ActivePickClock(saved) {
+    this.total = Number.isFinite(saved) && saved >= 0 ? saved : 0;
+    this.since = null;
+    this.until = 0;
+  }
+  ActivePickClock.prototype.elapsed = function (now) {
+    return this.total + (this.since === null ? 0 : Math.max(0, Math.min(now, this.until) - this.since));
+  };
+  ActivePickClock.prototype.stop = function (now) {
+    this.total = this.elapsed(now);
+    this.since = null;
+    this.until = 0;
+    return this.total;
+  };
+  ActivePickClock.prototype.activity = function (now) {
+    if (this.since === null || now >= this.until) {
+      this.stop(now);
+      this.since = now;
+    }
+    this.until = now + 75000;
+  };
+  ActivePickClock.prototype.running = function (now) {
+    return this.since !== null && now < this.until;
+  };
+
     // ---- app state ----
     var S = {
       orderId: "", order: null, lots: [], rows: [], groups: [],
-      marks: {}, binIndex: 0, view: "one", startedAt: 0, source: "api",
+      marks: {}, binIndex: 0, view: "one", timer: null, screen: "screen-orders", source: "api",
     };
 
     var $ = function (id) { return document.getElementById(id); };
     function show(id) {
+      if (S.screen === "screen-pick" && id !== "screen-pick") pausePick();
+      S.screen = id;
       ["screen-orders", "screen-pick", "screen-done"].forEach(function (s) {
         $(s).classList.toggle("hide", s !== id);
       });
@@ -350,10 +378,64 @@
     function saveLocal() {
       try {
         localStorage.setItem(LKEY(S.orderId), JSON.stringify({
-          marks: S.marks, startedAt: S.startedAt, order: S.order, lots: S.lots, source: S.source,
+          marks: S.marks, activeMs: S.timer ? S.timer.elapsed(performance.now()) : 0, order: S.order, lots: S.lots, source: S.source,
         }));
       } catch (e) { /* private mode / full quota — KV sync still carries it */ }
     }
+    // The clock only advances while this sheet is in front, and never
+    // beyond 75 seconds from the last real interaction. Offline marks
+    // still sync through the existing queue; the active total is local.
+    var checkpointAt = 0;
+    function pickInFront() {
+      return S.screen === "screen-pick" && document.visibilityState === "visible" && document.hasFocus();
+    }
+    function drawPickTime(now) {
+      if (!S.timer || S.screen !== "screen-pick") return;
+      var label = "Active pick time: " + hms(S.timer.elapsed(now)) +
+        (S.timer.running(now) ? "" : " · Paused. Touch to resume.");
+      var el = $("p-active-time");
+      if (el.textContent !== label) el.textContent = label;
+    }
+    function pausePick() {
+      if (!S.timer || S.timer.since === null) return;
+      var now = performance.now();
+      S.timer.stop(now);
+      saveLocal();
+      drawPickTime(now);
+    }
+    function pickActivity() {
+      if (!S.timer || !pickInFront()) return;
+      var now = performance.now(), wasRunning = S.timer.running(now);
+      S.timer.activity(now);
+      if (!wasRunning) { checkpointAt = now; saveLocal(); }
+      drawPickTime(now);
+    }
+    function trustedActivity(e) { if (e.isTrusted) pickActivity(); }
+    if (window.PointerEvent) {
+      document.addEventListener("pointerdown", trustedActivity, {passive:true,capture:true});
+      document.addEventListener("pointermove", function (e) {
+        if (e.pointerType === "touch" || (e.buttons && e.pointerType === "pen")) trustedActivity(e);
+      }, {passive:true,capture:true});
+    }
+    // Safari can cancel pointer events once scrolling starts; touchmove
+    // keeps a real finger scroll active without counting inertial scroll.
+    document.addEventListener("touchstart", trustedActivity, {passive:true,capture:true});
+    document.addEventListener("touchmove", trustedActivity, {passive:true,capture:true});
+    document.addEventListener("keydown", function (e) {
+      if (!e.repeat && !["Alt","Shift","Control","Meta","Tab"].includes(e.key)) trustedActivity(e);
+    }, true);
+    document.addEventListener("visibilitychange", function () { if (document.hidden) pausePick(); });
+    window.addEventListener("blur", pausePick);
+    window.addEventListener("pagehide", pausePick);
+    window.setInterval(function () {
+      if (!S.timer || S.screen !== "screen-pick") return;
+      var now = performance.now();
+      if (S.timer.since !== null) {
+        if (!pickInFront() || !S.timer.running(now)) pausePick();
+        else if (now - checkpointAt >= 5000) { checkpointAt = now; saveLocal(); }
+      }
+      drawPickTime(now);
+    }, 500);
     function queue(marks) {
       var q;
       try { q = JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { q = []; }
@@ -513,7 +595,8 @@
         });
       }
       S.marks = merged;
-      S.startedAt = (local && local.startedAt) || (state && state.claimed_at ? Date.parse(state.claimed_at) : 0) || Date.now();
+      // Old wall-clock timestamps cannot reconstruct real active time.
+      S.timer = new ActivePickClock(local && local.activeMs);
 
       // Start on the first bin that still has something to pull.
       var firstOpen = S.groups.findIndex(function (g) {
@@ -533,6 +616,8 @@
         b.classList.toggle("on", b.dataset.view === "one");
       });
       show("screen-pick");
+      pickActivity();
+      drawPickTime(performance.now());
       render();
       flush();
     }
@@ -693,11 +778,13 @@
     async function finish() {
       var p = C.progress(S.rows, S.marks);
       var open = p.lots - p.lotsPicked - p.lotsNotFound;
+      // Don't time the confirmation prompt or the completion network call.
+      pausePick();
       if (open && !confirm(open + " lot" + (open === 1 ? "" : "s") +
-        " still unmarked. Finish anyway?")) return;
+        " still unmarked. Finish anyway?")) { pickActivity(); return; }
 
       var nfText = C.notFoundText(S.rows, S.marks, S.orderId);
-      var elapsed = Date.now() - (S.startedAt || Date.now());
+      var elapsed = Math.floor(S.timer ? S.timer.elapsed(performance.now()) : 0);
 
       var unit = p.lots === p.distinctLots ? ["lot", "lots"] : ["pick", "picks"];
       $("d-picked").textContent = C.plural(p.lotsPicked, unit[0], unit[1]) + " / " + C.plural(p.piecesPicked, "pc");
@@ -758,6 +845,7 @@
     $("printbtn").onclick = function () {
       var prev = S.view;
       S.view = "all"; render();
+      pausePick();
       window.print();
       S.view = prev; render();
     };
@@ -769,7 +857,7 @@
     };
     $("d-copy").onclick = function () { copyText($("d-nftext").textContent, this); };
     $("d-back").onclick = function () { show("screen-orders"); loadOrders(); };
-    $("d-reopen").onclick = function () { show("screen-pick"); render(); };
+    $("d-reopen").onclick = function () { show("screen-pick"); pickActivity(); drawPickTime(performance.now()); render(); };
 
     document.querySelectorAll(".views button").forEach(function (b) {
       b.onclick = function () {
