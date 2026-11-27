@@ -4,7 +4,7 @@
   const endpoint = '/employees/api/magazine/feature';
   const lists = {blog:[],newsroom:[]};
   const selection = {blog:'',newsroom:''};
-  const summaries = new Map(), cards = new Map();
+  const summaries = new Map(), cards = new Map(), previousCovers = new Map();
   let state, busy=false, loaded=false, failures=[];
   function status(message,error=false){
     $('status').dataset.error=String(error);
@@ -23,8 +23,12 @@
     $('reload').disabled=busy;
   }
   function resizeText(field){
-    field.style.height='auto';
-    field.style.height=Math.max(52,field.scrollHeight+2)+'px';
+    field.style.height='0px';
+    field.style.height=field.scrollHeight+'px';
+  }
+  function setCoverStatus(message,error=false){
+    $('cover-status').style.color=error?'#a11223':'';
+    $('cover-status').textContent=message;
   }
   function refreshSummary(){
     const kind=$('kind').value, id=$('story').value;
@@ -42,15 +46,15 @@
       PPMagazine.render(root,chosen,false);
       root.removeAttribute('data-pp-magazine');
     }
-    const originalImageAlt=root.querySelector('.pp-magazine-lead img')?.alt||'';
     const originalImageCaption=root.querySelector('.pp-magazine-lead figcaption')?.textContent.trim()||'';
     PPFeatured.applyCover(root,card);
     const slots=PPFeatured.cardElements(root,kind,true);
     for(const link of root.querySelectorAll('a')) link.removeAttribute('href');
     function fieldFor(k, original){
       const [label,limit]=PPFeatured.cardFields[k];
-      const field=document.createElement(k==='summary'?'textarea':'input');
+      const field=document.createElement(k==='summary'||k==='headline'?'textarea':'input');
       if(k==='summary'){field.id='summary';field.rows=2;field.className='pp-magazine-dek';}
+      else if(k==='headline'){field.id='card-headline';field.rows=1;field.className='pp-headline-input';}
       else field.type='text';
       field.classList.add('pp-card-field');
       field.maxLength=limit;
@@ -62,8 +66,10 @@
       const update=()=>{
         if(k==='summary'){
           summaries.set(key,field.value);resizeText(field);
-        }else if(field.value===original)delete card[k];
-        else card[k]=field.value;
+        }else{
+          if(k==='headline'){if(/[\r\n]/.test(field.value))field.value=field.value.replace(/[\r\n]+/g,' ');resizeText(field);}
+          if(field.value===original)delete card[k];else card[k]=field.value;
+        }
       };
       field.addEventListener('input',update);
       return field;
@@ -91,14 +97,16 @@
     const picker=document.createElement('input');picker.type='file';picker.accept='image/png,image/jpeg,image/webp,image/gif';picker.hidden=true;
     picker.addEventListener('change',async()=>{
       const file=picker.files[0];if(!file)return;
-      if(file.size>8*1024*1024){status('Choose an image under 8 MB.',true);return;}
-      busy=true;canPublish();status('Uploading cover…');
+      picker.value='';
+      if(file.size>8*1024*1024){setCoverStatus('Choose an image under 8 MB.',true);return;}
+      busy=true;canPublish();setCoverStatus('Uploading cover…');
       try{
         const form=new FormData();form.append('file',file);
         const result=await json('/employees/api/magazine/upload',{method:'POST',body:form});
         if(!/^\/magazine\/img\/[a-f0-9-]{36}$/.test(result.url||''))throw new Error('The cover upload could not be confirmed.');
-        card.coverImage=result.url;refreshSummary();status('Cover added to this preview. It is not on the homepage until you publish.');
-      }catch(error){status(error.message,true);}
+        previousCovers.set(key,card.coverImage);
+        card.coverImage=result.url;refreshSummary();setCoverStatus('Cover updated in the preview. Publish to make it live.');
+      }catch(error){setCoverStatus(error.message,true);}
       finally{busy=false;canPublish();}
     });
     const image=imageArea.querySelector('img');
@@ -115,12 +123,28 @@
     else imageArea.prepend(coverPicker);
     coverPicker.htmlFor='feature-cover-input';
     picker.id='feature-cover-input';
+    const coverControls=document.createElement('div');
+    coverControls.className='pp-cover-actions';
+    const upload=document.createElement('button');
+    upload.type='button';upload.textContent='Upload cover';upload.addEventListener('click',()=>picker.click());
+    const undo=document.createElement('button');
+    undo.type='button';
+    undo.textContent=previousCovers.has(key)?'Undo cover change':'Use original cover';
+    undo.hidden=!previousCovers.has(key)&&!Object.hasOwn(card,'coverImage');
+    undo.addEventListener('click',()=>{
+      const previous=previousCovers.get(key);
+      if(previous===undefined)delete card.coverImage;else card.coverImage=previous;
+      previousCovers.delete(key);
+      refreshSummary();
+      setCoverStatus(previous===undefined?'Original cover restored in the preview.':'Previous cover restored in the preview.');
+      root.querySelector('.pp-cover-actions button')?.focus({preventScroll:true});
+    });
+    coverControls.append(upload,undo,picker);
+    coverPicker.after(coverControls);
     const existing=imageArea.querySelector('figcaption');
     const coverCaption=fieldFor('coverCaption',originalImageCaption);
-    const coverAlt=fieldFor('coverAlt',originalImageAlt);
     if(existing)existing.replaceWith(coverCaption);else imageArea.append(coverCaption);
-    imageArea.append(coverAlt,picker);
-    resizeText($('summary'));
+    for(const id of ['summary','card-headline']) if($(id))resizeText($(id));
   }
   function refresh(){
     const kind=$('kind').value;
@@ -132,7 +156,7 @@
       story.value=selection[kind]||'';
       if(!story.value) story.selectedIndex=0;
     }
-    $('count').textContent=$('caption').value.length+'/300';
+    setCoverStatus('');
     refreshSummary();
     canPublish();
   }
@@ -148,7 +172,7 @@
       const [settings,blog,news]=await Promise.allSettled([json(endpoint),PPFeatured.blogs(),json('/magazine/pages.json')]);
       if(settings.status!=='fulfilled') throw settings.reason;
       state=settings.value;
-      summaries.clear();cards.clear();
+      summaries.clear();cards.clear();previousCovers.clear();
       if(state.card) cards.set(state.kind+':'+state.id,{...state.card});
       if(state.summary) summaries.set(state.kind+':'+state.id,state.summary);
       lists.blog=blog.status==='fulfilled'?blog.value:[];
@@ -158,27 +182,25 @@
       selection.blog=state.kind==='blog'?state.id:'';
       selection.newsroom=state.kind==='newsroom'?state.id:(state.kind==='default'?newsValue?.layout?.homepageId||'':'');
       $('kind').value=state.kind==='default'?'newsroom':state.kind;
-      $('caption').value=state.caption||'';
       loaded=true;showLive();refresh();
       status(failures.length?'Could not load '+failures.join(' and ')+' choices. You can still hide the spot or use a loaded list.': '',!!failures.length);
     }catch(error){loaded=false;$('live').textContent='Live setting could not be loaded.';status(error.message,true);}
     finally{busy=false;canPublish();}
   }
   $('kind').addEventListener('change',refresh);
-  $('story').addEventListener('change',()=>{selection[$('kind').value]=$('story').value;refreshSummary();canPublish();});
-  window.addEventListener('resize',()=>{if($('summary')) resizeText($('summary'));});
-  $('caption').addEventListener('input',()=>{$('count').textContent=$('caption').value.length+'/300';});
+  $('story').addEventListener('change',()=>{selection[$('kind').value]=$('story').value;setCoverStatus('');refreshSummary();canPublish();});
+  window.addEventListener('resize',()=>{for(const id of ['summary','card-headline'])if($(id))resizeText($(id));});
   $('reload').addEventListener('click',load);
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
     if($('publish').disabled) return;
     const kind=$('kind').value;
-    const change={kind,id:kind==='hidden'?'':$('story').value,caption:$('caption').value,summary:kind==='hidden'?'':(summaries.get(kind+':'+$('story').value)||''),card:kind==='hidden'?{}:(cards.get(kind+':'+$('story').value)||{}),updatedAt:state.updatedAt};
+    const change={kind,id:kind==='hidden'?'':$('story').value,caption:state.caption||'',summary:kind==='hidden'?'':(summaries.get(kind+':'+$('story').value)||''),card:kind==='hidden'?{}:(cards.get(kind+':'+$('story').value)||{}),updatedAt:state.updatedAt};
     busy=true;canPublish();status('Publishing…');
     try{
       const saved=await json(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(change)});
       if(saved.kind!==change.kind||saved.id!==change.id||saved.summary!==change.summary.trim()||!saved.card||typeof saved.updatedAt!=='string') throw new Error('Could not confirm the change. Reload to check the live setting.');
-      state=saved;showLive();
+      state=saved;showLive();setCoverStatus('');
       status(kind==='hidden'?'Saved. The featured story spot is hidden.':'Saved. Your selection will appear on the public homepage.');
     }catch(error){status(error.message,true);}
     finally{busy=false;canPublish();}

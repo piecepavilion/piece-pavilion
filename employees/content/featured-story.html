@@ -8,8 +8,8 @@
 <style>
 :root{font-family:system-ui,sans-serif;color:#191923;background:#f5f6f9}
 *{box-sizing:border-box}body{margin:0}
-main{max-width:1120px;margin:0 auto;padding:clamp(14px,4vw,32px)}
-section{border:1px solid #e0e3eb;background:#fff;border-radius:15px;padding:clamp(16px,4vw,27px)}
+main{--edge:24px;max-width:1200px;margin:0 auto;padding:var(--edge)}
+section{--panel-inset:clamp(16px,4vw,27px);border:1px solid #e0e3eb;background:#fff;border-radius:15px;padding:var(--panel-inset)}
 h1{margin:0 0 6px;font-size:1.45rem}p{line-height:1.5;margin:0 0 18px;color:#4b5563}.live{padding:12px 14px;background:#f6f7fb;border-left:3px solid #0057a8;border-radius:5px;color:#303744;overflow-wrap:anywhere}
 label{display:block;font-weight:700;margin:16px 0 6px}
 textarea,select,button{font:inherit}textarea,select{width:100%;padding:10px 11px;border:1px solid #aab2c0;border-radius:7px;background:white;color:inherit;min-width:0}
@@ -24,16 +24,22 @@ fieldset{padding:0;border:0;margin:0;min-width:0}
 </style>
 <link rel="stylesheet" href="/magazine/magazine.css?v=20261127-feature">
 <style>
-.card-preview{margin:18px 0 0}
+.card-preview{margin:18px calc(-1 * (var(--panel-inset) + 1px)) 0}
+.preview-toolbar{padding:0 var(--panel-inset)}
+@media(max-width:700px){main{--edge:12px}}
 .preview-toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 18px;margin-bottom:8px;color:#4b5563;font-size:.84rem}
 .preview-toolbar strong{color:#191923}
 #story-preview .pp-magazine{margin:0}
-#story-preview .pp-magazine-heading h2{font-size:clamp(27px,5vw,54px)}
 #story-preview .pp-feature-link{cursor:default}
 #story-preview .pp-magazine-masthead > *{flex:1;min-width:0}
 #story-preview .pp-magazine-masthead > :last-child{text-align:right}
 #story-preview .pp-card-field:not(textarea){width:100%;min-width:0;font:inherit;color:inherit;letter-spacing:inherit;text-align:inherit;background:#fffdf7;border:1px dashed #b96f43;border-radius:5px;padding:.22em .35em}
-#story-preview .pp-magazine-heading h2 .pp-card-field{font-size:.75em}
+#story-preview .pp-magazine-heading{min-width:0}
+#story-preview .pp-headline-input{display:block;width:100%;min-height:1.12em;resize:none;overflow:hidden;font:inherit;letter-spacing:inherit;line-height:inherit;color:inherit;background:#fffdf7;border:0;border-radius:4px;padding:0;outline:1px dashed #b96f43;outline-offset:3px;appearance:none}
+#story-preview .pp-headline-input:focus-visible{outline:2px solid #0057a8}
+#story-preview .pp-cover-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#story-preview .pp-cover-actions button{font:600 14px system-ui,sans-serif;min-height:44px;text-align:left}
+#story-preview .pp-cover-actions button[hidden]{display:none}
 #story-preview .pp-magazine-photo > .pp-card-field{display:block;margin:8px 0;font:14px system-ui,sans-serif}
 .pp-cover-picker{display:block;cursor:pointer;border-radius:6px}
 .pp-cover-picker:focus-visible{outline:2px solid #0057a8;outline-offset:4px}
@@ -42,12 +48,11 @@ fieldset{padding:0;border:0;margin:0;min-width:0}
 #story-preview textarea.pp-magazine-dek{display:block;width:100%;min-height:3.1em;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.55;letter-spacing:normal;color:#403a34;border:1px dashed #b96f43;border-radius:6px;background:#fffdf7;padding:8px 10px;margin:0 0 14px}
 #story-preview textarea.pp-magazine-dek:focus{outline:2px solid #0057a8;outline-offset:2px}
 #story-preview textarea.pp-magazine-dek::placeholder{color:#6f6256}
-#story-preview .pp-magazine-lead.has-image{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-@media(max-width:700px){#story-preview .pp-magazine-lead.has-image{grid-template-columns:minmax(0,1fr)}}
+
 </style>
 <script defer src="/magazine/feature.js?v=20261127-wholecard"></script>
 <script defer src="/magazine/magazine.js?v=20261127-wholecard"></script>
-<script defer src="./featured-story-editor.js?v=20261127-cleancard"></script>
+<script defer src="./featured-story-editor.js?v=20261127-phonecover"></script>
 </head>
 <body>
 <main><section>
@@ -68,13 +73,11 @@ fieldset{padding:0;border:0;margin:0;min-width:0}
 <div class="card-preview" id="preview-block" hidden>
   <div class="preview-toolbar">
     <strong>Homepage preview</strong>
-    <span id="summary-help">Tap the outlined words to edit them. Tap the cover to replace the image.</span>
+    <span id="summary-help">Tap the outlined words to edit them. Replace or undo a cover under the image.</span>
   </div>
   <div id="story-preview"></div>
+  <small id="cover-status" class="preview-toolbar" role="status" aria-live="polite"></small>
 </div>
-<label for="caption">Note below the card (optional)</label>
-<textarea id="caption" rows="3" maxlength="300" aria-describedby="note-help"></textarea>
-<small id="note-help">A short note under the story. Leave it blank to show only the story. <span id="count">0/300</span></small>
 </div>
 </fieldset>
 <div class="actions">
