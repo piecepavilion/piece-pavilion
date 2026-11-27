@@ -30,15 +30,23 @@ fieldset{padding:0;border:0;margin:0;min-width:0}
 #story-preview .pp-magazine{margin:0}
 #story-preview .pp-magazine-heading h2{font-size:clamp(27px,5vw,54px)}
 #story-preview .pp-feature-link{cursor:default}
+#story-preview .pp-magazine-masthead > *{flex:1;min-width:0}
+#story-preview .pp-magazine-masthead > :last-child{text-align:right}
+#story-preview .pp-card-field:not(textarea){width:100%;min-width:0;font:inherit;color:inherit;letter-spacing:inherit;text-align:inherit;background:#fffdf7;border:1px dashed #b96f43;border-radius:5px;padding:.22em .35em}
+#story-preview .pp-magazine-heading h2 .pp-card-field{font-size:.75em}
+#story-preview .pp-magazine-photo > .pp-card-field{display:block;margin:8px 0;font:14px system-ui,sans-serif}
+.cover-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.cover-actions button,#reset-summary{font-size:.82rem}
+.pp-empty-cover{background:#f4f0e6;padding:12px;border-radius:8px}
 #story-preview textarea.pp-magazine-dek{display:block;width:100%;min-height:3.1em;resize:none;overflow:hidden;font:inherit;font-size:16px;line-height:1.55;letter-spacing:normal;color:#403a34;border:1px dashed #b96f43;border-radius:6px;background:#fffdf7;padding:8px 10px;margin:0 0 14px}
 #story-preview textarea.pp-magazine-dek:focus{outline:2px solid #0057a8;outline-offset:2px}
 #story-preview textarea.pp-magazine-dek::placeholder{color:#6f6256}
 #story-preview .pp-magazine-lead.has-image{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 @media(max-width:700px){#story-preview .pp-magazine-lead.has-image{grid-template-columns:minmax(0,1fr)}}
 </style>
-<script defer src="/magazine/feature.js?v=20261127-feature"></script>
-<script defer src="/magazine/magazine.js?v=20261127-cardwords"></script>
-<script defer src="./featured-story-editor.js?v=20261127-inlinecard"></script>
+<script defer src="/magazine/feature.js?v=20261127-wholecard"></script>
+<script defer src="/magazine/magazine.js?v=20261127-wholecard"></script>
+<script defer src="./featured-story-editor.js?v=20261127-wholecard"></script>
 </head>
 <body>
 <main><section>
@@ -59,10 +67,10 @@ fieldset{padding:0;border:0;margin:0;min-width:0}
 <div class="card-preview" id="preview-block" hidden>
   <div class="preview-toolbar">
     <strong>Homepage preview</strong>
-    <span id="summary-help">Tap the text under the headline to edit it. <span id="summary-count">0/300</span></span>
+    <span id="summary-help">Tap any outlined text to edit it, or use the controls by the image.</span>
   </div>
   <div id="story-preview"></div>
-  <small><button id="reset-summary" type="button">Use original wording</button></small>
+  <small><button id="reset-summary" type="button">Reset card to original</button></small>
 </div>
 <label for="caption">Note below the card (optional)</label>
 <textarea id="caption" rows="3" maxlength="300" aria-describedby="note-help"></textarea>
