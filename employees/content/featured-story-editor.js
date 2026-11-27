@@ -22,13 +22,41 @@
     $('fields').disabled=!loaded||busy;
     $('reload').disabled=busy;
   }
+  function resizeText(field){
+    field.style.height='auto';
+    field.style.height=Math.max(52,field.scrollHeight+2)+'px';
+  }
   function refreshSummary(){
     const kind=$('kind').value, id=$('story').value;
     const chosen=lists[kind]?.find(item=>item.id===id);
-    const field=$('summary');
-    field.value=summaries.get(kind+':'+id)||'';
-    field.placeholder=chosen?.summary || chosen?.dek || '';
-    $('summary-count').textContent=field.value.length+'/300';
+    const root=$('story-preview');
+    root.replaceChildren();
+    $('preview-block').hidden=!chosen;
+    if(!chosen) return;
+    const key=kind+':'+id, original=String(chosen.summary || chosen.dek || '').trim();
+    if(kind==='blog') PPFeatured.renderBlog(root,chosen);
+    else{
+      root.setAttribute('data-pp-magazine','preview');
+      PPMagazine.render(root,chosen,false);
+      root.removeAttribute('data-pp-magazine');
+    }
+    for(const link of root.querySelectorAll('a')) link.removeAttribute('href');
+    const heading=root.querySelector('.pp-magazine-heading');
+    const field=document.createElement('textarea');
+    field.id='summary';field.className='pp-magazine-dek';field.rows=2;field.maxLength=300;
+    field.setAttribute('aria-label','Edit text under the featured headline');
+    field.setAttribute('aria-describedby','summary-help');
+    field.placeholder='Tap here to add text to the card';
+    field.value=summaries.has(key)?summaries.get(key):original;
+    const dek=heading.querySelector('.pp-magazine-dek');
+    if(dek) dek.replaceWith(field);
+    else heading.querySelector('h2').after(field);
+    const count=()=>{$('summary-count').textContent=Math.min(field.value.length,300)+'/300';resizeText(field);};
+    field.addEventListener('input',()=>{
+      if(field.value.length>300) field.value=field.value.slice(0,300);
+      summaries.set(key,field.value);count();
+    });
+    count();
   }
   function refresh(){
     const kind=$('kind').value;
@@ -73,18 +101,19 @@
   }
   $('kind').addEventListener('change',refresh);
   $('story').addEventListener('change',()=>{selection[$('kind').value]=$('story').value;refreshSummary();canPublish();});
-  $('summary').addEventListener('input',()=>{
-    const field=$('summary');
-    summaries.set($('kind').value+':'+$('story').value,field.value);
-    $('summary-count').textContent=field.value.length+'/300';
+  $('reset-summary').addEventListener('click',()=>{
+    summaries.delete($('kind').value+':'+$('story').value);
+    refreshSummary();
+    $('summary')?.focus();
   });
+  window.addEventListener('resize',()=>{if($('summary')) resizeText($('summary'));});
   $('caption').addEventListener('input',()=>{$('count').textContent=$('caption').value.length+'/300';});
   $('reload').addEventListener('click',load);
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
     if($('publish').disabled) return;
     const kind=$('kind').value;
-    const change={kind,id:kind==='hidden'?'':$('story').value,caption:$('caption').value,summary:kind==='hidden'?'':$('summary').value,updatedAt:state.updatedAt};
+    const change={kind,id:kind==='hidden'?'':$('story').value,caption:$('caption').value,summary:kind==='hidden'?'':(summaries.get(kind+':'+$('story').value)||''),updatedAt:state.updatedAt};
     busy=true;canPublish();status('Publishing…');
     try{
       const saved=await json(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(change)});
