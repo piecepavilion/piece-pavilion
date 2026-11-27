@@ -84,13 +84,13 @@
         if(feature?.kind==='blog'){
           const post=(await global.PPFeatured.blogs()).find(item=>item.id===feature.id);
           if(!post) return;
-          global.PPFeatured.renderBlog(root,post);
+          global.PPFeatured.renderBlog(root,feature.summary ? {...post,summary:feature.summary} : post);
         }else{
           const featured=feature?.kind==='newsroom'
             ? visiblePages.find(a=>a.id===feature.id)
             : visiblePages.find(a=>a.id===data.layout?.homepageId) || visiblePages[0];
           if(!featured) return;
-          render(root,featured,false);
+          render(root,feature?.summary ? {...featured,dek:feature.summary} : featured,false);
         }
         global.PPFeatured?.caption(root,feature?.caption);
       }
