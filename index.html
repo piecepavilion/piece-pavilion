@@ -115,7 +115,7 @@
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <!-- ===== LEFT SIDEBAR NAV ===== -->
-  <nav class="sidebar" id="sidebar">
+  <nav class="sidebar" id="sidebar" inert aria-hidden="true">
     <div class="sidebar-header">
       <a href="#hero" class="sidebar-logo">
         <img src="logo-white.png" alt="Piece Pavilion" class="logo-img" />
@@ -206,7 +206,7 @@
           <span class="viewer-count" id="viewer-count">&mdash;</span>
           <span class="viewer-label">Viewer count.</span>
         </div>
-        <button class="header-burger" id="header-burger" aria-label="Open menu">&#9776;</button>
+        <button class="header-burger" id="header-burger" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">&#9776;</button>
       </div>
     </div>
     <nav class="pp-quick-nav" aria-label="Quick links">
@@ -1177,7 +1177,7 @@
   </div><!-- end .main-content -->
 
   <script async src="https://f.convertkit.com/ckjs/ck.5.js" integrity="sha384-jrPr3cryOobCciVpnyICbK0gXiRQxFQMYLwmA1ncyFPJg3m6jwTkIPWwOgJo2lPj" crossorigin="anonymous"></script>
-  <script src="script.js?v=20261108-visibility"></script>
+  <script src="script.js?v=20261128-drawer-focus"></script>
   <!--
     Client-side override for homepage featured items. Reads Dad's staff-editor
     picks from /featured/overrides.json (served by the pp-partout worker from
