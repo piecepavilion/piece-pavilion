@@ -96,6 +96,7 @@ def parse_post(slug_dir):
         "date_iso": date_iso,
         "date_display": format_date(date_iso),
         "has_thumb": has_thumb,
+        "reading_time_min": byline_reading_time(html_txt),
     })
 
 
@@ -383,6 +384,16 @@ def inject_view_tracker(html_txt, block):
     return close.sub("\n" + block + "\n</body>", html_txt, count=1)
 
 
+def byline_reading_time(html_txt):
+    """Read the article byline, never a recommendation or summary."""
+    byline = re.search(r'<p\b[^>]*class=["\'][^"\']*\bblog-byline\b[^"\']*["\'][^>]*>(.*?)</p>', html_txt, re.I | re.S)
+    if not byline:
+        return None
+    text = html.unescape(re.sub(r"<[^>]*>", " ", byline.group(1)))
+    value = re.search(r"\b(\d{1,2})\s*min\s*read\b", text, re.I)
+    return int(value.group(1)) if value and 1 <= int(value.group(1)) <= 60 else None
+
+
 def extract_reading_time(html_txt):
     """Pull '3 min read' out of the byline so the tracker uses the same number
     the reader sees. Defaults to 3 when the line is missing."""
@@ -464,8 +475,10 @@ def render_cards(posts):
         thumb = '<img src="/thumb/%s.png%s" alt="" loading="lazy" />' % (p["slug"], thumb_version)
         slug_attr = html.escape(p["slug"], quote=True)
         badge = '<span class="view-badge" data-slug="%s" aria-label="0 views">0</span>' % slug_attr
+        reading_time = p.get("reading_time_min")
+        read_attr = ' data-reading-time="%d"' % reading_time if reading_time else ""
         card = (
-            '      <a href="{href}" class="blog-card">\n'
+            '      <a href="{href}" class="blog-card" data-published-date="{date_iso}"{read_attr}>\n'
             '        <div class="blog-card-thumb">{thumb}</div>\n'
             '        <div class="blog-card-body">\n'
             '          <span class="blog-card-date">{date}</span>\n'
@@ -480,6 +493,8 @@ def render_cards(posts):
             thumb=thumb,
             badge=badge,
             date=html.escape(p["date_display"]),
+            date_iso=html.escape(p["date_iso"], quote=True),
+            read_attr=read_attr,
             title=html.escape(p["title"]),
             desc=html.escape(p["desc"]),
         )
