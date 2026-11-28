@@ -184,7 +184,7 @@
 
     <div class="parts-hero">
       <h1>LEGO Parts Database</h1>
-      <p>Search our BrickLink listings by name, color, nickname or part number. See what we have listed, or ask us about a specific piece.</p>
+      <p>Search our BrickLink listings by name, color, nickname or part number. See what we have listed in our latest inventory snapshot.</p>
       <form class="parts-search" id="pp-search" role="search" onsubmit="return false;">
         <div class="parts-search-row">
           <input id="q" type="search" placeholder="Try &ldquo;red 2x4 brick&rdquo;, &ldquo;cheese slope&rdquo;, &ldquo;Hagrid&rdquo; or a part number..." autocomplete="off" autofocus />
@@ -663,7 +663,7 @@
   </footer>
   </div>
 
-  <script src="/script.js?v=20261128-parts-stock"></script>
+  <script src="/script.js?v=20261128-stock-links"></script>
   <script>
   // --- Unified search engine. Ported from /finder/ then extended to also
   //     surface landing-page spotlights when a query matches a part we own
@@ -729,7 +729,7 @@
       // No query: hide inventory, show browse grid, hide spotlight.
       if (!q && !type){
         statusEl.textContent = inventoryState === 'error'
-          ? 'Inventory snapshot unavailable right now. You can still browse the encyclopedia or email us about a piece.'
+          ? 'Inventory snapshot unavailable right now. You can still browse the encyclopedia.'
           : 'Showing the parts encyclopedia. Search above to check our latest inventory snapshot.';
         resEl.innerHTML = "";
         spotEl.innerHTML = "";
@@ -797,10 +797,6 @@
           : inventoryState === 'error' ? 'We couldn’t check stock right now.'
           : 'No matches in our latest inventory snapshot. Try a part number or a shorter search.';
         card.appendChild(document.createTextNode(msg));
-        if (stock && q && inventoryState !== 'loading') {
-          card.appendChild(document.createElement('br'));
-          card.appendChild(stock.askLink({ name: q }, '', 'Ask about this piece'));
-        }
         resEl.appendChild(card);
         return;
       }
@@ -827,7 +823,6 @@
         const it = SHOWN[i];
         const exact = stock.listingLink(it);
         if (exact) box.appendChild(exact);
-        if (it.type === 'PART' && !selected) box.appendChild(stock.askLink(it, it.color));
       });
     }
 
