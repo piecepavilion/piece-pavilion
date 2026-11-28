@@ -659,15 +659,67 @@
       }));
     }
 
+    // Live article metadata is the authority on publication date and read time.
+    // Use a single same-origin request for the entire Published tab.
+    let livePosts = new Map();
+    let listRequest = 0;
+    const dateLabel = new Intl.DateTimeFormat('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+    });
+    const publishDay = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/New_York'
+    });
+    function livePostMeta(post) {
+      const source = livePosts.get(post.slug);
+      const published = new Date(post.published_at || '');
+      const day = !Number.isNaN(published.getTime()) ? publishDay.formatToParts(published) : [];
+      const getPart = (part) => day.find(p => p.type === part)?.value;
+      const iso = source?.date || (day.length ? [getPart('year'), getPart('month'), getPart('day')].join('-') : '');
+      const date = new Date(iso + 'T12:00:00Z');
+      return {
+        iso,
+        label: !Number.isNaN(date.getTime()) ? dateLabel.format(date) : '',
+        minutes: source?.minutes || post.reading_time_min
+      };
+    }
+
+    async function loadLivePostMetadata() {
+      try {
+        const response = await fetch('/blog/', { cache: 'no-cache', signal: AbortSignal.timeout(4500) });
+        if (!response.ok) return new Map();
+        const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+        return new Map(Array.from(page.querySelectorAll('.blog-cards a.blog-card[data-published-date]')).flatMap(card => {
+          const slug = /^\/blog\/([a-z0-9-]+)\/$/.exec(card.getAttribute('href') || '')?.[1];
+          const date = card.dataset.publishedDate;
+          const readingTime = Number(card.dataset.readingTime);
+          const minutes = Number.isInteger(readingTime) && readingTime >= 1 && readingTime <= 60 ? readingTime : null;
+          return slug && /^\d{4}-\d{2}-\d{2}$/.test(date) ? [[slug, {date, minutes}]] : [];
+        }));
+      } catch (error) {
+        return new Map();
+      }
+    }
+
     async function loadList() {
+      const tab = state.tab;
+      const request = ++listRequest;
       $('list').innerHTML = '<div class="empty">Loading…</div>';
       try {
-        const r = await api('GET', '/' + state.tab);
+        const [r, metadata] = await Promise.all([
+          api('GET', '/' + tab),
+          tab === 'published' ? loadLivePostMetadata() : null
+        ]);
+        if (request !== listRequest || tab !== state.tab) return;
         state.items = (r && r.items) || [];
-        state.counts[state.tab] = state.items.length;
-        $('count-' + state.tab).textContent = state.items.length;
+        if (metadata) {
+          livePosts = metadata;
+          state.items.sort((a, b) => livePostMeta(b).iso.localeCompare(livePostMeta(a).iso));
+        }
+        state.counts[tab] = state.items.length;
+        $('count-' + tab).textContent = state.items.length;
         renderList();
       } catch (e) {
+        if (request !== listRequest || tab !== state.tab) return;
         $('list').innerHTML = '<div class="empty">Could not load: ' + escHtml(e.message) + '</div>';
       }
     }
@@ -681,7 +733,9 @@
         return;
       }
       $('list').innerHTML = state.items.map((it) => {
-        const dt = it.generated_at ? new Date(it.generated_at).toLocaleString() : '';
+        const live = state.tab === 'published' ? livePostMeta(it) : null;
+        const dt = live ? live.label : (it.generated_at ? new Date(it.generated_at).toLocaleString() : '');
+        const minutes = live ? live.minutes : it.reading_time_min;
         const sel = state.selected === it.id ? ' selected' : '';
         return (
           '<div class="draft-item' + sel + '" role="button" tabindex="0" data-id="' + escHtml(it.id) + '">' +
@@ -689,7 +743,7 @@
             '<div class="meta">' +
               '<span class="cat-badge ' + escHtml(it.category || '') + '">' + escHtml(it.category || 'news') + '</span>' +
               '<span>' + escHtml(dt) + '</span>' +
-              (it.reading_time_min ? '<span>&middot; ' + it.reading_time_min + ' min read</span>' : '') +
+              (minutes ? '<span>&middot; ' + escHtml(minutes) + ' min read</span>' : '') +
             '</div>' +
           '</div>'
         );
@@ -739,6 +793,7 @@
     }
 
     function renderPreview(d) {
+      const live = state.tab === 'published' ? livePostMeta(d) : null;
       const faqHtml = (Array.isArray(d.faq) && d.faq.length)
         ? ('<section class="faq-block"><h2>FAQ</h2>' +
             d.faq.map((f) => (
@@ -797,8 +852,8 @@
       $('preview').innerHTML =
         '<p class="pv-slug">/blog/' + escHtml(d.slug || '') + '/</p>' +
         '<h1 class="pv-title">' + escHtml(d.title || '') + '</h1>' +
-        '<p class="pv-byline">Piece Pavilion &middot; ' + escHtml(d.date_display || '') + ' &middot; ' +
-          escHtml(String(d.reading_time_min || 4)) + ' min read &middot; ' +
+        '<p class="pv-byline">Piece Pavilion &middot; ' + escHtml(live ? live.label : (d.date_display || '')) + ' &middot; ' +
+          escHtml(String((live ? live.minutes : d.reading_time_min) || 4)) + ' min read &middot; ' +
           '<span class="cat-badge ' + escHtml(d.category || '') + '">' + escHtml(d.category || 'news') + '</span></p>' +
         starterNotice +
         sourcesHtml +
