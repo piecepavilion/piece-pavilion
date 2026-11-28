@@ -225,6 +225,46 @@
   .tile .go{margin-top:8px}
 }
 </style>
+<style id="pp-today-style">
+  .today-board{margin:0 0 24px;padding:clamp(12px,2vw,21px);border:1px solid #ecd9d6;border-top:3px solid #a3131c;border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-sm)}
+  .today-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .today-kicker{color:#90141d;font-size:.7rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase}
+  .today-head h2{font-size:clamp(1.45rem,4vw,1.85rem);line-height:1.1}
+  .today-date,.today-help,.today-status{font-size:.82rem;color:#4b5563}
+  .today-date{margin-top:3px}
+  .today-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:start}
+  .today-card{min-width:0;padding:12px;background:#fcfcfd;border:1px solid var(--line);border-radius:12px}
+  .today-card.today-attention{background:#fff9f5;border-color:#efd6c8}
+  .today-card h3{font-size:1.02rem;line-height:1.2}
+  .today-card-label{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 6px;margin-bottom:3px}
+  .today-count{font-size:.72rem;font-weight:900;line-height:1.25;padding:3px 7px;border-radius:18px;background:#eaebf1;color:#2d313b;font-variant-numeric:tabular-nums}
+  .today-count[data-nonempty]{background:#fce6df;color:#8f271f}
+  .today-links{list-style:none;margin:8px 0 3px;padding:0}
+  .today-links li{border-top:1px solid #e9e4e3;min-width:0;margin:0}
+  .today-links li[hidden],.today-board [hidden]{display:none}
+  .today-item{display:flex;flex-direction:column;justify-content:center;min-width:0;min-height:44px;padding:5px 0;color:#5d141b;overflow-wrap:anywhere;font-size:.88rem;font-weight:900;line-height:1.22}
+  .today-item small{color:#4b5563;font-weight:700;margin-top:2px;font-size:.75rem}
+  .today-toolbar{display:flex;flex-wrap:wrap;gap:5px 9px;align-items:center}
+  .today-action,.today-board summary,.today-direct{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:4px 9px;background:#fff;color:#6e1d25;border:1px solid #e3d5d3;border-radius:9px;cursor:pointer;font:800 .8rem/1.2 'Nunito',system-ui,sans-serif;text-align:left}
+  .today-direct,.today-more,.today-board summary{border-color:transparent;background:transparent;padding-left:0}
+  .today-board summary{list-style:none}
+  .today-board summary::-webkit-details-marker{display:none}
+  .today-board summary::before{content:'+';margin-right:5px}
+  .today-board details[open] summary::before{content:'−'}
+  .today-action:disabled{opacity:.65;cursor:progress}
+  .today-action:hover:not(:disabled),.today-direct:hover,.today-item:hover{text-decoration:underline}
+  .today-board :focus-visible{outline:3px solid #0057a8;outline-offset:2px}
+  .today-status{margin-top:8px}
+  .today-form{display:flex;flex-wrap:wrap;gap:5px 7px;align-items:center}
+  .today-form label{width:100%;font-size:.78rem;font-weight:800;color:var(--slate)}
+  .today-form input{flex:1 1 94px;min-width:0;width:100%;min-height:44px;padding:0 7px;border:1px solid #ccc4c2;border-radius:7px;background:#fff;color:var(--ink);font:700 16px 'Nunito',system-ui,sans-serif}
+  .today-replacement-row{display:flex;align-items:center;justify-content:space-between;gap:3px 7px;flex-wrap:wrap}
+  .today-replacement-row .today-item{flex:1 1 auto}
+  .today-replacement-row button{margin:3px 0}
+  .today-undo{margin-top:6px}
+  @media(max-width:940px){.today-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:375px){.today-card{padding:8px}.today-grid{gap:7px}.today-board{padding:10px}}
+</style>
 </head>
 <body>
 
@@ -253,6 +293,69 @@
       <a href="/employees/blog-review/">Blog Review</a>
       <a href="/employees/content/">Content Editor</a>
     </nav>
+
+    <!-- Staff worklist: read-only order/draft feeds plus a device-local replacement checklist. -->
+    <section class="today-board" id="today-worklist" aria-labelledby="today-worklist-title">
+      <div class="today-head">
+        <div>
+          <p class="today-kicker">Staff Worklist</p>
+          <h2 id="today-worklist-title">Today</h2>
+          <p class="today-date" id="today-date">Open tasks, including carryovers</p>
+        </div>
+        <button id="today-refresh" class="today-action" type="button">Refresh worklist</button>
+      </div>
+      <div class="today-grid">
+        <section class="today-card" aria-labelledby="today-pick-title" id="today-pick">
+          <div class="today-card-label"><h3 id="today-pick-title">Orders to pick</h3><span class="today-count" hidden></span></div>
+          <p class="today-help today-message">Checking Pick Sheet…</p>
+          <ul class="today-links"></ul>
+          <div class="today-toolbar">
+            <button type="button" class="today-action today-more" aria-expanded="false" hidden></button>
+            <a class="today-direct" href="/employees/pick/">Pick Sheet →</a>
+          </div>
+        </section>
+        <section class="today-card today-attention" aria-labelledby="today-missing-title" id="today-missing">
+          <div class="today-card-label"><h3 id="today-missing-title">Couldn’t find</h3><span class="today-count" hidden></span></div>
+          <p class="today-help today-message">Checking pick exceptions…</p>
+          <ul class="today-links"></ul>
+          <div class="today-toolbar">
+            <button type="button" class="today-action today-more" aria-expanded="false" hidden></button>
+            <a class="today-direct" href="/employees/pick/">Open Pick Sheet →</a>
+          </div>
+        </section>
+        <section class="today-card" aria-labelledby="today-replace-title" id="today-replace">
+          <div class="today-card-label"><h3 id="today-replace-title">Replacements to ship</h3><span class="today-count" hidden></span></div>
+          <p class="today-help">Manual checklist. Saved in this browser only; it doesn’t update BrickLink.</p>
+          <p class="today-help today-message">No replacements added here.</p>
+          <ul class="today-links"></ul>
+          <div class="today-toolbar">
+            <button type="button" class="today-action today-more" aria-expanded="false" hidden></button>
+          </div>
+          <details id="today-add-replacement">
+            <summary>Add replacement</summary>
+            <form class="today-form" id="today-replacement-form">
+              <label for="today-order-id">BrickLink order number</label>
+              <input id="today-order-id" name="order" type="text" inputmode="numeric" maxlength="20" pattern="[0-9]{1,20}" required>
+              <button class="today-action" type="submit">Add</button>
+            </form>
+          </details>
+          <div class="today-toolbar today-undo" hidden>
+            <button type="button" class="today-action" id="today-undo">Undo mark shipped</button>
+          </div>
+          <p class="today-status" id="today-replacement-note" role="status"></p>
+        </section>
+        <section class="today-card" aria-labelledby="today-drafts-title" id="today-drafts">
+          <div class="today-card-label"><h3 id="today-drafts-title">Blog drafts to review</h3><span class="today-count" hidden></span></div>
+          <p class="today-help today-message">Checking Blog Review…</p>
+          <ul class="today-links"></ul>
+          <div class="today-toolbar">
+            <button type="button" class="today-action today-more" aria-expanded="false" hidden></button>
+            <a class="today-direct" href="/employees/blog-review/">Blog Review →</a>
+          </div>
+        </section>
+      </div>
+      <p class="today-status" id="today-feed-status" role="status"></p>
+    </section>
 
     <!-- ===== QUICK STATS ===== -->
     <div class="stats-row" id="stats-row">
@@ -522,6 +625,239 @@
         count.textContent = q ? shown + ' of ' + tiles.length + ' tools' : '';
       });
     })();
+  </script>
+  <script>
+  (function staffToday() {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const page = $('today-worklist');
+    const refresh = $('today-refresh');
+    const form = $('today-replacement-form');
+    const input = $('today-order-id');
+    const note = $('today-replacement-note');
+    const undo = $('today-undo');
+    const key = 'pp:staff-today:replacement-orders:v1';
+    const pickUrl = '/employees/pick/';
+    const blogUrl = '/employees/blog-review/';
+    const countPattern = /^\d{1,20}$/;
+    const pickStatuses = new Set(['PENDING', 'UPDATED', 'PROCESSING', 'READY', 'PAID', 'PACKED']);
+    const closedStatuses = new Set(['PACKED']);
+    const groups = new Map();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      weekday:'long', month:'long', day:'numeric', timeZone:'America/New_York'
+    });
+    const timeFormatter = new Intl.DateTimeFormat('en-US', {
+      hour:'numeric', minute:'2-digit', timeZone:'America/New_York', timeZoneName:'short'
+    });
+    let removed = null;
+    function updateDate() {
+      $('today-date').textContent = formatter.format(new Date()) + ' · Open tasks, including carryovers';
+    }
+    function itemLink(label, detail, href) {
+      const a = document.createElement('a');
+      a.className = 'today-item';
+      a.href = href;
+      a.textContent = label;
+      if (detail) {
+        const meta = document.createElement('small');
+        meta.textContent = detail;
+        a.append(meta);
+      }
+      return a;
+    }
+    function renderGroup(id, rows, comment) {
+      const card = $(id);
+      const list = card.querySelector('.today-links');
+      const button = card.querySelector('.today-more');
+      const badge = card.querySelector('.today-count');
+      const state = groups.get(id) || { showAll:false };
+      groups.set(id, state);
+      const pending = rows === null;
+      card.querySelector('.today-message').textContent = comment || '';
+      badge.hidden = pending;
+      badge.textContent = pending ? '' : String(rows.length);
+      badge.toggleAttribute('data-nonempty', !pending && rows.length > 0);
+      list.replaceChildren();
+      (rows || []).forEach((child, index) => {
+        const li = document.createElement('li');
+        li.hidden = !state.showAll && index >= 3;
+        li.appendChild(child);
+        list.appendChild(li);
+      });
+      button.hidden = pending || rows.length <= 3;
+      if (!button.hidden) {
+        list.id = id + '-list';
+        button.setAttribute('aria-controls', list.id);
+        button.setAttribute('aria-expanded', String(state.showAll));
+        button.textContent = state.showAll ? 'Show fewer' : 'Show ' + (rows.length - 3) + ' more';
+        button.onclick = () => {
+          state.showAll = !state.showAll;
+          Array.from(list.children).forEach((li, index) => { li.hidden = !state.showAll && index >= 3; });
+          button.setAttribute('aria-expanded', String(state.showAll));
+          button.textContent = state.showAll ? 'Show fewer' : 'Show ' + (rows.length - 3) + ' more';
+          if (state.showAll) {
+            const next = list.children[3]?.querySelector('a,button');
+            if (next) next.focus();
+          }
+        };
+      }
+    }
+    async function readFeed(path, field) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 9000);
+      try {
+        const response = await fetch(path, {
+          method:'GET', credentials:'same-origin', cache:'no-store', signal:controller.signal
+        });
+        if (!response.ok) throw new Error('feed unavailable');
+        const body = await response.json();
+        if (!Array.isArray(body?.[field])) throw new Error('invalid feed');
+        return body[field];
+      } finally { clearTimeout(timer); }
+    }
+    function cleanOrders(orders) {
+      const seen = new Set();
+      return orders.filter(order => {
+        const id = String(order?.order_id || '');
+        if (!countPattern.test(id) || seen.has(id) || !pickStatuses.has(order.status)) return false;
+        seen.add(id);
+        return true;
+      }).sort((a,b) => String(a.date_ordered || '').localeCompare(String(b.date_ordered || '')));
+    }
+    function orderLink(order, detail) {
+      const id = String(order.order_id);
+      return itemLink('Order #' + id, detail, pickUrl + '?order=' + encodeURIComponent(id));
+    }
+    async function showOrders() {
+      const orders = cleanOrders(await readFeed('/employees/api/pick/orders','orders'));
+      const picks = orders.filter(o => !o.completed_at && !closedStatuses.has(o.status));
+      const exceptions = orders.filter(o => Number(o.not_found) > 0);
+      renderGroup('today-pick', picks.map(o => {
+        const detail = o.claimed_by || Number(o.picked) > 0 || Number(o.not_found) > 0
+          ? 'Picking started' : 'Open Pick Sheet';
+        return orderLink(o, detail);
+      }), picks.length ? 'Oldest open orders first.' : 'No open orders waiting to be picked.');
+      renderGroup('today-missing', exceptions.map(o => {
+        const missing = Number(o.not_found);
+        const label = missing.toLocaleString() + (missing === 1 ? ' row marked not found' : ' rows marked not found');
+        return orderLink(o, label);
+      }), exceptions.length ? 'Pick Sheet flags on active orders.' : 'No active orders with parts marked not found.');
+    }
+    async function showDrafts() {
+      const drafts = (await readFeed('/employees/api/blog/drafts','items')).filter(item =>
+        typeof item?.id === 'string' && item.id.length > 0 && item.id.length <= 200);
+      renderGroup('today-drafts', drafts.map(d => itemLink(
+        typeof d.title === 'string' && d.title.trim() ? d.title : 'Untitled draft',
+        'Open draft', blogUrl + '?draft=' + encodeURIComponent(d.id)
+      )), drafts.length ? 'From Staff Blog Review.' : 'No blog drafts to review.');
+    }
+    async function load() {
+      if (refresh.disabled) return;
+      updateDate();
+      refresh.disabled = true;
+      $('today-feed-status').textContent = 'Checking live worklists…';
+      const result = await Promise.allSettled([
+        showOrders().catch(() => {
+          renderGroup('today-pick', null, 'Could not load orders. Open Pick Sheet or retry.');
+          renderGroup('today-missing', null, 'Could not load pick exceptions.');
+          throw new Error('orders not loaded');
+        }),
+        showDrafts().catch(() => {
+          renderGroup('today-drafts', null, 'Could not load drafts. Open Blog Review or retry.');
+          throw new Error('drafts not loaded');
+        })
+      ]);
+      $('today-feed-status').textContent = result.every(r => r.status === 'fulfilled')
+        ? 'Live queues checked at ' + timeFormatter.format(new Date()) + '.'
+        : 'Some live queues could not load. Refresh to retry.';
+      refresh.disabled = false;
+    }
+    function readReplacements() {
+      const raw = localStorage.getItem(key);
+      const saved = raw === null ? [] : JSON.parse(raw);
+      if (!Array.isArray(saved)) throw new Error('invalid saved replacements');
+      return Array.from(new Set(saved.filter(id => typeof id === 'string' && countPattern.test(id))));
+    }
+    function saveReplacements(ids) {
+      localStorage.setItem(key, JSON.stringify(ids));
+      renderReplacements(ids);
+    }
+    function replacementRow(id) {
+      const row = document.createElement('div');
+      row.className = 'today-replacement-row';
+      row.append(itemLink('Order #' + id, 'Open on BrickLink',
+        'https://www.bricklink.com/orderDetail.asp?ID=' + encodeURIComponent(id)));
+      const done = document.createElement('button');
+      done.className = 'today-action';
+      done.type = 'button';
+      done.textContent = 'Mark shipped';
+      done.setAttribute('aria-label','Mark replacement for order #' + id + ' shipped');
+      done.addEventListener('click',() => {
+        try {
+          saveReplacements(readReplacements().filter(saved => saved !== id));
+          removed = id;
+          undo.parentElement.hidden = false;
+          undo.focus();
+          note.textContent = 'Order #' + id + ' removed from this checklist.';
+        } catch (e) {
+          note.textContent = 'Could not save the change in this browser.';
+        }
+      });
+      row.append(done);
+      return row;
+    }
+    function renderReplacements(given) {
+      try {
+        const ids = given || readReplacements();
+        renderGroup('today-replace', ids.map(replacementRow), ids.length ? '' : 'No replacements added here.');
+        input.disabled = false;
+        form.querySelector('button').disabled = false;
+      } catch (e) {
+        renderGroup('today-replace', null, 'The checklist could not be read in this browser.');
+        input.disabled = true;
+        form.querySelector('button').disabled = true;
+      }
+    }
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const id = input.value.trim();
+      if (!countPattern.test(id)) { note.textContent = 'Enter only the digits of the BrickLink order number.'; return; }
+      try {
+        const ids = readReplacements();
+        if (ids.includes(id)) { note.textContent = 'Order #' + id + ' is already in the checklist.'; return; }
+        saveReplacements([id, ...ids]);
+        input.value = '';
+        const details = $('today-add-replacement');
+        details.open = false;
+        details.querySelector('summary').focus();
+        note.textContent = 'Order #' + id + ' added.';
+      } catch (e) {
+        note.textContent = 'Could not save this order in this browser.';
+      }
+    });
+    undo.addEventListener('click', () => {
+      if (!removed) return;
+      try {
+        const ids = readReplacements();
+        if (!ids.includes(removed)) saveReplacements([removed, ...ids]);
+        note.textContent = 'Order #' + removed + ' restored to the checklist.';
+        removed = null;
+        undo.parentElement.hidden = true;
+        $('today-add-replacement').querySelector('summary').focus();
+      } catch (e) {
+        note.textContent = 'Could not restore this order in this browser.';
+      }
+    });
+    window.addEventListener('storage', event => {
+      if (event.key === key || event.key === null) renderReplacements();
+    });
+    refresh.addEventListener('click', load);
+    window.addEventListener('pageshow', event => {
+      if (event.persisted) { renderReplacements(); load(); }
+    });
+    renderReplacements();
+    load();
+  })();
   </script>
 </body>
 </html>
