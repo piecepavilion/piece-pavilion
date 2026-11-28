@@ -339,3 +339,96 @@
   document.addEventListener("visibilitychange", visibleChanged);
   visibleChanged();
 })();
+
+/* One next step per blog article. This also works on old articles that lack the
+   generated related-post block. It does not depend on hearts being enabled. */
+(function mountBlogNext() {
+  'use strict';
+  const path = /^\/blog\/([a-z0-9][a-z0-9-]{0,139})(?:\/index\.html|\/)?$/;
+  const slug = path.exec(location.pathname)?.[1];
+  const article = document.querySelector('article, .blog-article');
+  if (!slug || !article || document.querySelector('.pp-blog-next')) return;
+  const section = document.querySelector('section.related-posts') || document.querySelector('section.more-posts') || document.createElement('section');
+  const previousLinks = Array.from(section.querySelectorAll('a[href]')).map(a => path.exec(a.getAttribute('href'))?.[1]).filter(Boolean);
+  const title = article.querySelector('h1')?.textContent.trim() || slug;
+  const shopTheme = /minifig|collectible figure|\bcmf\b/i.test(title + ' ' + slug) ? 'minifig' :
+    /retir|\bsets\b/i.test(title + ' ' + slug) ? 'sets' : 'store';
+
+  const styles = document.createElement('style');
+  styles.textContent = '.pp-blog-next{box-sizing:border-box;max-width:780px;margin:0 auto 2rem;padding:0 1rem;color:var(--dark,#171721)}.pp-blog-next-card{padding:clamp(1rem,4vw,1.65rem);background:#f7f8fc;border:1px solid #dfe3eb;border-radius:16px}.pp-blog-next h2{font-size:1.45rem;line-height:1.2;margin:0 0 .55rem}.pp-blog-next p{margin:0 0 .7rem;color:#404650}.pp-blog-next-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:.65rem}.pp-blog-next-links a{box-sizing:border-box;min-height:46px;display:flex;align-items:center;padding:.55rem .8rem;border-radius:9px;border:1px solid #b4c2d8;color:#11344f;font-weight:650;text-decoration:none;background:#fff;overflow-wrap:anywhere}.pp-blog-next-links a:hover{text-decoration:underline}.pp-blog-next-links a:focus-visible{outline:3px solid #176db6;outline-offset:2px}';
+  document.head.append(styles);
+  section.className = 'pp-blog-next';
+  section.setAttribute('aria-labelledby', 'pp-blog-next-heading');
+  section.replaceChildren();
+  const box = document.createElement('div');
+  box.className = 'pp-blog-next-card';
+  const heading = document.createElement('h2');
+  heading.id = 'pp-blog-next-heading';
+  heading.textContent = 'Read next';
+  const text = document.createElement('p');
+  text.textContent = 'Keep building with Piece Pavilion.';
+  const links = document.createElement('div');
+  links.className = 'pp-blog-next-links';
+  box.append(heading, text, links);
+  section.append(box);
+  if (!section.isConnected) article.after(section);
+
+  function record(kind) {
+    const body = JSON.stringify({slug, kind});
+    // Link navigation must work even when tracking is blocked or unavailable.
+    void fetch('/api/views/next-click', {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body, keepalive: true, credentials: 'omit'
+    }).catch(() => {});
+  }
+  function addLink(to, label, kind, first = false) {
+    const a = document.createElement('a');
+    a.href = to;
+    a.textContent = label + ' →';
+    a.addEventListener('click', event => { if (event.isTrusted) record(kind); });
+    a.addEventListener('auxclick', event => { if (event.isTrusted && event.button === 1) record(kind); });
+    first ? links.prepend(a) : links.append(a);
+  }
+  const shops = {
+    minifig: ['/lego-minifigures/', 'Shop minifigures'],
+    sets: ['/retired-lego-sets/', 'Shop retired sets'],
+    store: ['https://store.bricklink.com/PiecePavilion?p=PiecePavilion#/shop', 'Shop Piece Pavilion on BrickLink']
+  };
+  addLink(...shops[shopTheme], 'shop');
+
+  const preferred = {
+    'lego-minifigure-stocking-stuffers': 'how-to-spot-fake-lego-minifigures',
+    'lego-black-friday-2026-godzilla-gifts-deals': 'lego-ideas-godzilla-21375',
+    'technic-pin-colors-explained': 'name-that-lego-piece'
+  };
+  const stop = new Set('lego brick bricks bricklink sets set piece pieces shop store guide guides new latest used good best most all things one two where when what who can get got will your how the and for with are from has why should you part parts stuffer stuffers more not'.split(' '));
+  function words(value) {
+    return new Set((value.toLowerCase().match(/[a-z0-9]+/g) || [])
+      .filter(x => x.length > 2 && !stop.has(x) && !/^20\d{2}$/.test(x))
+      .map(x => x.replace(/s$/, '')));
+  }
+  const terms = words(title + ' ' + slug);
+  fetch('/blog/', {cache: 'no-cache'}).then(res => {
+    if (!res.ok) return '';
+    return res.text();
+  }).then(markup => {
+    if (!markup) return;
+    const page = new DOMParser().parseFromString(markup, 'text/html');
+    const posts = [...page.querySelectorAll('.blog-cards a.blog-card')].flatMap(a => {
+      const href = a.getAttribute('href');
+      const candidate = path.exec(href || '')?.[1];
+      const headline = a.querySelector('h2')?.textContent.trim();
+      if (!candidate || candidate === slug || !headline) return [];
+      const matches = [...words(headline + ' ' + candidate)].filter(w => terms.has(w));
+      const explicit = preferred[slug] === candidate;
+      // Do not add a dedicated SOS series box or rank a generic newest post.
+      const related = (matches.length >= 1) && !(slug.startsWith('bricklink-sos') && candidate.startsWith('bricklink-sos'));
+      if (!explicit && !related) return [];
+      const guide = /how-to|guide|tips|explained|check|collect/i.test(candidate);
+      return [{href, headline, score: explicit ? 1000 : matches.length * 10 + (guide ? 3 : 0) + (previousLinks.includes(candidate) ? 1 : 0)}];
+    });
+    posts.sort((a,b) => b.score - a.score);
+    if (posts[0]) addLink(posts[0].href, posts[0].headline, 'guide', true);
+    else heading.textContent = 'Shop Piece Pavilion';
+  }).catch(() => { heading.textContent = 'Shop Piece Pavilion'; });
+})();
