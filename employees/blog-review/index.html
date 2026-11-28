@@ -277,6 +277,15 @@
       .pill-row button { padding-inline:10px; }
       .pill-row .count { margin-left:2px; }
     }
+    .blog-click-card {margin:0 0 1rem;padding:.8rem 1rem;border:1px solid #d3dbea;border-radius:12px;background:#fff;color:#1c2440}
+    .blog-click-card summary {cursor:pointer;min-height:44px;display:flex;align-items:center;gap:.55rem;font-weight:700}
+    .blog-click-card summary::before {content:"▸"}
+    .blog-click-card[open] summary::before {content:"▾"}
+    .blog-click-card summary:focus-visible {outline:2px solid #1876be;outline-offset:3px}
+    .blog-click-card p {margin:.45rem 0;font-size:.9rem}
+    .blog-click-card ul {margin:.65rem 0 0;list-style:none;padding:0}
+    .blog-click-card li {display:flex;align-items:baseline;justify-content:space-between;gap:.6rem 1rem;flex-wrap:wrap;border-top:1px solid #e2e7f0;padding:.65rem 0;overflow-wrap:anywhere}
+    .blog-click-card li span {font-variant-numeric:tabular-nums;color:#384156}
   </style>
 <style id="pp-touch-layout">
 #back-to-blog-list{display:none}
@@ -345,6 +354,13 @@
         <button class="btn btn-ghost" id="blog-request-more" type="button" hidden>Load more</button>
       </div>
     </details>
+    <details class="blog-click-card" id="blog-click-card">
+      <summary>Read next &amp; shop clicks</summary>
+      <p>Counts from the links below each article since this feature was added. These are clicks, not unique readers or sales.</p>
+      <p id="blog-click-status" role="status">Expand to load click counts.</p>
+      <ul id="blog-click-rows"></ul>
+    </details>
+
     <div class="pill-row" id="pill-row">
       <button data-tab="drafts" class="active">Drafts <span class="count" id="count-drafts">0</span></button>
       <button data-tab="archived">Archived <span class="count" id="count-archived">0</span></button>
@@ -1306,9 +1322,52 @@
       });
     });
 
+    $('blog-click-card').addEventListener('toggle', async () => {
+      if (!$('blog-click-card').open) return;
+      const status = $('blog-click-status');
+      const rows = $('blog-click-rows');
+      status.textContent = 'Loading click counts…';
+      rows.replaceChildren();
+      try {
+        const [clicks, feed] = await Promise.all([
+          api('GET', '/next-clicks'),
+          fetch('/blog/', {cache: 'no-cache'}).then(r => r.ok ? r.text() : '').catch(() => '')
+        ]);
+        if (!Array.isArray(clicks?.items)) throw new Error('Invalid counts');
+        const parsed = new DOMParser().parseFromString(feed, 'text/html');
+        const titles = new Map(Array.from(parsed.querySelectorAll('.blog-cards a.blog-card')).map(a => [
+          /^\/blog\/([a-z0-9-]+)\/$/.exec(a.getAttribute('href') || '')?.[1],
+          a.querySelector('h2')?.textContent.trim()
+        ]));
+        const data = clicks.items.filter(x => /^[a-z0-9][a-z0-9-]{0,139}$/.test(x.slug)
+          && Number.isSafeInteger(x.guide) && x.guide >= 0 && Number.isSafeInteger(x.shop) && x.shop >= 0)
+          .sort((a,b) => b.guide + b.shop - a.guide - a.shop);
+        if (!data.length) { status.textContent = 'No clicks recorded yet.'; return; }
+        status.textContent = data.length + (data.length === 1 ? ' article with recorded clicks' : ' articles with recorded clicks');
+        const fragment = document.createDocumentFragment();
+        for (const entry of data) {
+          const li = document.createElement('li');
+          const name = document.createElement(titles.has(entry.slug) ? 'a' : 'strong');
+          if (name.tagName === 'A') name.href = '/blog/' + entry.slug + '/';
+          name.textContent = titles.get(entry.slug) || entry.slug;
+          const count = document.createElement('span');
+          count.textContent = entry.guide.toLocaleString() + ' guide · ' + entry.shop.toLocaleString() + ' shop';
+          li.append(name, count);
+          fragment.append(li);
+        }
+        rows.append(fragment);
+      } catch (e) {
+        status.textContent = 'Could not load click counts. Close and reopen this panel to retry.';
+      }
+    });
+
     (async function init() {
       await refreshCounts();
       await loadList();
+      const requested = new URLSearchParams(location.search).get('draft');
+      if (requested && state.tab === 'drafts' && state.items.some(item => item.id === requested)) {
+        await selectItem(requested, true);
+      }
     })();
   </script>
 </body>

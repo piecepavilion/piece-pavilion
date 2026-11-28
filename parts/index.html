@@ -184,7 +184,7 @@
 
     <div class="parts-hero">
       <h1>LEGO Parts Database</h1>
-      <p>Search our live inventory of 2,583+ listings &mdash; by name, color, nickname or part number &mdash; and browse the parts encyclopedia for context on every piece.</p>
+      <p>Search our BrickLink listings by name, color, nickname or part number. See what we have listed, or ask us about a specific piece.</p>
       <form class="parts-search" id="pp-search" role="search" onsubmit="return false;">
         <div class="parts-search-row">
           <input id="q" type="search" placeholder="Try &ldquo;red 2x4 brick&rdquo;, &ldquo;cheese slope&rdquo;, &ldquo;Hagrid&rdquo; or a part number..." autocomplete="off" autofocus />
@@ -205,8 +205,9 @@
       </form>
     </div>
 
-    <div id="status">Loading our live inventory&hellip;</div>
+    <div id="status" aria-live="polite">Loading our inventory snapshot&hellip;</div>
     <div id="landing-spotlight"></div>
+    <section class="pp-stock-box" id="exact-stock" aria-label="In Our Store" hidden></section>
     <div id="results" class="inv-grid"></div>
 
     <section id="browse-section">
@@ -662,7 +663,7 @@
   </footer>
   </div>
 
-  <script src="/script.js?v=20261108-newsroom-nav"></script>
+  <script src="/script.js?v=20261128-parts-stock"></script>
   <script>
   // --- Unified search engine. Ported from /finder/ then extended to also
   //     surface landing-page spotlights when a query matches a part we own
@@ -673,7 +674,8 @@
     const CART_KEY = "pp-cart";
     const LANDING = {"54200": {"nick": "Cheese slope", "name": "Slope 30 1 x 1 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/54200.png"}, "15573": {"nick": "Jumper plate", "name": "Plate, Modified 1 x 2 with 1 Stud with Groove and Bottom Stud Holder", "img": "https://img.bricklink.com/ItemImage/PN/86/15573.png"}, "4070": {"nick": "Headlight brick (Erling brick)", "name": "Brick, Modified 1 x 1 with Headlight", "img": "https://img.bricklink.com/ItemImage/PN/86/4070.png"}, "87087": {"nick": "SNOT brick", "name": "Brick, Modified 1 x 1 with Stud on Side", "img": "https://img.bricklink.com/ItemImage/PN/5/87087.png"}, "4733": {"nick": "Travis brick", "name": "Brick, Modified 1 x 1 with Studs on 4 Sides", "img": "https://img.bricklink.com/ItemImage/PN/86/4733.png"}, "2654": {"nick": "Boat stud", "name": "Plate, Round 2 x 2 with Rounded Bottom (Boat Stud)", "img": "https://img.bricklink.com/ItemImage/PN/11/2654.png"}, "98138": {"nick": "Dot (round 1x1 tile)", "name": "Tile, Round 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/3/98138.png"}, "2412b": {"nick": "Grille tile", "name": "Tile, Modified 1 x 2 Grille with Bottom Groove", "img": "https://img.bricklink.com/ItemImage/PN/86/2412b.png"}, "4081b": {"nick": "Lamp holder", "name": "Plate, Modified 1 x 1 with Light Attachment - Thick Ring", "img": "https://img.bricklink.com/ItemImage/PN/86/4081b.png"}, "4599": {"nick": "Tap / faucet", "name": "Tap 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/86/4599b.png"}, "2877": {"nick": "Profile brick", "name": "Brick, Modified 1 x 2 with Grille / Fluted Profile", "img": "https://img.bricklink.com/ItemImage/PN/86/2877.png"}, "3005": {"nick": "1x1 brick", "name": "Brick 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3005.png"}, "3024": {"nick": "1x1 plate", "name": "Plate 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3024.png"}, "3070": {"nick": "1x1 tile", "name": "Tile 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3070.png"}, "3004": {"nick": "1x2 brick", "name": "Brick 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3004.png"}, "3023": {"nick": "1x2 plate", "name": "Plate 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3023.png"}, "3069": {"nick": "1x2 tile", "name": "Tile 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3069.png"}, "3001": {"nick": "2x4 brick", "name": "Brick 2 x 4", "img": "https://img.bricklink.com/ItemImage/PN/5/3001.png"}, "3040": {"nick": "45° roof slope", "name": "Slope 45 2 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3040.png"}, "3039": {"nick": "45° slope 2x2", "name": "Slope 45 2 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3039.png"}, "3298": {"nick": "33° slope 3x2", "name": "Slope 33 3 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3298.png"}, "4286": {"nick": "33° slope 3x1", "name": "Slope 33 3 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/4286.png"}, "3665": {"nick": "Inverted slope", "name": "Slope, Inverted 45 2 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/3665.png"}, "3747b": {"nick": "Inverted 33 slope", "name": "Slope, Inverted 33 3 x 2", "img": "https://img.bricklink.com/ItemImage/PN/5/3747b.png"}, "85984": {"nick": "Double cheese", "name": "Slope 30 1 x 2 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/85984.png"}, "11477": {"nick": "Curved slope", "name": "Slope, Curved 2 x 1 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/11477.png"}, "15068": {"nick": "Curved slope 2x2", "name": "Slope, Curved 2 x 2 x 2/3", "img": "https://img.bricklink.com/ItemImage/PN/5/15068.png"}, "3045": {"nick": "Roof corner", "name": "Slope 45 2 x 2 Double Convex", "img": "https://img.bricklink.com/ItemImage/PN/5/3045.png"}, "99780": {"nick": "Inverted bracket", "name": "Bracket 1 x 2 - 1 x 2 Inverted", "img": "https://img.bricklink.com/ItemImage/PN/86/99780.png"}, "99781": {"nick": "Bracket", "name": "Bracket 1 x 2 - 1 x 2", "img": "https://img.bricklink.com/ItemImage/PN/86/99781.png"}, "32028": {"nick": "Door rail plate", "name": "Plate, Modified 1 x 2 with Door Rail", "img": "https://img.bricklink.com/ItemImage/PN/86/32028.png"}, "3839b": {"nick": "Handle plate", "name": "Plate, Modified 1 x 2 with Bar Handles - Flat Ends", "img": "https://img.bricklink.com/ItemImage/PN/86/3839b.png"}, "60470b": {"nick": "Double clip plate", "name": "Plate, Modified 1 x 2 with Clips Horizontal (thick open O clips)", "img": "https://img.bricklink.com/ItemImage/PN/86/60470b.png"}, "4085d": {"nick": "Vertical clip", "name": "Plate, Modified 1 x 1 with Clip Vertical", "img": "https://img.bricklink.com/ItemImage/PN/86/4085d.png"}, "61252": {"nick": "O-clip", "name": "Plate, Modified 1 x 1 with Open O Clip Horizontal", "img": "https://img.bricklink.com/ItemImage/PN/86/61252.png"}, "30414": {"nick": "1x4 SNOT brick", "name": "Brick, Modified 1 x 4 with 4 Studs on Side", "img": "https://img.bricklink.com/ItemImage/PN/5/30414.png"}, "3937": {"nick": "Hinge base", "name": "Hinge Brick 1 x 2 Base", "img": "https://img.bricklink.com/ItemImage/PN/5/3937.png"}, "3938": {"nick": "Hinge top", "name": "Hinge Brick 1 x 2 Top Plate", "img": "https://img.bricklink.com/ItemImage/PN/5/3938.png"}, "3176": {"nick": "Coupling plate", "name": "Plate, Modified 3 x 2 with Hole", "img": "https://img.bricklink.com/ItemImage/PN/86/3176.png"}, "2540": {"nick": "Side handle plate", "name": "Plate, Modified 1 x 2 with Bar Handle on Side - Free Ends", "img": "https://img.bricklink.com/ItemImage/PN/86/2540.png"}, "2780": {"nick": "Black pin", "name": "Technic, Pin with Friction Ridges Lengthwise and Center Slots", "img": "https://img.bricklink.com/ItemImage/PN/11/2780.png"}, "3673": {"nick": "Gray pin", "name": "Technic, Pin without Friction Ridges Lengthwise", "img": "https://img.bricklink.com/ItemImage/PN/86/3673.png"}, "6558": {"nick": "Long blue pin", "name": "Technic, Pin 3L with Friction Ridges Lengthwise", "img": "https://img.bricklink.com/ItemImage/PN/7/6558.png"}, "43093": {"nick": "Axle pin", "name": "Technic, Axle 1L with Pin with Friction Ridges Lengthwise", "img": "https://img.bricklink.com/ItemImage/PN/7/43093.png"}, "4274": {"nick": "Half pin", "name": "Technic, Pin 1/2", "img": "https://img.bricklink.com/ItemImage/PN/86/4274.png"}, "32062": {"nick": "Red 2L axle", "name": "Technic, Axle 2L Notched", "img": "https://img.bricklink.com/ItemImage/PN/5/32062.png"}, "3713": {"nick": "Bushing", "name": "Technic, Bush", "img": "https://img.bricklink.com/ItemImage/PN/86/3713.png"}, "4265c": {"nick": "Half bush", "name": "Technic, Bush 1/2 Smooth", "img": "https://img.bricklink.com/ItemImage/PN/86/4265c.png"}, "3648": {"nick": "24-tooth gear", "name": "Technic, Gear 24 Tooth", "img": "https://img.bricklink.com/ItemImage/PN/86/3648.png"}, "32073": {"nick": "5L axle", "name": "Technic, Axle 5L", "img": "https://img.bricklink.com/ItemImage/PN/86/32073.png"}, "3700": {"nick": "Technic brick 1x2", "name": "Technic, Brick 1 x 2 with Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/3700.png"}, "6541": {"nick": "Technic brick 1x1", "name": "Technic, Brick 1 x 1 with Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/6541.png"}, "32064": {"nick": "Axle-hole brick", "name": "Technic, Brick 1 x 2 with Axle Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/32064.png"}, "3062b": {"nick": "1x1 round brick", "name": "Brick, Round 1 x 1 Open Stud", "img": "https://img.bricklink.com/ItemImage/PN/5/3062.png"}, "4073": {"nick": "1x1 round plate", "name": "Plate, Round 1 x 1", "img": "https://img.bricklink.com/ItemImage/PN/5/4073.png"}, "4589b": {"nick": "1x1 cone", "name": "Cone 1 x 1 with Top Groove", "img": "https://img.bricklink.com/ItemImage/PN/5/4589b.png"}, "3941": {"nick": "2x2 round brick", "name": "Brick, Round 2 x 2 with Axle Hole", "img": "https://img.bricklink.com/ItemImage/PN/5/3941.png"}, "14769": {"nick": "2x2 round tile", "name": "Tile, Round 2 x 2 with Bottom Stud Holder", "img": "https://img.bricklink.com/ItemImage/PN/5/14769.png"}, "3960": {"nick": "Radar dish 4x4", "name": "Dish 4 x 4 Inverted (Radar)", "img": "https://img.bricklink.com/ItemImage/PN/86/3960.png"}, "4740": {"nick": "Radar dish 2x2", "name": "Dish 2 x 2 Inverted (Radar)", "img": "https://img.bricklink.com/ItemImage/PN/86/4740.png"}, "3957b": {"nick": "Antenna", "name": "Antenna 1 x 4 - Flat Top", "img": "https://img.bricklink.com/ItemImage/PN/11/3957b.png"}, "30374": {"nick": "Lightsaber blade", "name": "Bar 4L (Lightsaber Blade / Wand)", "img": "https://img.bricklink.com/ItemImage/PN/12/30374.png"}, "3626": {"nick": "Minifigure head", "name": "Minifigure, Head", "img": "https://img.bricklink.com/ItemImage/PN/3/3626pb1965.png"}, "970c00": {"nick": "Legs", "name": "Hips and Legs", "img": "https://img.bricklink.com/ItemImage/PN/7/970c00.png"}, "3901": {"nick": "Classic hair", "name": "Minifigure, Hair Male", "img": "https://img.bricklink.com/ItemImage/PN/11/3901.png"}, "3899": {"nick": "Mug", "name": "Minifigure, Utensil Cup", "img": "https://img.bricklink.com/ItemImage/PN/1/3899.png"}, "2343": {"nick": "Goblet", "name": "Minifigure, Utensil Goblet", "img": "https://img.bricklink.com/ItemImage/PN/12/2343.png"}, "3959": {"nick": "Space gun / torch", "name": "Minifigure, Utensil Space Gun / Torch", "img": "https://img.bricklink.com/ItemImage/PN/11/3959.png"}, "30162": {"nick": "Binoculars", "name": "Minifigure, Utensil Binoculars", "img": "https://img.bricklink.com/ItemImage/PN/11/30162.png"}, "3962b": {"nick": "Walkie-talkie", "name": "Minifigure, Utensil Radio", "img": "https://img.bricklink.com/ItemImage/PN/11/3962b.png"}, "3847": {"nick": "Shortsword", "name": "Minifigure, Weapon Sword, Shortsword", "img": "https://img.bricklink.com/ItemImage/PN/95/3847.png"}};  // {partNo: {nick,name,img}} for parts with their own encyclopedia page
 
-    let ITEMS = [], SHOWN = [];
+    let ITEMS = [], SHOWN = [], inventoryState = 'loading';
+    const stock = typeof window.ppPartStock === 'object' ? window.ppPartStock : null;
 
     function img(it){return "https://img.bricklink.com/ItemImage/" + (TLET[it.type]||"P") + "N/" + (it.color_id||0) + "/" + it.no + ".png";}
     function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -685,20 +687,20 @@
     const resEl = document.getElementById('results');
     const spotEl = document.getElementById('landing-spotlight');
     const browseEl = document.getElementById('browse-section');
+    const exactEl = document.getElementById('exact-stock');
+    const formatQuery = q => q.toLowerCase().trim().replace(/(\d)\s*[x×]\s*(?=\d)/g, '$1 x ').replace(/\s+/g, ' ');
 
     function findLanding(q){
       if (!q) return null;
-      // Exact part-number match wins
-      if (LANDING[q]) return Object.assign({no:q}, LANDING[q]);
-      const qLow = q.toLowerCase();
-      // Nickname / name match (loose: substring)
-      for (const no in LANDING) {
-        const row = LANDING[no];
-        if (row.nick.toLowerCase() === qLow) return Object.assign({no:no}, row);
+      const qLow = formatQuery(q);
+      // Exact catalog ID, exact nickname, and exact official name are safe to
+      // select. A loose nickname match is only an encyclopedia suggestion.
+      if (Object.prototype.hasOwnProperty.call(LANDING, qLow)) return { no: qLow, ...LANDING[qLow], exact: true };
+      for (const [no, row] of Object.entries(LANDING)) {
+        if ([row.nick, row.name].some(value => formatQuery(value) === qLow)) return { no, ...row, exact: true };
       }
-      for (const no in LANDING) {
-        const row = LANDING[no];
-        if (row.nick.toLowerCase().includes(qLow) && qLow.length >= 4) return Object.assign({no:no}, row);
+      for (const [no, row] of Object.entries(LANDING)) {
+        if (formatQuery(row.nick).includes(qLow) && qLow.length >= 4) return { no, ...row, exact: false };
       }
       return null;
     }
@@ -726,9 +728,12 @@
 
       // No query: hide inventory, show browse grid, hide spotlight.
       if (!q && !type){
-        statusEl.textContent = "Showing the full parts encyclopedia below. Search above to filter our live inventory.";
+        statusEl.textContent = inventoryState === 'error'
+          ? 'Inventory snapshot unavailable right now. You can still browse the encyclopedia or email us about a piece.'
+          : 'Showing the parts encyclopedia. Search above to check our latest inventory snapshot.';
         resEl.innerHTML = "";
         spotEl.innerHTML = "";
+        exactEl.hidden = true;
         browseEl.style.display = "";
         return;
       }
@@ -741,7 +746,8 @@
       // don't appear in BrickLink's official item names, so without this the
       // user searching "cheese" sees the spotlight but gets "no in-stock matches"
       // even though we have 23 colors in stock.
-      const landing = findLanding(q);
+      const canSelectPart = !type || type === 'PART';
+      const landing = canSelectPart ? findLanding(q) : null;
       renderSpotlight(landing);
 
       // Inventory search (same algorithm as /finder/).
@@ -769,13 +775,38 @@
       else if (sort === "desc") hits.sort((a,b)=>b.it.price-a.it.price);
       else hits.sort((a,b)=>b.score-a.score || (a.it.name||"").localeCompare(b.it.name||""));
 
-      if (!hits.length){
-        statusEl.textContent = "";
-        resEl.innerHTML = '<div class="inv-empty">No in-stock matches. Try fewer or different words &mdash; or <a href="' + STORE + '?p=PiecePavilion#/shop" target="_blank" rel="noopener">browse the full store &#8599;</a></div>';
+      // Only show an exact stock panel if the catalog number has been selected
+      // or all current hits identify the same part. Never treat variants as one.
+      const firstExact = hits.find(h => h.it.type === "PART" && String(h.it.no).toLowerCase() === qLow)?.it;
+      const onlyPart = hits.length && hits[0].it.type === "PART" && hits.every(h =>
+        h.it.type === "PART" && String(h.it.no).toLowerCase() === String(hits[0].it.no).toLowerCase()
+      ) ? hits[0].it : null;
+      const idLike = /^\d[a-z\d_*-]{2,49}$/i.test(q) && !/^\d+x\d+$/i.test(q);
+      const selected = canSelectPart && (firstExact || (landing?.exact && landing) || (q && onlyPart) || (idLike && { no: q, name: '' })) || null;
+      exactEl.hidden = true;
+      if (selected && stock) stock.render(exactEl, selected, ITEMS, inventoryState);
+
+      SHOWN = [];
+      if (!hits.length || inventoryState !== 'loaded'){
+        statusEl.textContent = '';
+        resEl.innerHTML = '';
+        if (selected && stock) return;
+        const card = document.createElement('div');
+        card.className = 'inv-empty';
+        const msg = inventoryState === 'loading' ? 'Checking our BrickLink inventory snapshot…'
+          : inventoryState === 'error' ? 'We couldn’t check stock right now.'
+          : 'No matches in our latest inventory snapshot. Try a part number or a shorter search.';
+        card.appendChild(document.createTextNode(msg));
+        if (stock && q && inventoryState !== 'loading') {
+          card.appendChild(document.createElement('br'));
+          card.appendChild(stock.askLink({ name: q }, '', 'Ask about this piece'));
+        }
+        resEl.appendChild(card);
         return;
       }
       SHOWN = hits.slice(0, 120).map(h => h.it);
-      statusEl.innerHTML = '<b>' + hits.length + '</b> item' + (hits.length===1 ? '' : 's') + ' in stock' + (hits.length>120 ? ' (showing first 120)' : '');
+      statusEl.textContent = hits.length + ' listing' + (hits.length === 1 ? '' : 's') + ' in our latest snapshot'
+        + (hits.length > 120 ? ' (showing first 120)' : '');
 
       resEl.innerHTML = SHOWN.map((it, i) => {
         const landed = LANDING[it.no];
@@ -788,9 +819,16 @@
             '<div class="inv-price">$' + Number(it.price).toFixed(2) + '</div>' +
             '<button class="inv-cta add" data-idx="' + i + '">+ Add to Cart &rarr;</button>' +
             learn +
+            '<div class="pp-stock-actions"></div>' +
           '</div>' +
         '</div>';
       }).join('');
+      if (stock) resEl.querySelectorAll('.pp-stock-actions').forEach((box, i) => {
+        const it = SHOWN[i];
+        const exact = stock.listingLink(it);
+        if (exact) box.appendChild(exact);
+        if (it.type === 'PART' && !selected) box.appendChild(stock.askLink(it, it.color));
+      });
     }
 
     // Cart integration (shared with the rest of the site).
@@ -831,19 +869,23 @@
     document.getElementById('go').addEventListener('click', run);
     qEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
 
-    // Load inventory, then honor ?q= / ?type= deep links from the homepage.
-    fetch('/finder-data.json?t=' + Date.now())
-      .then(r => r.json())
-      .then(d => {
-        ITEMS = d.items || [];
-        const p = new URLSearchParams(location.search);
-        if (p.get('q')) qEl.value = p.get('q');
-        if (p.get('type')) typeEl.value = p.get('type');
-        run();
-      })
-      .catch(() => {
-        statusEl.innerHTML = '<span style="color:var(--red)">Could not load inventory right now. Please refresh.</span>';
-      });
+    // Honor deep links immediately, including when the stock snapshot is unavailable.
+    const p = new URLSearchParams(location.search);
+    if (p.get('q')) qEl.value = p.get('q');
+    if (p.get('type')) typeEl.value = p.get('type');
+    run();
+    const fetchInventory = stock ? stock.load() : fetch('/finder-data.json', { cache: 'no-store' }).then(r => {
+      if (!r.ok) throw new Error('Inventory unavailable');
+      return r.json();
+    }).then(d => { if (!Array.isArray(d.items)) throw new Error('Invalid inventory'); return d.items; });
+    fetchInventory.then(items => {
+      ITEMS = items;
+      inventoryState = 'loaded';
+      run();
+    }).catch(() => {
+      inventoryState = 'error';
+      run();
+    });
   })();
   </script>
 </body>

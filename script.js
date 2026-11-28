@@ -1190,3 +1190,131 @@ if (navDropdown) {
   script.src = '/blog/hearts.js?v=20261109b'; script.defer = true;
   script.dataset.blogHearts = 'true'; document.head.appendChild(script);
 })();
+
+// Exact retail inventory on public Parts Database search and encyclopedia pages.
+// The same already-public Finder snapshot is the only source; no Staff data.
+(function partStock() {
+  'use strict';
+  const path = location.pathname.match(/^\/parts(?:\/([^/]+))?\/?(?:index\.html)?$/i);
+  if (!path) return;
+  const STORE = 'https://store.bricklink.com/PiecePavilion';
+  const EMAIL = 'piecepavilion@gmail.com';
+  const clean = (value, max = 140) => String(value == null ? '' : value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+  const key = value => clean(value, 60).toLowerCase();
+  const lotId = row => clean(row && row.lot, 24);
+  const node = (tag, text, cls) => {
+    const element = document.createElement(tag);
+    if (text) element.textContent = text;
+    if (cls) element.className = cls;
+    return element;
+  };
+  let snapshot;
+  function load() {
+    if (!snapshot) snapshot = fetch('/finder-data.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(response => {
+        if (!response.ok) throw new Error('Inventory snapshot unavailable');
+        return response.json();
+      })
+      .then(data => {
+        if (!Array.isArray(data?.items) || data.items.length === 0 || Number(data.count) !== data.items.length) {
+          throw new Error('Unexpected inventory snapshot');
+        }
+        return data.items.filter(row => row && typeof row === 'object');
+      });
+    return snapshot;
+  }
+  function exactRows(no, items) {
+    const match = key(no);
+    if (!match || !Array.isArray(items)) return [];
+    const known = new Set();
+    return items.filter(row => {
+      const id = lotId(row);
+      if (row.type !== 'PART' || key(row.no) !== match || !/^\d{1,20}$/.test(id)
+          || !Number.isInteger(Number(row.qty)) || Number(row.qty) <= 0 || known.has(id)) return false;
+      known.add(id);
+      return true;
+    }).sort((a, b) => clean(a.color).localeCompare(clean(b.color)) || clean(a.cond).localeCompare(clean(b.cond)) || Number(a.price) - Number(b.price));
+  }
+  function askLink(part, color, label = 'Ask about this piece') {
+    const number = clean(part?.no, 60);
+    const description = clean(part?.name);
+    const details = description && number && description.toLowerCase() !== number.toLowerCase() ? description + ' (part ' + number + ')' : description || (number ? 'part ' + number : '');
+    const subject = 'BrickLink stock question' + (number ? ': part ' + number : '');
+    const body = 'Hi Piece Pavilion,\r\n\r\nDo you have ' + (details || 'this LEGO piece') + ' in stock in your BrickLink store? If so, could you send me the listing?\r\n\r\nColor: ' + (clean(color, 80) || '[enter color]') + '\r\nQuantity: [enter quantity]\r\n\r\nThanks!';
+    const a = node('a', label, 'pp-stock-ask');
+    a.href = 'mailto:' + EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    return a;
+  }
+  function listingLink(row, label = 'View on BrickLink ↗') {
+    const id = lotId(row);
+    if (!/^\d{1,20}$/.test(id)) return null;
+    const a = node('a', label, 'pp-stock-lot');
+    a.href = STORE + '?itemID=' + id;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    return a;
+  }
+  function list(rows, partName) {
+    const ul = node('ul', '', 'pp-stock-list');
+    rows.forEach(row => {
+      const color = clean(row.color) || 'Color not specified';
+      const condition = clean(row.cond) || 'Condition not specified';
+      const qty = Number(row.qty);
+      const price = Number(row.price);
+      const li = node('li');
+      const info = node('div', '', 'pp-stock-info');
+      info.append(node('strong', color), node('span', condition + ' · Qty ' + qty + (row.price !== null && row.price !== '' && Number.isFinite(price) ? ' · $' + price.toFixed(2) + ' each' : '')));
+      const a = listingLink(row);
+      a.setAttribute('aria-label', 'View ' + color + ', ' + condition + ' ' + partName + ' on BrickLink');
+      li.append(info, a);
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+  function render(container, part, items, status) {
+    const rows = exactRows(part.no, items);
+    const name = clean(part.name) || ('part ' + clean(part.no));
+    const header = node('div', '', 'pp-stock-heading');
+    const heading = node('h2', 'In Our Store');
+    header.append(heading, askLink(part));
+    const idLine = node('p', name + (part.no && key(name) !== key('part ' + part.no) ? ' · Part ' + clean(part.no) : ''), 'pp-stock-id');
+    const message = node('p', status === 'loading' ? 'Checking the latest BrickLink inventory snapshot…'
+      : status !== 'loaded' ? 'We couldn’t check stock right now. Ask us or check BrickLink directly.'
+      : rows.length ? 'From our latest BrickLink inventory snapshot. Check the listing for current stock and price.'
+      : 'No listings for this exact part in our latest BrickLink inventory snapshot. Email us to double-check.', 'pp-stock-note');
+    if (status !== 'loaded') message.setAttribute('role', 'status');
+    container.className = 'pp-stock-box';
+    container.replaceChildren(header, idLine, message);
+    if (rows.length) {
+      container.appendChild(list(rows.slice(0, 6), name));
+      if (rows.length > 6) {
+        const more = node('details');
+        more.append(node('summary', 'Show ' + (rows.length - 6) + ' more BrickLink listings'), list(rows.slice(6), name));
+        container.appendChild(more);
+      }
+    } else if (status !== 'loading') {
+      const a = node('a', 'Browse our BrickLink store ↗', 'pp-stock-lot');
+      a.href = STORE + '?p=PiecePavilion#/shop';
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      container.appendChild(a);
+    }
+    container.hidden = false;
+  }
+  const style = node('style');
+  style.textContent = '.pp-stock-box{margin:16px 0 22px;padding:clamp(14px,3vw,22px);background:#f7faf8;border:1px solid #cbded2;border-radius:14px;color:#1e2a21}.pp-stock-box[hidden]{display:none}.pp-stock-heading{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}.pp-stock-heading h2{margin:0!important;color:#173e24;font-size:clamp(1.2rem,2.4vw,1.55rem);line-height:1.2}.pp-stock-id{font-weight:800;margin:6px 0 0!important;overflow-wrap:anywhere}.pp-stock-note{font-size:.88rem;color:#485a50;margin:6px 0 10px!important}.pp-stock-ask,.pp-stock-lot{display:inline-flex;align-items:center;min-height:44px;font-size:.86rem;font-weight:800;text-underline-offset:3px;color:#17452a;max-width:100%}.pp-stock-ask{padding:0 12px;border:1px solid #628d71;border-radius:9px;background:#fff;text-decoration:none}.pp-stock-ask:hover{background:#eaf3ed}.pp-stock-actions{display:flex;flex-wrap:wrap;gap:0 10px;align-items:center}.pp-stock-actions .pp-stock-ask{padding:0 8px;font-size:.8rem}.pp-stock-list{list-style:none!important;margin:0!important;padding:0!important;display:grid;gap:5px}.pp-stock-list li{display:flex;flex-wrap:wrap;gap:0 12px;align-items:center;justify-content:space-between;margin:0!important;padding:4px 10px!important;background:#fff;border-radius:8px}.pp-stock-info{display:flex;flex-direction:column;overflow-wrap:anywhere}.pp-stock-info span{color:#485a50;font-size:.84rem}.pp-stock-box summary{min-height:44px;line-height:44px;cursor:pointer;font-weight:800;font-size:.86rem}';
+  document.head.appendChild(style);
+  window.ppPartStock = { load, render, askLink, listingLink };
+  const article = document.querySelector('.part-hero');
+  if (!article || !path[1] || !/^[a-z\d][a-z\d_*-]{0,49}$/i.test(path[1])) return;
+  const part = { no: path[1], name: article.querySelector('.part-official strong')?.textContent || article.querySelector('.part-nick')?.textContent || '' };
+  const oldBox = document.querySelector('.stock-box');
+  const box = node('section');
+  if (oldBox) oldBox.replaceWith(box);
+  else (document.querySelector('.fact-grid') || article).after(box);
+  article.querySelectorAll('.part-tag').forEach(tag => {
+    if (/^(in stock|not in stock|out of stock)$/i.test(tag.textContent.trim())) tag.remove();
+  });
+  render(box, part, [], 'loading');
+  load().then(rows => render(box, part, rows, 'loaded')).catch(() => render(box, part, [], 'error'));
+})();
