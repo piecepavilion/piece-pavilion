@@ -273,9 +273,9 @@
         <button class="btn" id="finishbtn">Finish pick</button>
       </div>
       <div class="replacement-quick noprint" style="margin-top:8px">
-        <button type="button" class="btn ghost sm" data-replacement-shortcut hidden>Add to Replacements</button>
+        <button type="button" class="btn ghost sm" data-replacement-shortcut hidden>Add to To Ship</button>
         <span class="muted" role="status"></span>
-        <a href="/employees/#today-replace" hidden>Open Staff checklist →</a>
+        <a href="/employees/#today-replace" hidden>Open To Ship →</a>
       </div>
     </section>
 
@@ -306,9 +306,9 @@
       </div>
 
       <div class="replacement-quick noprint" style="margin-bottom:12px">
-        <button type="button" class="btn ghost sm" data-replacement-shortcut hidden>Add to Replacements</button>
+        <button type="button" class="btn ghost sm" data-replacement-shortcut hidden>Add to To Ship</button>
         <span class="muted" role="status"></span>
-        <a href="/employees/#today-replace" hidden>Open Staff checklist →</a>
+        <a href="/employees/#today-replace" hidden>Open To Ship →</a>
       </div>
 
       <div class="row">
@@ -383,36 +383,57 @@
       window.scrollTo(0, 0);
     }
 
-    // Same browser-local checklist as Staff > Today. This never writes to BrickLink.
-    var replacementKey = "pp:staff-today:replacement-orders:v1";
+    // Shared Staff To Ship checklist. Does not change the BrickLink order.
     var replacementId = /^\d{1,20}$/;
-    function resetReplacementButtons() {
+    var replacementBusy = new Set();
+    function renderReplacementButtons(id, message, showLink) {
+      if (String(S.orderId || "") !== id) return;
       document.querySelectorAll("[data-replacement-shortcut]").forEach(function (button) {
         var row = button.parentElement;
-        button.hidden = !replacementId.test(S.orderId);
-        row.querySelector("[role='status']").textContent = "";
-        row.querySelector("a").hidden = true;
+        var busy = replacementBusy.has(id);
+        button.hidden = !replacementId.test(id);
+        button.disabled = busy;
+        button.setAttribute("aria-busy", String(busy));
+        row.querySelector("[role='status']").textContent = message || "";
+        row.querySelector("a").hidden = !showLink;
       });
     }
-    function addToReplacements(button) {
+    function resetReplacementButtons() {
       var id = String(S.orderId || "");
-      if (!replacementId.test(id)) return;
-      var row = button.parentElement;
-      var status = row.querySelector("[role='status']");
-      var link = row.querySelector("a");
+      renderReplacementButtons(id, replacementBusy.has(id) ? "Adding to To Ship…" : "", false);
+    }
+    async function addToReplacements() {
+      var id = String(S.orderId || "");
+      if (!replacementId.test(id) || replacementBusy.has(id)) return;
+      replacementBusy.add(id);
+      renderReplacementButtons(id, "Adding to To Ship…", false);
+      var message = "";
+      var saved = false;
+      var controller = new AbortController();
+      var timeout = setTimeout(function () { controller.abort(); }, 12000);
       try {
-        var raw = localStorage.getItem(replacementKey);
-        var ids = raw === null ? [] : JSON.parse(raw);
-        if (!Array.isArray(ids)) throw new Error("invalid checklist");
-        var next = [id].concat(ids.filter(function (saved) { return saved !== id; }));
-        var unchanged = ids.length === next.length && ids.every(function (saved, index) { return saved === next[index]; });
-        if (!unchanged) localStorage.setItem(replacementKey, JSON.stringify(next));
-        status.textContent = (unchanged ? "Already at the top: order #" : "Queued at the top: order #")
-          + id + ". Saved in this browser only.";
-        link.hidden = false;
+        var response = await fetch(API + "/to-ship", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json", "accept": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({ action: "add", id: id }),
+        });
+        if (response.status === 401 || response.status === 403) {
+          message = "Sign in to Staff again, then retry.";
+          return;
+        }
+        if (!response.ok) throw new Error("To Ship request failed");
+        var result = await response.json();
+        saved = Array.isArray(result.ids) && result.ids.indexOf(id) >= 0;
+        if (!saved) throw new Error("Order not in returned queue");
+        message = "Order #" + id + " is in the shared To Ship list.";
       } catch (e) {
-        status.textContent = "Could not save to the replacement checklist in this browser.";
-        link.hidden = true;
+        message = "Could not confirm the save. Check To Ship or try again.";
+      } finally {
+        clearTimeout(timeout);
+        replacementBusy.delete(id);
+        renderReplacementButtons(id, message, saved);
       }
     }
 
@@ -906,7 +927,7 @@
       copyText(t, this);
     };
     document.querySelectorAll("[data-replacement-shortcut]").forEach(function (button) {
-      button.addEventListener("click", function () { addToReplacements(button); });
+      button.addEventListener("click", addToReplacements);
     });
     $("d-copy").onclick = function () { copyText($("d-nftext").textContent, this); };
     $("d-back").onclick = function () { show("screen-orders"); loadOrders(); };
