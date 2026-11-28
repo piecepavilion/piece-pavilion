@@ -159,6 +159,11 @@
     .sync.ok{background:var(--green);color:#fff}
     .sync.off{background:var(--amber);color:#fff}
 
+    .replacement-quick{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}
+    .replacement-quick button,.replacement-quick a{min-height:44px}
+    .replacement-quick .muted{font-size:.82rem}
+    .replacement-quick a{display:inline-flex;align-items:center}
+    [data-replacement-shortcut][hidden],.replacement-quick a[hidden]{display:none}
     /* completion */
     .done .big{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0 4px}
     .done .kpi{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line2);
@@ -267,6 +272,11 @@
         <span class="grow"></span>
         <button class="btn" id="finishbtn">Finish pick</button>
       </div>
+      <div class="replacement-quick noprint" style="margin-top:8px">
+        <button type="button" class="btn ghost sm" data-replacement-shortcut hidden>Add to Replacements</button>
+        <span class="muted" role="status"></span>
+        <a href="/employees/#today-replace" hidden>Open Staff checklist →</a>
+      </div>
     </section>
 
     <!-- ============ SCREEN 3: done ============ -->
@@ -293,6 +303,12 @@
           <a class="btn sm ghost" id="d-blorder" target="_blank" rel="noopener"
              style="text-decoration:none;display:inline-flex;align-items:center">Open order on BrickLink &rarr;</a>
         </div>
+      </div>
+
+      <div class="replacement-quick noprint" style="margin-bottom:12px">
+        <button type="button" class="btn ghost sm" data-replacement-shortcut hidden>Add to Replacements</button>
+        <span class="muted" role="status"></span>
+        <a href="/employees/#today-replace" hidden>Open Staff checklist →</a>
       </div>
 
       <div class="row">
@@ -351,6 +367,7 @@
       ["screen-orders", "screen-pick", "screen-done"].forEach(function (s) {
         $(s).classList.toggle("hide", s !== id);
       });
+      resetReplacementButtons();
       window.scrollTo(0, 0);
     }
     function esc(s) {
@@ -364,6 +381,39 @@
       e.textContent = msg;
       e.classList.remove("hide");
       window.scrollTo(0, 0);
+    }
+
+    // Same browser-local checklist as Staff > Today. This never writes to BrickLink.
+    var replacementKey = "pp:staff-today:replacement-orders:v1";
+    var replacementId = /^\d{1,20}$/;
+    function resetReplacementButtons() {
+      document.querySelectorAll("[data-replacement-shortcut]").forEach(function (button) {
+        var row = button.parentElement;
+        button.hidden = !replacementId.test(S.orderId);
+        row.querySelector("[role='status']").textContent = "";
+        row.querySelector("a").hidden = true;
+      });
+    }
+    function addToReplacements(button) {
+      var id = String(S.orderId || "");
+      if (!replacementId.test(id)) return;
+      var row = button.parentElement;
+      var status = row.querySelector("[role='status']");
+      var link = row.querySelector("a");
+      try {
+        var raw = localStorage.getItem(replacementKey);
+        var ids = raw === null ? [] : JSON.parse(raw);
+        if (!Array.isArray(ids)) throw new Error("invalid checklist");
+        var next = [id].concat(ids.filter(function (saved) { return saved !== id; }));
+        var unchanged = ids.length === next.length && ids.every(function (saved, index) { return saved === next[index]; });
+        if (!unchanged) localStorage.setItem(replacementKey, JSON.stringify(next));
+        status.textContent = (unchanged ? "Already at the top: order #" : "Queued at the top: order #")
+          + id + ". Saved in this browser only.";
+        link.hidden = false;
+      } catch (e) {
+        status.textContent = "Could not save to the replacement checklist in this browser.";
+        link.hidden = true;
+      }
     }
 
     // ---------------- offline-tolerant persistence ----------------
@@ -855,6 +905,9 @@
       if (!t) { alert("Nothing is flagged as missing."); return; }
       copyText(t, this);
     };
+    document.querySelectorAll("[data-replacement-shortcut]").forEach(function (button) {
+      button.addEventListener("click", function () { addToReplacements(button); });
+    });
     $("d-copy").onclick = function () { copyText($("d-nftext").textContent, this); };
     $("d-back").onclick = function () { show("screen-orders"); loadOrders(); };
     $("d-reopen").onclick = function () { show("screen-pick"); pickActivity(); drawPickTime(performance.now()); render(); };
