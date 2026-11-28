@@ -34,7 +34,9 @@ const sidebarClose   = document.getElementById('sidebar-close');
 
 let lastFocusBeforeSidebar = null;
 function openSidebar() {
-  lastFocusBeforeSidebar = document.activeElement;
+  lastFocusBeforeSidebar = headerBurger || document.activeElement;
+  sidebar.removeAttribute('inert');
+  sidebar.removeAttribute('aria-hidden');
   sidebar.classList.add('open');
   sidebarOverlay.classList.add('open');
   // Lock body scroll so the user doesn't accidentally scroll the page
@@ -47,8 +49,11 @@ function openSidebar() {
   sidebar.setAttribute('aria-label', 'Site navigation');
   if (headerBurger) headerBurger.setAttribute('aria-expanded', 'true');
   const main = document.querySelector('.main-content');
-  if (main) main.setAttribute('aria-hidden', 'true');
-  if (sidebarClose) setTimeout(() => sidebarClose.focus(), 100);
+  if (sidebarClose) sidebarClose.focus({ preventScroll: true });
+  if (main) {
+    main.setAttribute('inert', '');
+    main.setAttribute('aria-hidden', 'true');
+  }
 }
 
 function closeSidebar() {
@@ -58,9 +63,17 @@ function closeSidebar() {
   document.documentElement.style.overflow = '';
   if (headerBurger) headerBurger.setAttribute('aria-expanded', 'false');
   const main = document.querySelector('.main-content');
-  if (main) main.removeAttribute('aria-hidden');
-  // Return focus to the burger that opened the sidebar
-  if (lastFocusBeforeSidebar && lastFocusBeforeSidebar.focus) lastFocusBeforeSidebar.focus();
+  if (main) {
+    main.removeAttribute('inert');
+    main.removeAttribute('aria-hidden');
+  }
+  // Move focus out of the drawer before hiding it from keyboard and assistive technology.
+  if (lastFocusBeforeSidebar && lastFocusBeforeSidebar.focus) {
+    lastFocusBeforeSidebar.focus({ preventScroll: true });
+  }
+  sidebar.setAttribute('inert', '');
+  sidebar.setAttribute('aria-hidden', 'true');
+  lastFocusBeforeSidebar = null;
 }
 
 // Escape closes the sidebar
@@ -73,7 +86,14 @@ function toggleSidebar() {
 }
 
 if (sidebar) {
-  if (headerBurger)  headerBurger.addEventListener('click', toggleSidebar);
+  // Shared by older pages that do not yet mark the closed drawer inert in HTML.
+  sidebar.setAttribute('inert', '');
+  sidebar.setAttribute('aria-hidden', 'true');
+  if (headerBurger) {
+    headerBurger.setAttribute('aria-controls', sidebar.id);
+    headerBurger.setAttribute('aria-expanded', 'false');
+    headerBurger.addEventListener('click', toggleSidebar);
+  }
   if (sidebarClose)  sidebarClose.addEventListener('click', closeSidebar);
   if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 
