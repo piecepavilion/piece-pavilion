@@ -189,6 +189,42 @@
     .note { margin-top:36px; font-size:.82rem; color:var(--muted); text-align:center; }
     .note svg { vertical-align:-3px; }
   </style>
+<style id="pp-touch-layout">
+.staff-quick{display:none}
+@media(max-width:1080px){
+  .wrap{padding:18px clamp(12px,3vw,24px) 40px}
+  .search-row{margin-bottom:14px;flex-wrap:wrap}
+  .search-row input{min-width:0;min-height:46px;font-size:16px}
+  .search-row .count:empty{display:none}
+  .staff-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 16px}
+  .staff-quick a{display:flex;align-items:center;justify-content:center;min-height:46px;text-align:center;
+    padding:6px 4px;color:#231a1a;font-weight:800;font-size:.88rem;line-height:1.2;
+    background:#fff;border:1px solid #e0d8d6;border-radius:10px}
+  .staff-quick a:focus-visible,.tile:focus-visible{outline:3px solid #0057a8;outline-offset:2px}
+  .wrap:has(#tile-search:not(:placeholder-shown)) .section:not(:has(.tile:not(.hidden))){display:none}
+  .section-head .section-sub{color:var(--mid)}
+  .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+  .tile,.tile.kpi-hero{min-width:0;padding:16px}
+}
+@media(max-width:620px){
+  .topbar{gap:8px;padding:9px 12px}
+  .topbar img{height:38px}
+  .topbar .back{display:flex;align-items:center;min-height:44px;margin-left:auto}
+  .topbar .user{display:none}
+  .stats-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:17px}
+  .stat-tile{padding:10px 9px 10px 12px}
+  .stat-tile .label{letter-spacing:.025em;font-size:.69rem}
+  .stat-tile .value{font-size:1.45rem;overflow-wrap:anywhere}
+  .lead{display:none}
+  .staff-quick{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .section{margin-bottom:23px}
+  .section-head{align-items:flex-start;flex-direction:column;gap:3px;margin:0 1px 9px}
+  .section-head h2{font-size:1.15rem}
+  .tile,.tile.kpi-hero{padding:13px 14px}
+  .tile .ico{margin-bottom:8px}
+  .tile .go{margin-top:8px}
+}
+</style>
 </head>
 <body>
 
@@ -206,6 +242,17 @@
   </div>
 
   <div class="wrap">
+
+    <div class="search-row">
+      <input type="search" id="tile-search" placeholder="Search staff tools…" aria-label="Search staff tools">
+      <span class="count" id="tile-count" role="status"></span>
+    </div>
+    <nav class="staff-quick" aria-label="Frequently used Staff tools">
+      <a href="/employees/pick/">Pick Sheet</a>
+      <a href="/employees/inventory/">Inventory Lookup</a>
+      <a href="/employees/blog-review/">Blog Review</a>
+      <a href="/employees/content/">Content Editor</a>
+    </nav>
 
     <!-- ===== QUICK STATS ===== -->
     <div class="stats-row" id="stats-row">
@@ -233,11 +280,6 @@
 
     <p class="lead">Everything the team needs in one place — <strong>edit the site</strong>, <strong>track sales</strong>, <strong>manage inventory</strong>, and <strong>run operations</strong> without digging through sheets.</p>
 
-    <!-- Search / filter -->
-    <div class="search-row">
-      <input type="search" id="tile-search" placeholder="&#128269; Jump to a tool (ticker, pick, kpi, bulk…)" aria-label="Search tiles">
-      <span class="count" id="tile-count"></span>
-    </div>
 
     <!-- ===== BUSINESS OVERVIEW (promoted to top — the main thing we look at) ===== -->
     <section class="section business">

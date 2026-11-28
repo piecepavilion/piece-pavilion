@@ -70,6 +70,44 @@
   <link rel="stylesheet" href="/breaking-news.css?v=20261111text-colors" />
   <script src="/breaking-news.js?v=20261111text-colors" defer></script>
   <script src="/countdown.js?v=20261111breaking1" defer></script>
+<style id="pp-touch-layout">
+.pp-quick-nav{display:none}
+@media(max-width:1080px){
+  .pp-quick-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;
+    max-width:650px;margin:auto;padding:0 12px 6px}
+  .pp-quick-nav a{display:grid;place-items:center;min-height:44px;padding:5px;
+    color:#241c1c;font-size:.9rem;font-weight:800;text-align:center;
+    background:#f7f7f9;border-radius:8px;line-height:1.15}
+  .pp-quick-nav a:focus-visible{outline:2px solid #0057a8;outline-offset:2px}
+  .site-header .header-cart,.site-header .header-burger,.sidebar-close{
+    display:inline-grid;place-items:center;min-height:44px;min-width:44px}
+  #product-finder,#featured{scroll-margin-top:195px}
+  .hero .hero-search{margin-inline:auto;width:100%}
+  .hero .hero-search-bar input{min-width:0;font-size:16px;min-height:44px}
+  .hero .hero-search-bar button{min-height:44px}
+  .hero-actions a{min-height:44px}
+  .sidebar-links li a{display:flex;align-items:center;min-height:46px}
+}
+@media(max-width:700px){
+  .site-header .header-inner,.site-header.scrolled .header-inner{height:58px;padding:5px 12px;gap:8px}
+  .site-header .header-actions{gap:4px}
+  .site-header .header-shop{display:none}
+  .pp-quick-nav{padding:0 12px 6px}
+  .hero{padding:26px 16px 36px;gap:26px}
+  .hero-sub{margin-bottom:23px}
+  .hero .hero-search{margin-bottom:20px}
+  .hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-inline:auto;max-width:460px}
+  .hero-actions a{display:flex;align-items:center;justify-content:center;width:100%;padding:9px 7px;text-align:center;line-height:1.2}
+  #product-finder,#featured{scroll-margin-top:160px}
+  .featured-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .featured-item{min-width:0}
+  .featured-actions{flex-wrap:wrap}
+  .featured-actions button{min-height:44px}
+}
+@media(max-width:355px){
+  .header-brand .brand-word{display:inline;font-size:.96rem}
+}
+</style>
 </head>
 <body>
 
@@ -171,6 +209,11 @@
         <button class="header-burger" id="header-burger" aria-label="Open menu">&#9776;</button>
       </div>
     </div>
+    <nav class="pp-quick-nav" aria-label="Quick links">
+      <a href="#product-finder">Find Parts</a>
+      <a href="#featured">Shop Picks</a>
+      <a href="/blog/">Blog</a>
+    </nav>
   </header>
 
   <!-- ===== ANNOUNCEMENT BANNER (yellow ticker) =====
@@ -243,7 +286,7 @@
         Individual bricks, complete sets, and bulk lots — all quality-checked
         and ready to ship. Find exactly what your build needs.
       </p>
-      <form class="hero-search" action="/parts/" method="get" role="search">
+      <form class="hero-search" id="product-finder" action="/parts/" method="get" role="search">
         <span class="hero-search-label">&#128269; Product Finder</span>
         <div class="hero-search-bar">
           <input type="search" name="q" placeholder="Search bricks, minifigures, sets&hellip;"
